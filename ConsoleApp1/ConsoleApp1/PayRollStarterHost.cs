@@ -39,12 +39,13 @@ namespace ConsoleApp1
             {
                 option.ConfigureHttpsDefaults(httpsOptions =>
                 {
-                    //httpsOptions.AllowAnyClientCertificate();
+                    httpsOptions.AllowAnyClientCertificate();
                 });
-                option.Listen(IPAddress.Any, 5600, configure => 
+                option.Listen(IPAddress.Any, 5243, configure => 
                 {
                     configure.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
-                    configure.UseHttps(@"C:\Users\yusbe\source\repos\LearningDotnet\ConsoleApp1\ConsoleApp1\Cert\localhostcert.pfx", "yusbel");
+                    //configure.UseHttps(@"C:\Users\yusbe\source\repos\LearningDotnet\ConsoleApp1\ConsoleApp1\Cert\localhostcert.pfx", "yusbel");
+                    configure.UseHttps();
                 });
             });
 
