@@ -1,0 +1,16 @@
+﻿syntax = "proto3";
+
+service PayRollRetrival{
+	rpc GetPayRoll (PayRollRequest) returns (PayRollReply);
+}
+
+message PayRollRequest{
+	string payRollIdentifier = 1;
+}
+
+message PayRollReply{
+	string payRollIdentifier = 1;
+	string monthlySalary = 2;
+	bool mailPayCheckInfo = 3;
+	string enrollDate = 4;
+}

@@ -1,0 +1,38 @@
+﻿using AutoFixture;
+using Sample.Messaging.WebHooks;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Sample.Messaging.Test
+{
+    [TestClass]
+    public class WebHookMessageSubscriberTest
+    {
+        [TestMethod]
+        public void WhenAddingMessageWithExistingSubscritionSenderKeyThenNewMessageAddedToSubscriptionSender() 
+        {
+            var fixture = new Fixture();
+            var webHookSubscribers = fixture.Create<WebHookSubscribers>();
+            webHookSubscribers.Add("EmployeeSubdomain", "PayRollAdded", "http://localhost");
+            fixture.Register<IWebHookSubscribers>(() => webHookSubscribers);
+            var webHookMsgSubscriber = fixture.Create<WebHookMessageSubscriber>();
+            webHookMsgSubscriber.Subscribe("EmployeeSubdomain");
+            fixture.Register<IWebHookMessageSubscriber>(() => webHookMsgSubscriber);
+            webHookMsgSubscriber.AddMessage("PayRollAdded", "PayRoll added message");
+            if (webHookMsgSubscriber.TryGetInMemmoryMessage("PayRollAdded", out var inMemmoryMessage))
+            {
+                Assert.IsNotNull(inMemmoryMessage);
+            }
+            if (webHookMsgSubscriber.TryGetInMemmoryMessage("EmployeeSubdomain", out var msgs))
+            {
+                Assert.IsTrue(msgs.GetMessage("PayRollAdded").ToList().Count == 1);
+            }
+        }
+
+    }
+
+
+}
