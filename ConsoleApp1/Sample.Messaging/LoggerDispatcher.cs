@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk.Msg;
+using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +13,7 @@ namespace Sample.Messaging
         private ILogger<LoggerDispatcher> _logger;
 
         public LoggerDispatcher(ILoggerFactory loggerFactory) => _logger = loggerFactory.CreateLogger<LoggerDispatcher>();
-        public Task<bool> Dispatch(string key, IMessage message)
+        public Task<bool> Dispatch(string key, IExternalMessage message)
         {
             _logger.LogInformation($"Logger dispather message {message.GetType().FullName}");
             return Task.FromResult(true);

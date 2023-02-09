@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sample.PayRoll.WebHook;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Persistance.Context;
 using System;
@@ -27,7 +28,7 @@ namespace Sample.PayRoll
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                //await RegisterNotifier.WebHook(new PayRollData() { EmployeeKey = Guid.NewGuid().ToString(), Salary = rnd.Next(1000) });
+                await RegisterNotifier.WebHook(new PayRollData() { EmployeeKey = Guid.NewGuid().ToString(), Salary = rnd.Next(1000) });
                 await Task.Delay(10000);
             }
 

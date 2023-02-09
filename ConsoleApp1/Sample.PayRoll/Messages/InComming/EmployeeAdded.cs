@@ -1,16 +1,16 @@
-﻿using Sample.Sdk.Msg;
+﻿using Sample.Sdk.Core.Attributes;
+using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.PayRoll.Payroll.Messages.InComming
+namespace Sample.PayRoll.Messages.InComming
 {
-    public class EmployeeAdded : IMessage
+    [MessageMetada("EmployeeAdded")]
+    public class EmployeeAdded : ExternalMessage
     {
-        private string _serializationType;
-        public string EmployeeIentifier { get; set; }
-        public string SerializationType { get => _serializationType; set => _serializationType = value; }
     }
 }

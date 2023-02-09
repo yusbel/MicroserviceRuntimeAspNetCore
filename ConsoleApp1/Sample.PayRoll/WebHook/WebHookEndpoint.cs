@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.PayRoll.Payroll.WebHook
+namespace Sample.PayRoll.WebHook
 {
     public static class WebHookEndpoint
     {

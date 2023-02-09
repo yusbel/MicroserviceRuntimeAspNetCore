@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Msg;
+﻿using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core
 {
-    public static class StaticBaseObject<T> where T : IMessage
+    public static class StaticBaseObject<T> where T : IExternalMessage
     {
         private static ConcurrentDictionary<string, List<Func<T, bool>>> registers = new ConcurrentDictionary<string, List<Func<T, bool>>>();
         public static bool? Register(Type type, Func<T, bool> func)

@@ -9,7 +9,20 @@ namespace Sample.Sdk.EntityModel
 {
     public class Entity
     {
+        private Guid _id;
         [Key]
-        public Guid Id { get; set; }
+        public Guid Id 
+        {
+            get 
+            {
+                if(_id == Guid.Empty)
+                    Id = Guid.NewGuid();
+                return _id;
+            }
+            set 
+            {
+                _id = value;
+            }
+        }
     }
 }

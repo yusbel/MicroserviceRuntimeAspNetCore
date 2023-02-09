@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Msg;
+﻿using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +9,9 @@ namespace Sample.Messaging
 {
     public class MemmoryDispatcher : IMessageDispatcher
     {
-        public Task<bool> Dispatch(string key, IMessage message)
+        public Task<bool> Dispatch(string key, IExternalMessage message)
         {
-            InMemmoryMessage<IMessage>.Create().Add(key, message);
+            InMemmoryMessage<IExternalMessage>.Create().Add(key, message);
             return Task.FromResult(true);
         }
 

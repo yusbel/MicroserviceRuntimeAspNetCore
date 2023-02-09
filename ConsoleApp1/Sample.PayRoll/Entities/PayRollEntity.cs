@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.PayRoll.Payroll.Entities
+namespace Sample.PayRoll.Entities
 {
     [Table(name: "PayRoll")]
     public class PayRollEntity : Entity

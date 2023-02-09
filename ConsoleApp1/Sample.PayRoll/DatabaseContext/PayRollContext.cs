@@ -1,12 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Sample.PayRoll.Payroll.Entities;
+using Sample.PayRoll.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.PayRoll.Payroll.DatabaseContext
+namespace Sample.PayRoll.DatabaseContext
 {
     public class PayRollContext : DbContext
     {

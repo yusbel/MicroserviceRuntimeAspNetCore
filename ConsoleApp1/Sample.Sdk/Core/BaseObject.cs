@@ -4,19 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
-using Sample.Sdk.Msg;
+using Sample.Sdk.Msg.Interfaces;
 
 namespace Sample.Sdk.Core
 {
     public abstract class BaseObject<T> where T : BaseObject<T>
     {
-        protected abstract Task Save(Action notifier = null);
-        protected abstract void Log();
+        private IMessageBusSender _msgSender;
+
+        public BaseObject(IMessageBusSender senderMessageDurable) => (_msgSender) = (senderMessageDurable);
+        protected abstract Task Save(IExternalMessage message, Action notifier = null);
+        protected abstract void LogMessage();
         public void SaveAndLog(T toSave)
         {
-            toSave.Save();
-            toSave.Log();
-
         }
-    }
+    } 
 }

@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Employee\Clients\PayRoll\Protos\GetPayRoll.proto" />
+    <None Remove="Service\Clients\PayRoll\Protos\GetPayRoll.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-	    <Protobuf Include="Employee\Clients\PayRoll\Protos\GetPayRoll.proto" />
+	    <Protobuf Include="Service\Clients\PayRoll\Protos\GetPayRoll.proto" />
     </ItemGroup>
 
 </Project>

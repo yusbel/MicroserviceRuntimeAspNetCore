@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.PayRoll.Payroll.Services.gRPC
+namespace Sample.PayRoll.Services.gRPC
 {
     public class PayRollService : PayRollRetrival.PayRollRetrivalBase
     {

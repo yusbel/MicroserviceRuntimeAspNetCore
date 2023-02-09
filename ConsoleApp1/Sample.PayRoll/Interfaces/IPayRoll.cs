@@ -1,4 +1,4 @@
-﻿namespace Sample.PayRoll.Payroll.Interfaces
+﻿namespace Sample.PayRoll.Interfaces
 {
     public interface IPayRoll
     {

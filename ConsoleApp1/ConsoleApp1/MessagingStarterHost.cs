@@ -14,22 +14,23 @@ namespace ConsoleApp1
     {
         public static Task<IWebHost> ConfigureMessaging(string[] args, ILogger logger, List<Task> hosts)
         {
-            logger.LogInformation("Configuring employee service");
-            IWebHost messagingWebHost = WebHost.CreateDefaultBuilder(args)
-                                                .ConfigureServices(services => { })
-                                                .CaptureStartupErrors(true)
-                                                .UseStartup<WebAppStartUp>()
-                                                .UseKestrel(options =>
-                                                {
-                                                    options.ListenLocalhost(5400, listenOptions =>
-                                                    {
-                                                        listenOptions.UseConnectionLogging();
-                                                    });
-                                                })
-                                                .Build();
+            //logger.LogInformation("Configuring employee service");
+            //IWebHost messagingWebHost = WebHost.CreateDefaultBuilder(args)
+            //                                    .ConfigureServices(services => { })
+            //                                    .CaptureStartupErrors(true)
+            //                                    .UseStartup<WebAppStartUp>()
+            //                                    .UseKestrel(options =>
+            //                                    {
+            //                                        options.ListenLocalhost(5400, listenOptions =>
+            //                                        {
+            //                                            listenOptions.UseConnectionLogging();
+            //                                        });
+            //                                    })
+            //                                    .Build();
 
-            hosts.Add(messagingWebHost.RunAsync());
-            return Task.FromResult(messagingWebHost);
+            //hosts.Add(messagingWebHost.RunAsync());
+            //return Task.FromResult(messagingWebHost);
+            return null;
         }
     }
 }
