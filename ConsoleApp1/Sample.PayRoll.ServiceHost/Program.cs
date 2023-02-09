@@ -17,8 +17,6 @@ appBuilder.Services.AddHostedService<PayRollHostApp>()
         .AddSampleSdk(appBuilder.Configuration, "PayRoll:AzureServiceBusInfo:Configuration")
         .AddGrpc();
 
-appBuilder.Services.Configure<ServiceBusInfoOptions>(appBuilder.Configuration.GetSection("PayRollService:MsgSdTransactionInfo"));
-
 appBuilder.WebHost.ConfigureKestrel(option =>
 {
     option.ConfigureHttpsDefaults(httpsOptions =>

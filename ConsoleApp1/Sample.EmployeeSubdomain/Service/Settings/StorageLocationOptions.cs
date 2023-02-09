@@ -8,7 +8,7 @@ namespace Sample.EmployeeSubdomain.Service.Settings
 {
     public class StorageLocationOptions
     {
-        public const string StorageLocation = "EmployeeService:StorageLocation";
+        public const string StorageLocation = "Employee:StorageLocation";
 
         public string Path { get; set; }
     }

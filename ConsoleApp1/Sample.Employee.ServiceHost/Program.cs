@@ -29,23 +29,6 @@ IHost employeeHost = Host.CreateDefaultBuilder(args)
                 {   
                     services.AddEmployeeServiceDependencies(host.Configuration);
                     services.AddSampleSdk(host.Configuration);
-                    services.AddAzureClients(azureClientFactoryBuilder => 
-                    {
-                        var serviceBusConnStr = host.Configuration.GetValue<string>("EmployeeService:MessageBusInfo:ServiceBusConnStr");
-                        azureClientFactoryBuilder.AddServiceBusClient(serviceBusConnStr).ConfigureOptions((options, host) => 
-                        {
-                            options.Identifier = "EmployeeAddedSenderFromEmployeeService";
-                            var configuration = host.GetRequiredService<IConfiguration>();
-                            options.RetryOptions = new ServiceBusRetryOptions()
-                            {
-                                Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("EmployeeService:MessageBusInfo:EmployeeAddedSender:DelayInSeconds")),
-                                MaxDelay = TimeSpan.FromSeconds(configuration.GetValue<int>("EmployeeService:MessageBusInfo:EmployeeAddedSender:MaxDelayInSeconds")),
-                                MaxRetries = configuration.GetValue<int>("EmployeeService:MessageBusInfo:EmployeeAddedSender:MaxRetries"),
-                                Mode = configuration.GetValue<string>("EmployeeService:MessageBusInfo:EmployeeAddedSender:Mode") == "Fixed" ? ServiceBusRetryMode.Fixed : ServiceBusRetryMode.Exponential
-                            };
-                        });
-                    });
-                    services.Configure<ServiceBusInfoOptions>(host.Configuration.GetSection("EmployeeService:Employee:MessageBusInfo"));
                 })
             .Build();
 

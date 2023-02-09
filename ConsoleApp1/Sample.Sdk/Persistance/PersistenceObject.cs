@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Persistance.Context;
 using System;
@@ -18,16 +19,16 @@ namespace Sample.Sdk.Persistance
         protected abstract TS GetInMemoryEntity();
         protected abstract void AttachEntity(TS entity);
         private readonly IEntityContext<TC, TS> _entityContext;
-        public readonly ILogger? _logger;
+        private readonly ILogger? _logger;
 
         public PersistenceObject(ILogger logger, IEntityContext<TC, TS> entityContext, IMessageBusSender sender) : base(sender)
         {
-            logger.LogInformation($"Base object is entity context {entityContext == null}");
+            Guard.ThrowWhenNull(logger, entityContext, sender);
             _entityContext = entityContext;
             _logger = logger;
         }
         protected override void LogMessage() => _logger?.LogInformation("Hello World");
-        protected override async Task Save(IExternalMessage message, Action notifier = null)
+        protected override async Task Save<TE>(TE message, bool sendNotification = true)
         {
             _entityContext.Add(GetInMemoryEntity());
 
@@ -37,12 +38,21 @@ namespace Sample.Sdk.Persistance
                 Body = System.Text.Json.JsonSerializer.Serialize(message),
                 CreationTime = DateTime.UtcNow.ToLong(),
                 IsDeleted = false,
-                Type = typeof(ExternalEventEntity).Name,
+                Type = typeof(TE).Name,
                 Version = "1.0.0"
             });
-            if (notifier != null) 
+            if(!sendNotification) 
             {
-                notifier();
+                return;
+            }
+            try
+            {
+                //Notifications
+                Task.Run(() => MessageNotifier<TE>.Notify(message));
+            }
+            catch (Exception e)
+            {
+                _logger?.LogError("An error occurred when sending notification for message {} with exception {}", message, e);
             }
         }
 

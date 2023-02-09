@@ -27,7 +27,7 @@ namespace Sample.PayRoll
         public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail)
         {
             _payRollEntity = new PayRollEntity() { EmployeeIdentifier = employeeIdentifier, MonthlySalary = monthlySalary, MailPaperRecord = sendMail, Id = Guid.NewGuid() };
-            await Save(null, () => StaticBaseObject<EmployeeAdded>.Notify(new EmployeeAdded()));
+            //await Save(null, () => MessageNotifier<EmployeeAdded>.Notify(new EmployeeAdded()));
             return true;
         }
     }

@@ -8,7 +8,7 @@ namespace Sample.EmployeeSubdomain.Service.Settings
 {
     public class DatabaseSettingOptions
     {
-        public const string DatabaseSetting = "EmployeeService:Database";
+        public const string DatabaseSetting = "Employee:Database";
         public string ConnectionString { get; set; }
     }
 }

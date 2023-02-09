@@ -15,7 +15,7 @@ namespace Sample.EmployeeSubdomain.Service
     {
         public static void Register()
         {
-            StaticBaseObject<EmployeeAdded>.Register(typeof(EmployeeAdded), (msg) =>
+            MessageNotifier<EmployeeAdded>.Register(typeof(EmployeeAdded), (msg) =>
             {
                 InMemmoryMessage<IExternalMessage>.Create().Add("EmployeeAdded", msg);
                 Console.WriteLine("Employee added notifier");

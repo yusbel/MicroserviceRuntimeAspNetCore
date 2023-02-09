@@ -11,12 +11,12 @@ namespace TestProject1
         public void WhenAregistrarSendNotfication()
         {
             var wasCalled = false;
-            StaticBaseObject<EmployeeAdded>.Register(typeof(EmployeeAdded), msg => 
+            MessageNotifier<EmployeeAdded>.Register(typeof(EmployeeAdded), msg => 
             {
                 wasCalled = true;
                 return true;
             });
-            StaticBaseObject<EmployeeAdded>.Notify(new EmployeeAdded());
+            MessageNotifier<EmployeeAdded>.Notify(new EmployeeAdded());
             Assert.IsTrue(wasCalled);
         }
     }
