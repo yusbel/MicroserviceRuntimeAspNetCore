@@ -10,12 +10,15 @@ using System.Threading.Tasks;
 
 namespace Sample.Messaging.Middleware
 {
+    /// <summary>
+    /// Process request send to /WebHook to create webhook subscritions and retrieve them using subscriber key
+    /// </summary>
     public class WebHookMiddleware
     {
         private RequestDelegate _next;
-        private IWebHookSubscribers _webHookSubscribers;
+        private IWebHookSubscription _webHookSubscribers;
 
-        public WebHookMiddleware(RequestDelegate next, IWebHookSubscribers webHookSubscribers) => (_next, _webHookSubscribers) = (next, webHookSubscribers);
+        public WebHookMiddleware(RequestDelegate next, IWebHookSubscription webHookSubscribers) => (_next, _webHookSubscribers) = (next, webHookSubscribers);
         public async Task InvokeAsync(HttpContext context)
         {
             Guard.ThrowWhenNull(context);
@@ -34,10 +37,10 @@ namespace Sample.Messaging.Middleware
                     msg.AddRange(segment.ToArray());
                 }
                 var jsonString = Encoding.UTF8.GetString(msg.ToArray());
-                var webHookSubscriber = System.Text.Json.JsonSerializer.Deserialize<WebHookSubscriber>(jsonString);
+                var webHookSubscriber = System.Text.Json.JsonSerializer.Deserialize<WebHooks.Data.WebHookSubscriber>(jsonString);
                 if (webHookSubscriber != null)
                 {
-                    webHookSubscriber = _webHookSubscribers.Add(webHookSubscriber.SenderKey, webHookSubscriber.MessageKey, webHookSubscriber.WebHookUrl);
+                    webHookSubscriber = _webHookSubscribers.Add(webHookSubscriber.SubscriberKey, webHookSubscriber.MessageKey, webHookSubscriber.WebHookUrl);
                 }
                 context.Response.StatusCode = StatusCodes.Status201Created;
                 context.Response.ContentType = "application/json";
@@ -46,8 +49,8 @@ namespace Sample.Messaging.Middleware
             }
             if (context.Request.Method == HttpMethod.Get.ToString())
             {
-                string senderKey = context.Request.Query["senderKey"];
-                var webHookSubscription = _webHookSubscribers.GetWebHookBySenderKey(senderKey);
+                string subscriberKey = context.Request.Query["subscriberKey"];
+                var webHookSubscription = _webHookSubscribers.GetWebHookBySubscriberKey(subscriberKey);
                 if (webHookSubscription == null)
                 {
                     context.Response.StatusCode = StatusCodes.Status404NotFound;

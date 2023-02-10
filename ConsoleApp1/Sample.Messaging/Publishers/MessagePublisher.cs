@@ -10,18 +10,18 @@ namespace Sample.Messaging.Publishers
     public class MessagePublisher : IMessagePublisher
     {
         private readonly IWebHookMessageSubscriber _webHookMsgSubs;
-        private readonly IWebHookSubscribers _subscribers;
+        private readonly IWebHookSubscription _subscribers;
         private readonly IWebHookPublisher _webHookPublisher;
 
-        public MessagePublisher(IWebHookMessageSubscriber webHookMessageSubscriber, IWebHookSubscribers subscribers, IWebHookPublisher webHookPublisher) =>
+        public MessagePublisher(IWebHookMessageSubscriber webHookMessageSubscriber, IWebHookSubscription subscribers, IWebHookPublisher webHookPublisher) =>
             (_webHookMsgSubs, _subscribers, _webHookPublisher) = (webHookMessageSubscriber, subscribers, webHookPublisher);
         public async Task Publish()
         {
             _subscribers.GetWebHooks().ToList().ForEach(sub =>
             {
-                if (_webHookMsgSubs.TryGetInMemmoryMessage(sub.SenderKey, out var inMemmoryMsgs)) //get messages for this subscriber
+                if (_webHookMsgSubs.TryGetInMemmoryMessage(sub.SubscriberKey, out var inMemmoryMsgs)) //get messages for this subscriber
                 {
-                    if (inMemmoryMsgs.TryGetMessage("PayRollAdded", out var msgs)) //get messages per type, a wildcard to be used
+                    if (inMemmoryMsgs.TryGetAndRemove("PayRollAdded", out var msgs)) //get messages per type, a wildcard to be used
                     {
                         //invoke webhook
                         msgs.ToList().ForEach(async msg =>

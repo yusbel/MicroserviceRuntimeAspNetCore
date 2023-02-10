@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Sample.EmployeeSubdomain.Service.DatabaseContext;
+using Sample.EmployeeSubdomain.DatabaseContext;
 using System;
 using System.Collections.Generic;
 using System.Linq;

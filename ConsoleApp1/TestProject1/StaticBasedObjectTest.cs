@@ -1,5 +1,5 @@
 
-using Sample.EmployeeSubdomain.Service.Messages;
+using Sample.EmployeeSubdomain.Messages;
 using Sample.Sdk.Core;
 
 namespace TestProject1

@@ -8,17 +8,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sample.Sdk.Persistance.Context;
-using Sample.EmployeeSubdomain.Service.Services;
-using Sample.EmployeeSubdomain.Service.Services.Interfaces;
-using Sample.EmployeeSubdomain.Service.Settings;
-using Sample.EmployeeSubdomain.Service.DatabaseContext;
-using Sample.EmployeeSubdomain.Service.Interfaces;
-using Sample.EmployeeSubdomain.Service.Entities;
-using Sample.EmployeeSubdomain.Service;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Azure;
 using Azure.Messaging.ServiceBus;
+using Sample.EmployeeSubdomain.Services.Interfaces;
+using Sample.EmployeeSubdomain.Services;
+using Sample.EmployeeSubdomain.Entities;
+using Sample.EmployeeSubdomain.Interfaces;
+using Sample.EmployeeSubdomain.Settings;
+using Sample.EmployeeSubdomain.DatabaseContext;
+using Sample.EmployeeSubdomain.WebHook.Data;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -37,6 +37,23 @@ namespace Sample.EmployeeSubdomain
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
+            services.Configure<WebHookConfigurationOptions>((option) => 
+            {
+                //the property name does not match then appsettings
+                var subscribeToMessageIdentifiers = configuration.GetValue<string>("Employee:WebHookConfiguration:SubscribeToMessageIdentifiers");
+                option.SubscribeToMessageIdentifiers = string.IsNullOrEmpty(subscribeToMessageIdentifiers) 
+                                                                ? (new List<string>()).AsEnumerable()
+                                                                : subscribeToMessageIdentifiers.Split(',').AsEnumerable();
+                option.WebHookReceiveMessageUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookReceiveMessageUrl");
+                option.WebHookSendMessageUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookSendMessageUrl");
+                option.WebHookSubscriptionUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookSubscriptionUrl");
+            });
+            services.Configure<WebHookRetryOptions>(option => 
+            {
+                option.TimeOut = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:TimeOutInSeconds"));
+                option.MaxRetries = configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:MaxRetries");
+                option.Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:DelayInSeconds"));
+            });
             services.AddAzureClients(azureClientFactoryBuilder =>
             {
                 var serviceBusConnStr = configuration.GetValue<string>("Employee:AzureServiceBusInfo:DefaultConnStr");

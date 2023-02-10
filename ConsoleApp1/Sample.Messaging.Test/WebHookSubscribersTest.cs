@@ -8,9 +8,9 @@ namespace Sample.Messaging.Test
         [TestMethod]
         public void WhenNewSenderKeyAndMessageKeyThenAddSubscriber()
         {
-            var webHookSubscriber = new WebHookSubscribers();
+            var webHookSubscriber = new WebHookSubscription();
             webHookSubscriber.Add("EmployeeSubdomain", "PayRollAdded", "https://localhost");
-            Assert.IsTrue(webHookSubscriber.GetWebHookBySenderKey("EmployeeSubdomain").ToList().Count == 1);
+            Assert.IsTrue(webHookSubscriber.GetWebHookBySubscriberKey("EmployeeSubdomain").ToList().Count == 1);
         }
     }
 }

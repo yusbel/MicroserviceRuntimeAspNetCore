@@ -1,4 +1,4 @@
-﻿using Sample.Messaging;
+﻿using Sample.Messaging.Bus;
 using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -25,16 +25,16 @@ namespace TestProject1
         [TestMethod]
         public void GivenExistingKeyThenUpdateMessages() 
         {
-            var inMemmoryMessage = InMemmoryMessage<IExternalMessage>.Create();
+            var inMemmoryMessage = InMemoryMessageBus<IExternalMessage>.Create();
             inMemmoryMessage.Add("Test", new Msg() { Name = "Yusbel" });
             inMemmoryMessage.Add("Test", new Msg() { Name = "Test" });
-            Assert.IsTrue(inMemmoryMessage.GetMessage("Test").Count() == 2);
+            Assert.IsTrue(inMemmoryMessage.GetAndRemove("Test").Count() == 2);
         }
 
         [TestMethod]
         public void GivenExistingKeyIsNullThenThrowException() 
         {
-            Assert.ThrowsException<ArgumentNullException>(() => InMemmoryMessage<IExternalMessage>.Create().Add(null, new Msg() { Name = "Test" }));
+            Assert.ThrowsException<ArgumentNullException>(() => InMemoryMessageBus<IExternalMessage>.Create().Add(null, new Msg() { Name = "Test" }));
         }
     }
 }

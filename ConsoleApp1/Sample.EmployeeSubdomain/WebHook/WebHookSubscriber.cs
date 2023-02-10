@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Messaging.WebHooks.Data
+namespace Sample.EmployeeSubdomain.WebHook
 {
-    public class WebHookSubscriber : WebHookSubscriberEntity
+    public class WebHookSubscriber
     {
-        public string SubscriberKey { get; set; }
+        public string SenderKey { get; set; }
         public string MessageKey { get; init; }
         public string WebHookUrl { get; init; }
     }

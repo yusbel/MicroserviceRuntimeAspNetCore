@@ -15,9 +15,9 @@ namespace Sample.Messaging.Test
         public void WhenAddingMessageWithExistingSubscritionSenderKeyThenNewMessageAddedToSubscriptionSender() 
         {
             var fixture = new Fixture();
-            var webHookSubscribers = fixture.Create<WebHookSubscribers>();
+            var webHookSubscribers = fixture.Create<WebHookSubscription>();
             webHookSubscribers.Add("EmployeeSubdomain", "PayRollAdded", "http://localhost");
-            fixture.Register<IWebHookSubscribers>(() => webHookSubscribers);
+            fixture.Register<IWebHookSubscription>(() => webHookSubscribers);
             var webHookMsgSubscriber = fixture.Create<WebHookMessageSubscriber>();
             webHookMsgSubscriber.Subscribe("EmployeeSubdomain");
             fixture.Register<IWebHookMessageSubscriber>(() => webHookMsgSubscriber);
@@ -28,7 +28,7 @@ namespace Sample.Messaging.Test
             }
             if (webHookMsgSubscriber.TryGetInMemmoryMessage("EmployeeSubdomain", out var msgs))
             {
-                Assert.IsTrue(msgs.GetMessage("PayRollAdded").ToList().Count == 1);
+                Assert.IsTrue(msgs.GetAndRemove("PayRollAdded").ToList().Count == 1);
             }
         }
 

@@ -1,4 +1,6 @@
-﻿using Sample.Sdk.Msg.Interfaces;
+﻿using Sample.Messaging.Bus;
+using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,18 +9,23 @@ using System.Threading.Tasks;
 
 namespace Sample.Messaging
 {
-    public class MemmoryDispatcher : IMessageDispatcher
+    public class MemoryDispatcher : IMessageDispatcher
     {
-        public Task<bool> Dispatch(string key, IExternalMessage message)
+        private readonly IInMemoryMessageBus<ExternalMessage> messageBus;
+
+        public MemoryDispatcher(IInMemoryMessageBus<ExternalMessage> messageBus) 
         {
-            InMemmoryMessage<IExternalMessage>.Create().Add(key, message);
-            return Task.FromResult(true);
+            this.messageBus = messageBus;
         }
 
-        public Task<bool> Dispatch(string key, string message)
+        public Task<bool> Dispatch(string subscriberKey)
         {
-            InMemmoryMessage<string>.Create().Add(key, message);
-            return Task.FromResult(true);
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DispatchAll()
+        {
+            throw new NotImplementedException();
         }
     }
 }

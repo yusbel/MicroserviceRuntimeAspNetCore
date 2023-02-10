@@ -1,13 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sample.EmployeeSubdomain;
-using Sample.EmployeeSubdomain.Service;
-using Sample.EmployeeSubdomain.Service.DatabaseContext;
-using Sample.EmployeeSubdomain.Service.Entities;
-using Sample.EmployeeSubdomain.Service.Interfaces;
-using Sample.EmployeeSubdomain.Service.Services;
-using Sample.EmployeeSubdomain.Service.Services.Interfaces;
 using Sample.Sdk;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
