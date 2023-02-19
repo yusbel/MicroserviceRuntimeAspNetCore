@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg.Data
 {
-    public class ExternalMessage : IExternalMessage
+    public class ExternalMessage
     {
         public string Key { get; set; }
         public string CorrelationId { get; set; }

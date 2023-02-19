@@ -16,9 +16,9 @@ namespace Sample.Messaging.Middleware
         private readonly IMessagePublisher _msgPublisher;
         private RequestDelegate _next;
         private ILogger<MessageMiddleware> _logger;
-        private IWebHookMessageSubscriber _webHookMsgSubscriber;
+        private IWebHookMessageSubscription _webHookMsgSubscriber;
 
-        public MessageMiddleware(RequestDelegate next, ILoggerFactory loggerFactory, IWebHookMessageSubscriber webHookMessageSubscriber, IMessagePublisher msgPublisher) =>
+        public MessageMiddleware(RequestDelegate next, ILoggerFactory loggerFactory, IWebHookMessageSubscription webHookMessageSubscriber, IMessagePublisher msgPublisher) =>
             (_next, _logger, _webHookMsgSubscriber, _msgPublisher) = (next, loggerFactory.CreateLogger<MessageMiddleware>(), webHookMessageSubscriber, msgPublisher);
 
         public async Task InvokeAsync(HttpContext context)

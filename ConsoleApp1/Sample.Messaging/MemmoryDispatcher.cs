@@ -1,4 +1,4 @@
-﻿using Sample.Messaging.Bus;
+﻿using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using System;

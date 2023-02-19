@@ -10,6 +10,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using Sample.PayRoll.Services.gRPC;
 
+///$Env: AZURE_CLIENT_ID = "51df4bce-6532-4345-9be7-5be7af315003"
+/// $Env:AZURE_CLIENT_SECRET="tdm8Q~Cw_e7cLFadttN7Zebacx_kC5Y-0xaWZdv2"
+/// $Env:AZURE_TENANT_ID="c8656f45-daf5-42c1-9b29-ac27d3e63bf3"
+
+Environment.SetEnvironmentVariable("AZURE_CLIENT_ID", "51df4bce-6532-4345-9be7-5be7af315003");
+Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", "tdm8Q~Cw_e7cLFadttN7Zebacx_kC5Y-0xaWZdv2");
+Environment.SetEnvironmentVariable("AZURE_TENANT_ID", "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
+
 WebApplicationBuilder appBuilder = WebApplication.CreateBuilder(args);
 
 appBuilder.Services.AddHostedService<PayRollHostApp>()

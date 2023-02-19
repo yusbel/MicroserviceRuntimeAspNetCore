@@ -19,6 +19,14 @@ using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Settings;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.WebHook.Data;
+using Google.Protobuf.Reflection;
+using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Asymetric;
+using Sample.Sdk.InMemory;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
+using Azure.Identity;
+using Azure.Security.KeyVault.Certificates;
+using Sample.Sdk.Core.Security.Providers.Protocol;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -26,6 +34,11 @@ namespace Sample.EmployeeSubdomain
     {
         public static IServiceCollection AddEmployeeServiceDependencies(this IServiceCollection services, IConfiguration configuration) 
         {
+            //Security
+            services.Configure<ServiceOptions>(configuration.GetSection("Employee:ConfigurationOptions"));
+            services.AddSingleton<IInMemoryMessageBus<ShortLivedSessionState>, InMemoryMessageBus<ShortLivedSessionState>>();
+            services.AddSingleton<IInMemoryMessageBus<PointToPointChannel>, InMemoryMessageBus<PointToPointChannel>>();
+            
             services.AddTransient<IEmployee, Employee>();
             services.AddTransient<IEntityContext<EmployeeContext, EmployeeEntity>, EntityContext<EmployeeContext, EmployeeEntity>>();
             services.AddDbContext<EmployeeContext>(options =>
@@ -57,15 +70,19 @@ namespace Sample.EmployeeSubdomain
             services.AddAzureClients(azureClientFactoryBuilder =>
             {
                 var serviceBusConnStr = configuration.GetValue<string>("Employee:AzureServiceBusInfo:DefaultConnStr");
-                azureClientFactoryBuilder.AddServiceBusClient(serviceBusConnStr).ConfigureOptions((options, host) =>
+                //For employee message service to send and retrieve employee messages
+                azureClientFactoryBuilder.AddServiceBusClient(serviceBusConnStr)
+                //.WithName("ServiceBusClientEmployeeMessages")
+                .ConfigureOptions((options, host) =>
                 {
-                    options.Identifier = "EmployeeService";
+                    options.Identifier = "ServiceBusClientEmployeeMessages";
                     options.RetryOptions = new ServiceBusRetryOptions()
                     {
-                        Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:MessageBusInfo:EmployeeAddedSender:DelayInSeconds")),
-                        MaxDelay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:MessageBusInfo:EmployeeAddedSender:MaxDelayInSeconds")),
-                        MaxRetries = configuration.GetValue<int>("Employee:MessageBusInfo:EmployeeAddedSender:MaxRetries"),
-                        Mode = configuration.GetValue<string>("Employee:MessageBusInfo:EmployeeAddedSender:Mode") == "Fixed" ? ServiceBusRetryMode.Fixed : ServiceBusRetryMode.Exponential
+                        Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:Service:Default:RetryOptions:DelayInSeconds")),
+                        MaxDelay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:Service:Default:RetryOptions:MaxDelayInSeconds")),
+                        MaxRetries = configuration.GetValue<int>("Employee:Service:Default:RetryOptions:MaxRetries"),
+                        Mode = configuration.GetValue<string>("Employee:Service:Default:RetryOptions:Mode") == "Fixed" ? ServiceBusRetryMode.Fixed 
+                                                                                                                       : ServiceBusRetryMode.Exponential
                     };
                 });
             });

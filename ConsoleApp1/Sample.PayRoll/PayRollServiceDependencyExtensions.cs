@@ -14,6 +14,7 @@ using Sample.PayRoll.Messages.InComming;
 using Sample.PayRoll.Entities;
 using Sample.PayRoll.Interfaces;
 using Sample.PayRoll.DatabaseContext;
+using Sample.PayRoll.Services;
 
 namespace Sample.PayRoll
 {
@@ -26,12 +27,18 @@ namespace Sample.PayRoll
             services.AddTransient<IMessageBusSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageBusSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageBusReceiver<EmployeeAdded>, ServiceBusMessageReceiver<EmployeeAdded>>();
+            services.AddHostedService<EmployeeAddedHostedService>();
+            services.AddTransient<IEmployeeAddedService, EmployeeAddedService>();
+            
+            services.AddHttpClient();//TODO:setup polly
+
             services.AddDbContext<PayRollContext>(options =>
             {
                 options.EnableDetailedErrors(true);
             });
             services.AddAzureClients(azureClientFactoryBuilder => 
             {
+                
                 //EmployeeAdded event
                 azureClientFactoryBuilder.AddServiceBusClient(configuration.GetValue<string>("PayRoll:AzureServiceBusInfo:DefaultConnStr"))
                 .ConfigureOptions(options => 

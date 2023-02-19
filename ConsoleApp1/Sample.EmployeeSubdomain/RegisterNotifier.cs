@@ -1,7 +1,7 @@
 ﻿using Sample.EmployeeSubdomain.Messages;
 using Sample.EmployeeSubdomain.WebHook;
-using Sample.Messaging.Bus;
 using Sample.Sdk.Core;
+using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using System;
@@ -18,7 +18,7 @@ namespace Sample.EmployeeSubdomain
         {
             MessageNotifier<EmployeeAdded>.Register(typeof(EmployeeAdded), (msg) =>
             {
-                InMemoryMessageBus<ExternalMessage>.Create().Add("EmployeeAdded", msg);
+                (new InMemoryMessageBus<ExternalMessage>()).Add("EmployeeAdded", msg);
                 Console.WriteLine("Employee added notifier");
                 Console.WriteLine(msg.GetType());
                 return true;

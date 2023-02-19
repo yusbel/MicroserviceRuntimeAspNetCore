@@ -9,14 +9,14 @@ namespace Sample.Sdk.EntityModel
 {
     public class Entity
     {
-        private Guid _id;
+        private string _id;
         [Key]
-        public Guid Id 
+        public string Id 
         {
             get 
             {
-                if(_id == Guid.Empty)
-                    Id = Guid.NewGuid();
+                if(string.IsNullOrEmpty(_id))
+                    Id = Guid.NewGuid().ToString();
                 return _id;
             }
             set 

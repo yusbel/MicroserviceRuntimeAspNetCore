@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sample.EmployeeSubdomain.Middleware;
 using Sample.Sdk;
+using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Persistance.Context;
 using System;
 using System.Collections.Generic;
@@ -24,12 +26,14 @@ namespace Sample.EmployeeSubdomain
 
         public void ConfigureServices(IServiceCollection services)
         {
-            RegisterNotifier.Register();
+            //RegisterNotifier.Register();
         }
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseMiddleware<WebHookMiddleware>();
-
+            
+            app.UseMiddleware<WellknownMiddleware>();
+            app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
+            //app.UseMiddleware<WebHookMiddleware>();//would be replaced with EventGrid
 
             app.Run(async context =>
             {

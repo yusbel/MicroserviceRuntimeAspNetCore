@@ -9,6 +9,9 @@ namespace Sample.Sdk.Msg.Interfaces
 {
     public interface IMessageBusSender
     {
-        Task<bool> Send(string queueName, CancellationToken token, IEnumerable<ExternalMessage> messages, Action<IExternalMessage> onSent);
+        Task<bool> Send(string queueName
+            , CancellationToken token
+            , IEnumerable<ExternalMessage> messages
+            , Action<ExternalMessage> onSent);
     }
 }

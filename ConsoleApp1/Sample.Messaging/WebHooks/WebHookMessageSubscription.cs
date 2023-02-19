@@ -4,19 +4,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Sample.Messaging.Bus;
+using Sample.Sdk.InMemory;
 
 namespace Sample.Messaging.WebHooks
 {
     /// <summary>
     /// Singleton instance
     /// </summary>
-    public class WebHookMessageSubscriber : IWebHookMessageSubscriber
+    public class WebHookMessageSubscription : IWebHookMessageSubscription
     {
         private readonly ConcurrentDictionary<string, InMemoryMessageBus<string>> messageSubscribers = new ConcurrentDictionary<string, InMemoryMessageBus<string>>();
         private IWebHookSubscription _webHookSubscriber;
 
-        public WebHookMessageSubscriber(IWebHookSubscription webHookSubscribers) => (_webHookSubscriber) = (webHookSubscribers);
+        public WebHookMessageSubscription(IWebHookSubscription webHookSubscribers) => (_webHookSubscriber) = (webHookSubscribers);
 
         /// <summary>
         /// Create subscribe message if it does not exist

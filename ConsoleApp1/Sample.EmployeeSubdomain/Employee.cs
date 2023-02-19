@@ -1,10 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.Entities;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Messages;
 using Sample.Sdk;
 using Sample.Sdk.Core;
+using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Persistance;
@@ -25,7 +29,15 @@ namespace Sample.EmployeeSubdomain
         private ILogger<Employee> _logger;
         public Employee(ILoggerFactory loggerFactory,
             IEntityContext<EmployeeContext, EmployeeEntity> entityContext,
-            IMessageBusSender messageSender) : base(loggerFactory.CreateLogger<Employee>(), entityContext, messageSender)
+            IAsymetricCryptoProvider asymetricCryptoProvider,
+            ISymetricCryptoProvider cryptoProvider,
+            IOptions<CustomProtocolOptions> options,
+            IMessageBusSender messageSender) : base(loggerFactory.CreateLogger<Employee>()
+                , cryptoProvider
+                , asymetricCryptoProvider
+                , entityContext
+                , options
+                , messageSender)
         {
             Guard.ThrowWhenNull(entityContext, loggerFactory, messageSender);
             _logger = loggerFactory.CreateLogger<Employee>();

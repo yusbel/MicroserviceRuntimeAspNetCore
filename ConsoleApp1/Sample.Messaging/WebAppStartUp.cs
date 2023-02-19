@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sample.Messaging.Bus;
 using Sample.Messaging.Middleware;
 using Sample.Messaging.Publishers;
 using Sample.Messaging.WebHooks;
+using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
 using System;
 using System.Collections.Generic;
@@ -24,15 +24,9 @@ namespace Sample.Messaging
         public WebAppStartUp(IConfiguration configuration) => _configuration = configuration;
         public void ConfigureServices(IServiceCollection services) 
         {
-            services.AddSingleton<IInMemoryMessageBus<ExternalMessage>, InMemoryMessageBus<ExternalMessage>>();
-            services.AddSingleton<IWebHookSubscription, WebHookSubscription>();
-            services.AddSingleton<IWebHookMessageSubscriber, WebHookMessageSubscriber>();
-            services.AddTransient<IWebHookPublisher, WebHookPublisher>();
-            services.AddTransient<IMessagePublisher, MessagePublisher>();
-            services.AddHttpClient<WebHookPublisher>(client =>
-            {
+            
 
-            });
+            
         }
 
         public void Configure(IApplicationBuilder appBuilder, IWebHostEnvironment env) 

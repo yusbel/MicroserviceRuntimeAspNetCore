@@ -40,11 +40,16 @@ namespace Sample.Messaging.Middleware
                 var webHookSubscriber = System.Text.Json.JsonSerializer.Deserialize<WebHooks.Data.WebHookSubscriber>(jsonString);
                 if (webHookSubscriber != null)
                 {
-                    webHookSubscriber = _webHookSubscribers.Add(webHookSubscriber.SubscriberKey, webHookSubscriber.MessageKey, webHookSubscriber.WebHookUrl);
+                    if (_webHookSubscribers.TryAdd(webHookSubscriber.SubscriberKey, webHookSubscriber.MessageKey, webHookSubscriber.WebHookUrl, out webHookSubscriber)) 
+                    {
+                        context.Response.StatusCode = StatusCodes.Status201Created;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(webHookSubscriber)));
+                    }
                 }
-                context.Response.StatusCode = StatusCodes.Status201Created;
-                context.Response.ContentType = "application/json";
-                await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(webHookSubscriber)));
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                context.Response.ContentType = "application/text";
+                await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes("Subscription was not added"));
                 return;
             }
             if (context.Request.Method == HttpMethod.Get.ToString())

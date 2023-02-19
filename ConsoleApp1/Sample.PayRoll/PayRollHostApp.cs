@@ -28,7 +28,7 @@ namespace Sample.PayRoll
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await RegisterNotifier.WebHook(new PayRollData() { EmployeeKey = Guid.NewGuid().ToString(), Salary = rnd.Next(1000) });
+                //await RegisterNotifier.WebHook(new PayRollData() { EmployeeKey = Guid.NewGuid().ToString(), Salary = rnd.Next(1000) });
                 await Task.Delay(10000);
             }
 

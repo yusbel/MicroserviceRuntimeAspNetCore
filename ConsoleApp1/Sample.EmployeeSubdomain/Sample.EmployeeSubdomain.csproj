@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sample.Messaging\Sample.Messaging.csproj" />
+    <ProjectReference Include="..\Sample.Sdk.AspNetCore\Sample.Sdk.AspNetCore.csproj" />
     <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
   </ItemGroup>
 

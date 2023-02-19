@@ -17,7 +17,7 @@ namespace Sample.Messaging
         public Task Dispath(string path, string key, string msg) 
         {
             Guard.ThrowWhenNull(key, msg);
-            _messageDispatcher.ToList().ForEach(dispatcher => dispatcher.Dispatch(key, msg));
+            //_messageDispatcher.ToList().ForEach(dispatcher => dispatcher.Dispatch(key, msg));
             return Task.CompletedTask;
         }
     }

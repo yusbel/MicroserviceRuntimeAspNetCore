@@ -9,11 +9,11 @@ namespace Sample.Messaging.Publishers
 {
     public class MessagePublisher : IMessagePublisher
     {
-        private readonly IWebHookMessageSubscriber _webHookMsgSubs;
+        private readonly IWebHookMessageSubscription _webHookMsgSubs;
         private readonly IWebHookSubscription _subscribers;
         private readonly IWebHookPublisher _webHookPublisher;
 
-        public MessagePublisher(IWebHookMessageSubscriber webHookMessageSubscriber, IWebHookSubscription subscribers, IWebHookPublisher webHookPublisher) =>
+        public MessagePublisher(IWebHookMessageSubscription webHookMessageSubscriber, IWebHookSubscription subscribers, IWebHookPublisher webHookPublisher) =>
             (_webHookMsgSubs, _subscribers, _webHookPublisher) = (webHookMessageSubscriber, subscribers, webHookPublisher);
         public async Task Publish()
         {

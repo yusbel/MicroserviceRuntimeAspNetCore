@@ -1,7 +1,11 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using System;
@@ -22,7 +26,21 @@ namespace Sample.Sdk.Msg
         private ILogger<ServiceBusMessageSender> _logger;
         public ServiceBusMessageSender(ILoggerFactory loggerFactory
             , IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
-            , IEnumerable<ServiceBusClient> serviceBusClients) : base(serviceBusInfoOptions, serviceBusClients)
+            , ServiceBusClient serviceBusClient
+            , IAsymetricCryptoProvider asymCryptoProvider
+            , ISymetricCryptoProvider cryptoProvider
+            , IExternalServiceKeyProvider externalServiceKeyProvider
+            , HttpClient httpClient
+            , IOptions<AzureKeyVaultOptions> keyVaultOptions
+            , ISecurePointToPoint securePointToPoint) : 
+            base(serviceBusInfoOptions
+                , serviceBusClient
+                , asymCryptoProvider
+                , cryptoProvider
+                , externalServiceKeyProvider
+                , httpClient
+                , keyVaultOptions
+                , securePointToPoint)
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }
@@ -37,38 +55,41 @@ namespace Sample.Sdk.Msg
         /// <param name="onSent"></param>
         /// <returns></returns>
         /// <exception cref="SenderQueueNotRegisteredException"></exception>
-        public async Task<bool> Send(string queueName, CancellationToken token, IEnumerable<ExternalMessage> messages, Action<IExternalMessage> onSent)
+        public async Task<bool> Send(string queueName, CancellationToken token, IEnumerable<ExternalMessage> messages, Action<ExternalMessage> onSent)
         {
-            if (!serviceBusSender.ContainsKey(queueName)) 
+            if (!serviceBusSender.Any(s=>s.Key.ToLower() == queueName.ToLower())) 
             {
                 throw new SenderQueueNotRegisteredException();
             }
-            var sender = serviceBusSender[queueName];
+            var sender = serviceBusSender.First(s=>s.Key.ToLower() == queueName.ToLower()).Value;
             //create service bus then iterate over messages, use cancellation token in case the service is stopped while processing
-            while (!token.IsCancellationRequested && messages.Any(item=> item != null)) 
+            foreach(var msg in messages) 
             {
-                var msg = messages.Take(1).FirstOrDefault(item=> item != null);
-                var serviceBusMsg = new ServiceBusMessage() 
+                var serviceBusMsg = new ServiceBusMessage()
                 {
-                    ContentType= MsgContentType, 
-                    MessageId = msg.Key, 
+                    ContentType = MsgContentType,
+                    MessageId = msg.Key,
                     CorrelationId = msg.CorrelationId,
-                    Body = new BinaryData(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(msg)))
+                    Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
                 };
                 try
                 {
                     await sender.SendMessageAsync(serviceBusMsg);
                 }
-                catch (ServiceBusException e)   
+                catch (ServiceBusException e)
                 {
                     throw;
                 }
 
-                if (onSent != null) 
+                if (onSent != null)
                 {
-                    onSent(new ExternalMessage() { Content = msg.Content, Key = msg.Key, CorrelationId = msg.CorrelationId });
+                    onSent(new ExternalMessage() 
+                    { 
+                        Content = msg.Content, 
+                        Key = msg.Key, 
+                        CorrelationId = msg.CorrelationId 
+                    });
                 }
-                messages.ToList().Remove(msg);
             }
             return true;
         }

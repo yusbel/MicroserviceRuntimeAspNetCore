@@ -1,4 +1,5 @@
-﻿using Sample.Messaging.Bus;
+﻿using Sample.Sdk.InMemory;
+using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace TestProject1
     [TestClass]
     public class InMemmoryMessageTest
     {
-        private class Msg : IExternalMessage
+        private class Msg : ExternalMessage
         {
             private string _serializationType;
             public string SerializationType { get => "Test"; set => _serializationType = value; }
@@ -25,7 +26,7 @@ namespace TestProject1
         [TestMethod]
         public void GivenExistingKeyThenUpdateMessages() 
         {
-            var inMemmoryMessage = InMemoryMessageBus<IExternalMessage>.Create();
+            var inMemmoryMessage = new InMemoryMessageBus<ExternalMessage>();
             inMemmoryMessage.Add("Test", new Msg() { Name = "Yusbel" });
             inMemmoryMessage.Add("Test", new Msg() { Name = "Test" });
             Assert.IsTrue(inMemmoryMessage.GetAndRemove("Test").Count() == 2);
@@ -34,7 +35,7 @@ namespace TestProject1
         [TestMethod]
         public void GivenExistingKeyIsNullThenThrowException() 
         {
-            Assert.ThrowsException<ArgumentNullException>(() => InMemoryMessageBus<IExternalMessage>.Create().Add(null, new Msg() { Name = "Test" }));
+            Assert.ThrowsException<ArgumentNullException>(() => (new InMemoryMessageBus<ExternalMessage>()).Add(null, new Msg() { Name = "Test" }));
         }
     }
 }

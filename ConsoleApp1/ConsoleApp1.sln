@@ -5,7 +5,7 @@ VisualStudioVersion = 17.2.32602.215
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{91E47948-A2F1-45DE-8ED1-575DB35ED54F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject1", "TestProject1\TestProject1.csproj", "{74771BAE-4F7D-4243-B09F-20B435D2611C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Sdk.Tests", "TestProject1\Sample.Sdk.Tests.csproj", "{74771BAE-4F7D-4243-B09F-20B435D2611C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.EmployeeSubdomain", "Sample.EmployeeSubdomain\Sample.EmployeeSubdomain.csproj", "{E7FAFA19-AA5F-4B17-9D96-6357B670780C}"
 EndProject
@@ -27,9 +27,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Extensions.Azure"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.ServiceBus", "..\..\azure-sdk-for-net\sdk\servicebus\Microsoft.Azure.ServiceBus\src\Microsoft.Azure.ServiceBus.csproj", "{54C1B0D1-8F79-4DD9-8E94-4FDBA7A4CB5E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Messaging.ServiceHost", "Sample.Messaging.ServiceHost\Sample.Messaging.ServiceHost.csproj", "{E1CAB6D7-0A8E-465D-B151-C942BF682E10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Messaging.ServiceHost", "Sample.Messaging.ServiceHost\Sample.Messaging.ServiceHost.csproj", "{E1CAB6D7-0A8E-465D-B151-C942BF682E10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.PayRoll.ServiceHost", "Sample.PayRoll.ServiceHost\Sample.PayRoll.ServiceHost.csproj", "{F20A592E-456E-4BE9-B1A0-3EE460B7D9CF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.PayRoll.ServiceHost", "Sample.PayRoll.ServiceHost\Sample.PayRoll.ServiceHost.csproj", "{F20A592E-456E-4BE9-B1A0-3EE460B7D9CF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Employee.Tests", "Sample.Employee.Tests\Sample.Employee.Tests.csproj", "{2400BB83-6E67-4FBC-835E-32F29F24DED3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Sdk.AspNetCore", "Sample.Sdk.AspNetCore\Sample.Sdk.AspNetCore.csproj", "{FD28F14B-07B2-4E36-94F6-675D379493AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -93,6 +97,14 @@ Global
 		{F20A592E-456E-4BE9-B1A0-3EE460B7D9CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F20A592E-456E-4BE9-B1A0-3EE460B7D9CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F20A592E-456E-4BE9-B1A0-3EE460B7D9CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2400BB83-6E67-4FBC-835E-32F29F24DED3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2400BB83-6E67-4FBC-835E-32F29F24DED3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2400BB83-6E67-4FBC-835E-32F29F24DED3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2400BB83-6E67-4FBC-835E-32F29F24DED3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD28F14B-07B2-4E36-94F6-675D379493AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD28F14B-07B2-4E36-94F6-675D379493AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD28F14B-07B2-4E36-94F6-675D379493AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD28F14B-07B2-4E36-94F6-675D379493AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

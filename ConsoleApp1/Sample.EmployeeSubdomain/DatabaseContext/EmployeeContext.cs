@@ -42,6 +42,12 @@ namespace Sample.EmployeeSubdomain.DatabaseContext
             optionsBuilder.EnableDetailedErrors();
             base.OnConfiguring(optionsBuilder);
         }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ExternalEventEntity>().HasKey(e => e.Id);
+            base.OnModelCreating(modelBuilder);
+        }
         public DbSet<EmployeeEntity> Employees { get; set; }
         public DbSet<ExternalEventEntity> ExternalEvents { get; set; }
         public DbSet<TransactionEntity> Transactions { get; set; }

@@ -31,15 +31,13 @@ namespace Sample.Sdk.Persistance.Context
 
         public async Task<IQueryable<T>> GetAll()
         {
-            var strategy = _dbContext.Database.CreateExecutionStrategy();
-            var result = await strategy.ExecuteAsync(async () => await Task.Run(()=> _dbContext.Set<T>().AsNoTracking().AsQueryable()));
+            var result = await Task.Run(()=> _dbContext.Set<T>().AsNoTracking().AsQueryable());
             return result;
         }
 
         public async Task<T> GetById(Guid id)
         {
-            var strategy = _dbContext.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () => await _dbContext.Set<T>().SingleOrDefaultAsync(item => item.Id == id));
+            return await _dbContext.Set<T>().SingleOrDefaultAsync(item => item.Id == id.ToString());
         }
 
         public async Task<bool> Save()
@@ -47,11 +45,11 @@ namespace Sample.Sdk.Persistance.Context
             var strategy = _dbContext.Database.CreateExecutionStrategy();
             var transaction = new TransactionEntity() { Id = Guid.NewGuid().ToString() };
             _dbContext.Add(transaction);
-            await strategy.ExecuteInTransaction(
+            strategy.ExecuteInTransaction(
                 _dbContext,
-                operation: async (context) => 
+                operation: (context) => 
                 {
-                    await context.SaveChangesAsync(acceptAllChangesOnSuccess: false);
+                    context.SaveChanges(acceptAllChangesOnSuccess: false);
                 },
                 verifySucceeded: (context) =>
                 {
@@ -69,16 +67,17 @@ namespace Sample.Sdk.Persistance.Context
             return await _dbContext.SaveChangesAsync() == 1;
         }
 
-        public async Task<bool> SaveWithEvent(ExternalEventEntity eventEntity)
+        //TODO: improve or change the code to use stored procedured
+        public bool SaveWithEvent(ExternalEventEntity eventEntity)
         {
             _dbContext.Add(eventEntity);
             var strategy = _dbContext.Database.CreateExecutionStrategy();
 
-            await strategy.ExecuteInTransaction(
+            strategy.ExecuteInTransaction(
                 _dbContext, 
-                operation: async (context) => 
+                operation: (context) => 
                     {
-                       await context.SaveChangesAsync(acceptAllChangesOnSuccess: false);
+                       context.SaveChanges(acceptAllChangesOnSuccess: false);
                     }, 
                 verifySucceeded: (context) => 
                     {
