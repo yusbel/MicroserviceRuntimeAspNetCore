@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sample.EmployeeSubdomain.Middleware;
 using Sample.Sdk;
+using Sample.Sdk.AspNetCore.Middleware;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Persistance.Context;
@@ -33,6 +34,8 @@ namespace Sample.EmployeeSubdomain
             
             app.UseMiddleware<WellknownMiddleware>();
             app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
+            app.UseMiddleware<CustomProtocolAcknowledgementMiddleware>();
+
             //app.UseMiddleware<WebHookMiddleware>();//would be replaced with EventGrid
 
             app.Run(async context =>

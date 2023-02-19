@@ -4,6 +4,7 @@ using Sample.PayRoll.DatabaseContext;
 using Sample.PayRoll.Entities;
 using Sample.PayRoll.Interfaces;
 using Sample.PayRoll.Messages.InComming;
+using Sample.PayRoll.Messages.Sent;
 using Sample.Sdk.Core;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
@@ -41,7 +42,7 @@ namespace Sample.PayRoll
         public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail)
         {
             _payRollEntity = new PayRollEntity() { EmployeeIdentifier = employeeIdentifier, MonthlySalary = monthlySalary, MailPaperRecord = sendMail, Id = Guid.NewGuid().ToString() };
-            //await Save(null, () => MessageNotifier<EmployeeAdded>.Notify(new EmployeeAdded()));
+            await Save();
             return true;
         }
     }

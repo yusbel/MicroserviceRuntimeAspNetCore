@@ -9,5 +9,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , byte[] encryptedData
             , IAsymetricCryptoProvider cryptoProvider
             , CancellationToken token);
+
+        Task<PointToPointChannel> GetOrCreate(string identifier);
     }
 }

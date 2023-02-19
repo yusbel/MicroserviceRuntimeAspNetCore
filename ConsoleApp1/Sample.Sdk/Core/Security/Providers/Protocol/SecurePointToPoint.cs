@@ -1,4 +1,5 @@
 ﻿using Azure.Security.KeyVault.Certificates;
+using Microsoft.Azure.Amqp.Framing;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,11 +7,13 @@ using Microsoft.IdentityModel.Tokens;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.InMemory;
+using Sample.Sdk.Msg.Data;
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core.Security.Providers.Protocol
@@ -87,6 +90,33 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
                 return plainData;
             }
             return new byte[0];
+        }
+
+        private PointToPointChannel GetChannel(string identifier) 
+        {
+            if (_sessions.TryGet(identifier, out var result)) 
+            {
+                return result.First();
+            }
+            return null;
+        }
+        public async Task<PointToPointChannel> GetOrCreate(string identifier) 
+        {
+            var channel = GetChannel(identifier);
+            if (channel != null) 
+            {
+                return channel;
+            }
+            channel = await _pointToPointChannel.Create(identifier
+                , _options.Value.WellknownSecurityEndpoint
+                , _certificateClient
+                , _serviceOptions
+                , _httpClient
+                , _externalServiceKeyProvider
+                , _loggerFactory
+                , CancellationToken.None);
+            _sessions.Add(identifier, channel);
+            return channel;
         }
     }
 }

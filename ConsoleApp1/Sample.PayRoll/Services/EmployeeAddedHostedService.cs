@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Sample.PayRoll.Messages.InComming;
 using Sample.Sdk.Msg.Interfaces;
 using System;
@@ -11,23 +12,20 @@ namespace Sample.PayRoll.Services
 {
     public class EmployeeAddedHostedService : IHostedService
     {
-        private static object _locker = new object();
-        private readonly IEmployeeAddedService _serviceEmployeeAdded;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public EmployeeAddedHostedService(IEmployeeAddedService employeeAddedService)
+        public EmployeeAddedHostedService(IServiceScopeFactory serviceScopeFactory)
         {
-            _serviceEmployeeAdded = employeeAddedService;
+            _serviceScopeFactory = serviceScopeFactory;
         }
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Task.Factory.StartNew(() => 
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                lock(_locker) 
-                {
-                    _serviceEmployeeAdded.Process(cancellationToken);
-                }
-                
-            });
+                var serviceEmpAddedService = scope.ServiceProvider.GetService<IEmployeeAddedService>();
+                serviceEmpAddedService.Process(cancellationToken);
+            }
+
             //var excecutingTask = _serviceEmployeeAdded.Process(cancellationToken); 
             //if(excecutingTask.IsCompleted) 
             //{

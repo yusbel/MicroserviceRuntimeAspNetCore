@@ -1,5 +1,7 @@
 ﻿using Sample.PayRoll.Messages.InComming;
+using Sample.PayRoll.Services.Processors.Converter;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +13,14 @@ namespace Sample.PayRoll.Services
     public class EmployeeAddedService : IEmployeeAddedService
     {
         private readonly IMessageBusReceiver<EmployeeAdded> _serviceEmpAdded;
+        private readonly IMessageProcessor<EmployeeDto> _messageProcessor;
 
         public EmployeeAddedService(
-            IMessageBusReceiver<EmployeeAdded> serviceEmpAdded)
+            IMessageBusReceiver<EmployeeAdded> serviceEmpAdded
+            , IMessageProcessor<EmployeeDto> messageProcessor)
         {
             _serviceEmpAdded = serviceEmpAdded;
+            _messageProcessor = messageProcessor;
         }
         public async Task<bool> Process(CancellationToken token)
         {
@@ -23,7 +28,7 @@ namespace Sample.PayRoll.Services
             {
                 await _serviceEmpAdded.Receive(token, async (employee) =>
                 {
-                    await Task.Delay(1000);
+                    await _messageProcessor.Process(token, employee);
                     return employee;
                 }, "EmployeeAdded");
             }

@@ -8,6 +8,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,7 +33,8 @@ namespace Sample.Sdk.Msg
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , HttpClient httpClient
             , IOptions<AzureKeyVaultOptions> keyVaultOptions
-            , ISecurePointToPoint securePointToPoint) : 
+            , ISecurePointToPoint securePointToPoint
+            , ISecurityEndpointValidator validator) : 
             base(serviceBusInfoOptions
                 , serviceBusClient
                 , asymCryptoProvider
@@ -40,7 +42,8 @@ namespace Sample.Sdk.Msg
                 , externalServiceKeyProvider
                 , httpClient
                 , keyVaultOptions
-                , securePointToPoint)
+                , securePointToPoint
+                , validator)
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }

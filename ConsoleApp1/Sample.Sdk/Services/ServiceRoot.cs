@@ -11,12 +11,11 @@ namespace Sample.Sdk.Services
 {
     public abstract class ServiceRoot : IServiceMessageReceiver
     {
-        private readonly IEnumerable<IMessageProcessor> _messageProcessors;
         private readonly IOptions<List<ServiceBusInfoOptions>> _options;
 
-        public ServiceRoot(IEnumerable<IMessageProcessor> messageProcessors, IOptions<List<ServiceBusInfoOptions>> options)
+        public ServiceRoot(IOptions<List<ServiceBusInfoOptions>> options)
         {
-            _messageProcessors = messageProcessors;
+            
             _options = options;
         }
 
@@ -36,18 +35,7 @@ namespace Sample.Sdk.Services
         {
             while (!token.IsCancellationRequested)
             {
-                var actions = GetMessageReceivers(token).ToList().Select(action => Task.Run(action)).AsEnumerable();
-                var taskResult = await Task.WhenAll(actions);
-                if (taskResult.Any() && _messageProcessors.Any())
-                {
-                    taskResult.ToList().ForEach(message =>
-                    {
-                        _messageProcessors.ToList().ForEach(async (messageProcessor) =>
-                        {
-                            await messageProcessor.Process(token, message);
-                        });
-                    });
-                }
+                
             }
         }
     }

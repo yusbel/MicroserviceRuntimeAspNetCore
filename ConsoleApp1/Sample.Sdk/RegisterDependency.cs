@@ -14,6 +14,7 @@ using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,7 @@ namespace Sample.Sdk
     {
         public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration, string serviceBusInfoSection = "")
         {
+            services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
             services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
             services.AddTransient<IPointToPointChannel, PointToPointChannel>();
             services.AddSingleton<IInMemoryMessageBus<PointToPointChannel>, InMemoryMessageBus<PointToPointChannel>>();

@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services.Interfaces
 {
-    public interface IMessageProcessor
+    public interface IMessageProcessor<T> where T : class
     {
-        public Task<bool> Process(CancellationToken token, ExternalMessage message);
+        public Task<T> Process(CancellationToken token, ExternalMessage message);
     }
 }

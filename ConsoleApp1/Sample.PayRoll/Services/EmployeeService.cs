@@ -22,8 +22,8 @@ namespace Sample.PayRoll.Services
         private readonly IEnumerable<Func<Task<ExternalMessage>>> actions = new List<Func<Task<ExternalMessage>>>();
         public EmployeeService(
             IMessageBusReceiver<EmployeeAdded> employeeAddedReceiver,
-            IEnumerable<IMessageProcessor> processors, 
-            IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions) : base(processors, serviceBusInfoOptions)
+            IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions) : 
+            base(serviceBusInfoOptions)
         {
             _employeeAddedReceiver = employeeAddedReceiver;
         }

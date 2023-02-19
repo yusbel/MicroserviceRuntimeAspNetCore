@@ -33,6 +33,7 @@ namespace Sample.Sdk.Core
         }
 
         protected abstract Task Save<TE>(TE message, bool sendNotification) where TE : ExternalMessage;
+        protected abstract Task Save();
         protected abstract void LogMessage();
         protected async Task<EncryptedMessageMetadata> EncryptExternalMessage<TC>(TC toEncrypt) where TC : ExternalMessage
         {
@@ -56,6 +57,7 @@ namespace Sample.Sdk.Core
                     CreatedOn = createdOn,
                     WellKnownEndpoint = _protocolOptions.Value.WellknownSecurityEndpoint,
                     DecryptEndpoint = _protocolOptions.Value.DecryptEndpoint,
+                    AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint,
                     EncryptedEncryptionIv = iv,
                     EncryptedEncryptionKey = key,
                     Signature = Convert.ToBase64String(signature),

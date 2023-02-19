@@ -3,6 +3,7 @@ using AutoFixture.AutoMoq;
 using Microsoft.Extensions.Options;
 using Moq;
 using Sample.Sdk.Core;
+using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Http;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace TestProject1
         public async Task GivenValidHttpRequestThenRetrieveEncryptionKeyForHttpRequestMessage() 
         {
             var fixture = new Fixture().Customize(new AutoMoqCustomization());
-            var options = fixture.Freeze<Mock<IOptions<ServiceOptions>>>();
+            var options = fixture.Freeze<Mock<IOptions<AzureKeyVaultOptions>>>();
             //options.Object.Value.VaultUri = new Uri("https://learningkeyvaultyusbel.vault.azure.net/");
             //var httpEncrytor = new HttpMessageEncryptor(options.Object);
             //var result = await httpEncrytor.Decrypt(new HttpRequestMessage());

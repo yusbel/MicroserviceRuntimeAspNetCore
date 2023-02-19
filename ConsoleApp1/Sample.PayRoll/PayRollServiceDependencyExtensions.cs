@@ -15,6 +15,10 @@ using Sample.PayRoll.Entities;
 using Sample.PayRoll.Interfaces;
 using Sample.PayRoll.DatabaseContext;
 using Sample.PayRoll.Services;
+using Sample.Sdk.Core.Security;
+using Sample.PayRoll.Services.Processors.Converter;
+using Sample.Sdk.Services.Interfaces;
+using Sample.PayRoll.Services.Processors;
 
 namespace Sample.PayRoll
 {
@@ -22,6 +26,8 @@ namespace Sample.PayRoll
     {
         public static IServiceCollection AddPayRollServiceDependencies(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddTransient<IMessageConverter<EmployeeDto>, EmployeeAddedConverter>();
+            services.AddTransient<IMessageProcessor<EmployeeDto>, EmployeeAddedProcessor>();
             services.AddTransient<IPayRoll, PayRoll>();
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();
             services.AddTransient<IMessageBusSender, ServiceBusMessageSender>();
@@ -30,6 +36,9 @@ namespace Sample.PayRoll
             services.AddHostedService<EmployeeAddedHostedService>();
             services.AddTransient<IEmployeeAddedService, EmployeeAddedService>();
             
+            //Configuration Options
+            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.Identifier));
+
             services.AddHttpClient();//TODO:setup polly
 
             services.AddDbContext<PayRollContext>(options =>

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Services.Interfaces;
-using Sample.Sdk.Core;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;

@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Core.Security.Providers.Protocol
+namespace Sample.Sdk.Core.Security
 {
-    public class CustomProtocolOptions
+    public class ExternalValidEndpointOptions
     {
-        public const string Identifier = "ServiceSdk:Security:CustomProtocol";
+        public const string Identifier = "ServiceSdk:Security:ExternalValidEndpoints";
         public string WellknownSecurityEndpoint { get; set; }
         public string DecryptEndpoint { get; set; }
         public string AcknowledgementEndpoint { get; set; }
-        public int SessionDurationInSeconds { get; set; }
-
     }
 }

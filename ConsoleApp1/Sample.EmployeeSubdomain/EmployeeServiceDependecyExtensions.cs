@@ -27,6 +27,9 @@ using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security;
+using Sample.Sdk.AspNetCore.Middleware;
+using Sample.EmployeeSubdomain.Messages.Acknowledgement;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -34,8 +37,12 @@ namespace Sample.EmployeeSubdomain
     {
         public static IServiceCollection AddEmployeeServiceDependencies(this IServiceCollection services, IConfiguration configuration) 
         {
-            //Security
+            //Configuration options
             services.Configure<ServiceOptions>(configuration.GetSection("Employee:ConfigurationOptions"));
+            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.Identifier));
+
+            //Security
+            services.AddTransient<IProcessAcknowledgement, MessageProcessAcknowledgement>();
             services.AddSingleton<IInMemoryMessageBus<ShortLivedSessionState>, InMemoryMessageBus<ShortLivedSessionState>>();
             services.AddSingleton<IInMemoryMessageBus<PointToPointChannel>, InMemoryMessageBus<PointToPointChannel>>();
             

@@ -1,12 +1,12 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
-using Sample.Sdk.Core;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,12 +24,13 @@ namespace Sample.Sdk.Msg
         /// PeekLock is the default, AddReceiveAndDelete
         /// </summary>
         protected readonly ConcurrentDictionary<string, ServiceBusReceiver> serviceBusReceiver = new ConcurrentDictionary<string, ServiceBusReceiver>();
-        protected readonly IAsymetricCryptoProvider asymCryptoProvider;
+        protected readonly IAsymetricCryptoProvider _asymCryptoProvider;
         private readonly ISymetricCryptoProvider _cryptoProvider;
         private readonly IExternalServiceKeyProvider _serviceKeyProvider;
         private readonly HttpClient _httpClient;
         private readonly IOptions<AzureKeyVaultOptions> _keyVaultOptions;
         private readonly ISecurePointToPoint _securePointToPoint;
+        private readonly ISecurityEndpointValidator _securityEndpointValidator;
 
         public ServiceBusRoot(
             IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
@@ -39,15 +40,16 @@ namespace Sample.Sdk.Msg
             , IExternalServiceKeyProvider serviceKeyProvider
             , HttpClient httpClient
             , IOptions<AzureKeyVaultOptions> keyVaultOptions
-            , ISecurePointToPoint securePointToPoint)
+            , ISecurePointToPoint securePointToPoint
+            , ISecurityEndpointValidator securityEndpointValidator)
         {
-            this.asymCryptoProvider = asymCryptoProvider;
+            _asymCryptoProvider = asymCryptoProvider;
             _cryptoProvider = cryptoProvider;
             _serviceKeyProvider = serviceKeyProvider;
             _httpClient = httpClient;
             _keyVaultOptions = keyVaultOptions;
             _securePointToPoint = securePointToPoint;
-
+            _securityEndpointValidator = securityEndpointValidator;
             Initialize(serviceBusInfoOptions, service);
         }
 
@@ -104,7 +106,10 @@ namespace Sample.Sdk.Msg
             , IAsymetricCryptoProvider cryptoProvider
             , CancellationToken token)
         {
-            if (encryptedMessage == null || !IsValid(encryptedMessage.WellKnownEndpoint)) 
+            if (encryptedMessage == null 
+                || !_securityEndpointValidator.IsWellKnownEndpointValid(encryptedMessage.WellKnownEndpoint)
+                || !_securityEndpointValidator.IsDecryptEndpointValid(encryptedMessage.DecryptEndpoint)
+                || !_securityEndpointValidator.IsAcknowledgementValid(encryptedMessage.AcknowledgementEndpoint)) 
             {
                 throw new ApplicationException("Invalid wellknown endpoint was provided");
             }
@@ -117,7 +122,7 @@ namespace Sample.Sdk.Msg
             var baseSignature = $"{encryptedMessage.EncryptedEncryptionKey}:{encryptedMessage.EncryptedEncryptionIv}:{encryptedMessage.CreatedOn}:{encryptedMessage.EncryptedContent}";
 
             //Verify signature using external public key of the private key used to sign the message
-            var isValidSignature = asymCryptoProvider.VerifySignature(
+            var isValidSignature = _asymCryptoProvider.VerifySignature(
                 externalPublicKey
                 , Convert.FromBase64String(encryptedMessage.Signature)
                 , Encoding.UTF8.GetBytes(baseSignature));
@@ -153,9 +158,22 @@ namespace Sample.Sdk.Msg
             return null;
         }
 
-        //TODO: have a list of wellknown endpoint on a app settings or environment variables
-        private bool IsValid(string wellKnownEndpoint) 
+        protected async Task<bool> SendAcknowledgement(string encryptedMessage
+                                                        , EncryptedMessageMetadata encryptedMessageMetadata) 
         {
+            var channel = await _securePointToPoint.GetOrCreate(encryptedMessageMetadata.WellKnownEndpoint);
+            var createdOn = DateTime.Now.Ticks;
+            var baseSign = $"{Convert.ToBase64String(channel.SessionIdentifierEncrypted)}:{createdOn}:{encryptedMessage}";
+            var signature = await _asymCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign));
+            var acknowledgeMsg = new MessageProcessedAcknowledgement() 
+            {
+                CreatedOn= createdOn, 
+                EncryptedExternalMessage = encryptedMessage, 
+                PointToPointSessionIdentifier = Convert.ToBase64String(channel.SessionIdentifierEncrypted), 
+                Signature = Convert.ToBase64String(signature)
+            };
+            var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(acknowledgeMsg)); 
+            await _httpClient.PostAsync(encryptedMessageMetadata.AcknowledgementEndpoint, content);
             return true;
         }
     }

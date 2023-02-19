@@ -37,7 +37,14 @@ namespace Sample.Sdk.Persistance
             _logger = logger;
         }
         protected override void LogMessage() => _logger?.LogInformation("Hello World");
-        protected override async Task Save<TE>(TE message, bool sendNotification = true) 
+
+        protected override async Task Save()
+        {
+            var entity = GetInMemoryEntity();
+            _entityContext.Add(entity);
+            await _entityContext.Save();
+        }
+        protected override async Task Save<TE>(TE message, bool sendNotification = false) 
         {
             var entity = GetInMemoryEntity();
             _entityContext.Add(entity);
@@ -45,6 +52,7 @@ namespace Sample.Sdk.Persistance
             var eventEntity = new ExternalEventEntity()
             {
                 Id = Guid.NewGuid().ToString(),
+                MessageKey = message.Key,
                 Body = System.Text.Json.JsonSerializer.Serialize(await EncryptExternalMessage(message)),
                 CreationTime = DateTime.UtcNow.ToLong(),
                 IsDeleted = false,
@@ -52,20 +60,6 @@ namespace Sample.Sdk.Persistance
                 Version = "1.0.0"
             };
             _entityContext.SaveWithEvent(eventEntity);
-            //TODO: Would use event grid to propagate message
-            if(!sendNotification) 
-            {
-                return;
-            }
-            try
-            {
-                //Notifications
-                Task.Run(() => MessageNotifier<TE>.Notify(message));
-            }
-            catch (Exception e)
-            {
-                _logger?.LogError("An error occurred when sending notification for message {} with exception {}", message, e);
-            }
         }
 
         protected async Task<TS> GetEntityById(Guid id) => await _entityContext.GetById(id);

@@ -1,6 +1,5 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Options;
-using Sample.Sdk.Core;
 using Sample.Sdk.Core.Attributes;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
@@ -9,6 +8,7 @@ using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +27,8 @@ namespace Sample.Sdk.Msg
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , HttpClient httpClient
             , ISecurePointToPoint securePointToPoint
-            , IOptions<AzureKeyVaultOptions> options) : 
+            , IOptions<AzureKeyVaultOptions> options
+            , ISecurityEndpointValidator securityEndpointValidator) : 
             base(serviceBusInfoOptions
                 , service
                 , asymCryptoProvider
@@ -35,7 +36,8 @@ namespace Sample.Sdk.Msg
                 , externalServiceKeyProvider
                 , httpClient
                 , options
-                , securePointToPoint)
+                , securePointToPoint
+                , securityEndpointValidator)
         {
         }
 
@@ -63,11 +65,21 @@ namespace Sample.Sdk.Msg
                 await receiver.CompleteMessageAsync(message);
                 return null;
             }
-            var externalMsg = System.Text.Json.JsonSerializer.Deserialize<ExternalMessage>(Encoding.UTF8.GetString(message.Body.ToMemory().ToArray()));
+            var msgReceivedBytes = message.Body.ToMemory().ToArray();
+            var receivedStringMsg = Encoding.UTF8.GetString(msgReceivedBytes);
+            var externalMsg = System.Text.Json.JsonSerializer.Deserialize<ExternalMessage>(receivedStringMsg);
             var externalMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(externalMsg.Content);
-            var externalMessage = await GetDecryptedExternalMessage(externalMsgMetadata, asymCryptoProvider, token);
-
-            //await processBeforeCompleted(msgToReturn);
+            var externalMessage = await GetDecryptedExternalMessage(externalMsgMetadata, _asymCryptoProvider, token);
+            try
+            {
+                await processBeforeCompleted(externalMessage);
+            }
+            catch (Exception e)
+            {
+                throw;
+            }        
+            //Send acknowledgement to sender service
+            await SendAcknowledgement(Convert.ToBase64String(msgReceivedBytes), externalMsgMetadata);
             await receiver.CompleteMessageAsync(message);
             return null;
         }
