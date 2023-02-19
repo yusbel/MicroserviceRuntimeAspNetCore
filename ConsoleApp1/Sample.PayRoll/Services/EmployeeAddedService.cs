@@ -54,8 +54,8 @@ namespace Sample.PayRoll.Services
                     catch (Exception e)
                     {
                         _logger.LogCritical("Exception occurred when saving entity {}", e);
+                        return false;
                     }
-                    return false;
                 }, "EmployeeAdded");
 
                 //Read from incoming event table
@@ -100,7 +100,6 @@ namespace Sample.PayRoll.Services
                                     {
                                         using var scope = _serviceScopeFactory.CreateScope();
                                         var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
-                                        inComingEvent.WasAcknowledge = true;
                                         inComingEvent.WasProcessed = true;
                                         dbContext.Entry(inComingEvent).State = EntityState.Modified;
                                         await dbContext.SaveChangesAsync();
@@ -113,6 +112,42 @@ namespace Sample.PayRoll.Services
                                     }
                                 }, 
                     token: token);
+
+                //Send acknowledgement of message processed
+                await _serviceEmpAdded.SendAcknowledgement(
+                    getIncomingEventProcessed: async () => 
+                    {
+                        using var scope = _serviceScopeFactory.CreateScope();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                        try 
+                        {
+                            return await dbContext.InComingEvents
+                            .Where(e => !e.IsDeleted && e.WasProcessed && !e.WasAcknowledge)
+                            .ToListAsync();
+                        }
+                        catch(Exception e) 
+                        {
+                            _logger.LogCritical("An error occurred {}", e);
+                            return Enumerable.Empty<InComingEventEntity>();
+                        }
+                    }, 
+                    updateToProcessed: async (inComingEvent) => 
+                    {
+                        try 
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                            inComingEvent.WasAcknowledge = true;
+                            dbContext.Entry(inComingEvent).State = EntityState.Modified;
+                            await dbContext.SaveChangesAsync();
+                            return true;
+                        }
+                        catch (Exception e) 
+                        {
+                            _logger.LogCritical("An error occurred {}", e);
+                            return false;
+                        }
+                    });
 
                 await Task.Delay(20000);
             }

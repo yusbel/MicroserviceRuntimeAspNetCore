@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Sample.Sdk.AspNetCore.Middleware.Data;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.InMemory;
@@ -44,6 +45,16 @@ namespace Sample.Sdk.AspNetCore.Middleware
                 using var ms = new MemoryStream();
                 await context.Request.Body.CopyToAsync(ms);
                 var ackMsg = System.Text.Json.JsonSerializer.Deserialize<MessageProcessedAcknowledgement>(ms.ToArray());
+                if(ackMsg == null) 
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new AcknowledgeResponse()
+                    {
+                        Description = $"Message content is not of type {nameof(MessageProcessedAcknowledgement)}"
+                    }));
+                    return;
+                }
                 //get session
                 if (_shortLivedSessions.TryGet(ackMsg.PointToPointSessionIdentifier, out var sessions)) 
                 {
@@ -58,13 +69,31 @@ namespace Sample.Sdk.AspNetCore.Middleware
                     {
                         await _processAcknowledgement.Process(ackMsg);
                         context.Response.StatusCode = StatusCodes.Status200OK;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new AcknowledgeResponse()
+                        {
+                            PointToPointSessionIdentifier = ackMsg.PointToPointSessionIdentifier,
+                            Description = String.Empty
+                        }));
                         return;
                     }
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest; 
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new AcknowledgeResponse() 
+                    { 
+                        PointToPointSessionIdentifier = ackMsg.PointToPointSessionIdentifier, 
+                        Description = "Invalid signature"
+                    }));
                     return;
                 }
                 _logger.LogError($"Session with identifier {ackMsg.PointToPointSessionIdentifier} was not found");
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new AcknowledgeResponse() 
+                { 
+                    PointToPointSessionIdentifier = ackMsg.PointToPointSessionIdentifier,
+                    Description = "Create session and resend"
+                }));
                 return;
             }
             await _next(context);

@@ -20,5 +20,9 @@ namespace Sample.Sdk.Msg.Interfaces
             , Func<ExternalMessage, Task<bool>> processDeryptedInComingMessage
             , Func<InComingEventEntity, Task<bool>> updateEntity
             , CancellationToken token);
+
+        Task<bool> SendAcknowledgement(
+            Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed
+            , Func<InComingEventEntity, Task<bool>> updateToProcessed);
     }
 }   

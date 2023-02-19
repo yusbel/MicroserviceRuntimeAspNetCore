@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core;
 using Sample.Sdk.Core.Attributes;
@@ -23,6 +24,7 @@ namespace Sample.Sdk.Msg
 {
     public class ServiceBusMessageReceiver<T> : ServiceBusRoot, IMessageBusReceiver<T> where T : ExternalMessage
     {
+        private readonly ILogger<ServiceBusMessageReceiver<T>> _logger;
         public ServiceBusMessageReceiver(
             IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
             , ServiceBusClient service
@@ -32,7 +34,8 @@ namespace Sample.Sdk.Msg
             , HttpClient httpClient
             , ISecurePointToPoint securePointToPoint
             , IOptions<AzureKeyVaultOptions> options
-            , ISecurityEndpointValidator securityEndpointValidator) : 
+            , ISecurityEndpointValidator securityEndpointValidator
+            , ILoggerFactory loggerFactory) : 
             base(serviceBusInfoOptions
                 , service
                 , asymCryptoProvider
@@ -43,6 +46,7 @@ namespace Sample.Sdk.Msg
                 , securePointToPoint
                 , securityEndpointValidator)
         {
+            _logger = loggerFactory.CreateLogger<ServiceBusMessageReceiver<T>>();
         }
         /// <summary>
         /// Retrieve incommign event from table
@@ -66,12 +70,36 @@ namespace Sample.Sdk.Msg
             {
                 var encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
                 var externalMessage = await GetDecryptedExternalMessage(encryptMsgMetadata, _asymCryptoProvider, token);
-                await processDeryptedInComingMessage(externalMessage);
-                //Send acknowledgement to sender service
-                await SendAcknowledgement(inComingEvent.Body, encryptMsgMetadata);
-                await updateEntity(inComingEvent);
+                if (await processDeryptedInComingMessage(externalMessage)) 
+                {
+                    await updateEntity(inComingEvent);
+                }
             }
             return true;
+        }
+
+        public async Task<bool> SendAcknowledgement(
+            Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed
+            , Func<InComingEventEntity, Task<bool>> updateToProcessed)
+        {
+            try
+            {
+                var events = await getIncomingEventProcessed();
+                foreach (var inComingEvent in events)
+                {
+                    var encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
+                    if (await SendAcknowledgement(inComingEvent.Body, encryptMsgMetadata)) 
+                    {
+                        await updateToProcessed(inComingEvent);
+                    }
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical("An error occurred {}", e);
+                return false;
+            }
         }
 
         public async Task<ExternalMessage> Receive(CancellationToken token
