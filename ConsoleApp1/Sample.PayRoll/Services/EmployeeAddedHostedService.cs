@@ -13,24 +13,22 @@ namespace Sample.PayRoll.Services
     public class EmployeeAddedHostedService : IHostedService
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IEmployeeAddedService _employeeAddedService;
 
-        public EmployeeAddedHostedService(IServiceScopeFactory serviceScopeFactory)
+        public EmployeeAddedHostedService(
+            IServiceScopeFactory serviceScopeFactory
+            , IEmployeeAddedService employeeAddedService)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _employeeAddedService = employeeAddedService;
         }
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            using (var scope = _serviceScopeFactory.CreateScope())
+            var task = Task.Run(() => _employeeAddedService.Process(cancellationToken));
+            if(task.IsCompleted) 
             {
-                var serviceEmpAddedService = scope.ServiceProvider.GetService<IEmployeeAddedService>();
-                serviceEmpAddedService.Process(cancellationToken);
+                return task;
             }
-
-            //var excecutingTask = _serviceEmployeeAdded.Process(cancellationToken); 
-            //if(excecutingTask.IsCompleted) 
-            //{
-            //    return excecutingTask;
-            //}
             return Task.CompletedTask;
         }
 

@@ -15,8 +15,10 @@ namespace Sample.Sdk.EntityModel
         {
             get 
             {
-                if(string.IsNullOrEmpty(_id))
-                    Id = Guid.NewGuid().ToString();
+                if (string.IsNullOrEmpty(_id)) 
+                {
+                    _id = Guid.NewGuid().ToString();
+                }
                 return _id;
             }
             set 

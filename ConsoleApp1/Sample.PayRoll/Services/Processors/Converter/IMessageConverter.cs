@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sample.PayRoll.Services.Processors.Converter
 {
-    internal interface IMessageConverter<TDto> where TDto : class 
+    public interface IMessageConverter<TDto> where TDto : class 
     {
         public TDto Convert(ExternalMessage em);
     }

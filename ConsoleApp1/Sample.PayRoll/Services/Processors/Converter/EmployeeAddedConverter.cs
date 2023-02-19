@@ -11,7 +11,7 @@ namespace Sample.PayRoll.Services.Processors.Converter
     /// <summary>
     /// It could be generic for sdk
     /// </summary>
-    internal class EmployeeAddedConverter : IMessageConverter<EmployeeDto>
+    public class EmployeeAddedConverter : IMessageConverter<EmployeeDto>
     {
         public EmployeeDto Convert(ExternalMessage em) 
         {
