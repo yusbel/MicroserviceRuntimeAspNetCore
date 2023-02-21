@@ -30,7 +30,13 @@ namespace Sample.Sdk.Persistance
             , IAsymetricCryptoProvider asymetricCryptoProvider
             , IEntityContext<TC, TS> entityContext
             , IOptions<CustomProtocolOptions> options
-            , IMessageBusSender sender) : base(sender, options, cryptoProvider, asymetricCryptoProvider)
+            , IMessageBusSender sender
+            , ILoggerFactory loggerFactory) : 
+            base(sender
+                , options
+                , cryptoProvider
+                , asymetricCryptoProvider
+                , loggerFactory.CreateLogger<BaseObject<T>>())
         {
             Guard.ThrowWhenNull(logger, entityContext, sender);
             _entityContext = entityContext;

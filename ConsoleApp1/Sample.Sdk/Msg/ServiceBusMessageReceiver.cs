@@ -8,6 +8,8 @@ using Sample.Sdk.Core.Attributes;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
@@ -32,6 +34,7 @@ namespace Sample.Sdk.Msg
             , ISymetricCryptoProvider cryptoProvider
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , HttpClient httpClient
+            , IHttpClientResponseConverter httpResponseConverter
             , ISecurePointToPoint securePointToPoint
             , IOptions<AzureKeyVaultOptions> options
             , ISecurityEndpointValidator securityEndpointValidator
@@ -42,17 +45,16 @@ namespace Sample.Sdk.Msg
                 , cryptoProvider
                 , externalServiceKeyProvider
                 , httpClient
+                , httpResponseConverter
                 , options
                 , securePointToPoint
-                , securityEndpointValidator)
+                , securityEndpointValidator
+                , loggerFactory.CreateLogger<ServiceBusRoot>())
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageReceiver<T>>();
         }
         /// <summary>
-        /// Retrieve incommign event from table
-        /// Validate and decrypt enciming event using the cutom protocol
-        /// Sent acknowdlegement of message processed
-        /// Update incoming event entity as processed
+        /// Process message out of order, message that can't be decrypted are skipped. May a dead letter table
         /// </summary>
         /// <param name="getInComingEvents"></param>
         /// <param name="processInComingMessage"></param>
@@ -65,14 +67,58 @@ namespace Sample.Sdk.Msg
             , Func<InComingEventEntity, Task<bool>> updateEntity
             , CancellationToken token)
         {
-            var events = await getInComingEvents();
-            foreach(var inComingEvent in events) 
+            IEnumerable<InComingEventEntity> events;
+            try
             {
-                var encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
-                var externalMessage = await GetDecryptedExternalMessage(encryptMsgMetadata, _asymCryptoProvider, token);
-                if (await processDeryptedInComingMessage(externalMessage)) 
+                events = await getInComingEvents();
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "An error ocurred when retrieving incoming events from database");
+                return false;
+            }
+            EncryptedMessageMetadata? encryptMsgMetadata;
+            foreach (var inComingEvent in events) 
+            {
+                try
                 {
-                    await updateEntity(inComingEvent);
+                    encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An an error ocurred deserialized the saved message into the encrypted message metadata");
+                    continue;
+                }
+                if (encryptMsgMetadata == null) 
+                {
+                    continue;
+                }
+                (bool wasDecrypted, ExternalMessage? message, EncryptionDecryptionFail reason) externalMessage = 
+                    await GetDecryptedExternalMessage(encryptMsgMetadata, _asymCryptoProvider, token);
+                if (!externalMessage.wasDecrypted || externalMessage.message == null) 
+                {
+                    continue;
+                }
+                bool wasProcessed;
+                try
+                {
+                    wasProcessed = await processDeryptedInComingMessage(externalMessage.message);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An error ocurred when processing message");
+                    continue;
+                }
+                if (wasProcessed) 
+                {
+                    try
+                    {
+                        await updateEntity(inComingEvent);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogCritical(e, "An error ocurred when saving a message that was processed");
+                    }
                 }
             }
             return true;
@@ -84,14 +130,56 @@ namespace Sample.Sdk.Msg
         {
             try
             {
-                var events = await getIncomingEventProcessed();
+                IEnumerable<InComingEventEntity> events;
+                try
+                {
+                    events = await getIncomingEventProcessed();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An error ocurred when retrieving incoming events from database");
+                    return false;
+                }
+                EncryptedMessageMetadata? encryptMsgMetadata;
                 foreach (var inComingEvent in events)
                 {
-                    var encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
-                    if (await SendAcknowledgement(inComingEvent.Body, encryptMsgMetadata)) 
+                    try
                     {
-                        await updateToProcessed(inComingEvent);
+                        encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
                     }
+                    catch (Exception e)
+                    {
+                        _logger.LogCritical(e, "An error ocurred when deserializing message from database");
+                        continue;
+                    }
+                    if (encryptMsgMetadata == null) 
+                    {
+                        _logger.LogCritical($"A message in the database incomming events can not be deserialized to encrypted message metadata");
+                        continue;
+                    }
+                    (bool wasSent, EncryptionDecryptionFail reason) sentResult;
+                    try
+                    {
+                        sentResult = await SendAcknowledgementToSender(inComingEvent.Body, encryptMsgMetadata, CancellationToken.None);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogCritical(e, "An error ocurred when sending the acknowledge message to sender");
+                        await Task.Delay(1000); //adding delay in case is a glitch
+                        continue;
+                    }
+                    try
+                    {
+                        if(sentResult.wasSent) 
+                        {
+                            await updateToProcessed(inComingEvent);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogCritical(e, "An error ocurred when updating the acknoedlegement message sent");
+                    }
+                    
                 }
                 return true;
             }
@@ -121,7 +209,11 @@ namespace Sample.Sdk.Msg
             }
             var receiver = serviceBusReceiver.First(s=> s.Key.ToLower() == queueName.ToLower()).Value;
             var message = await receiver.ReceiveMessageAsync(null, token);
-            if (message == null || message.ContentType != MsgContentType)
+            if(message == null) 
+            {
+                return null;
+            }
+            if (message.ContentType != MsgContentType)
             {
                 throw new ApplicationException("Invalid event content type");
             }

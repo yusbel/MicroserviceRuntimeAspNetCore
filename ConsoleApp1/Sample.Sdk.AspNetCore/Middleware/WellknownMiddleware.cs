@@ -2,13 +2,16 @@
 using Azure.Security.KeyVault.Certificates;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Sample.Sdk.AspNetCore.Middleware;
 using Sample.Sdk.Core;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
@@ -16,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
@@ -26,29 +30,25 @@ namespace Sample.EmployeeSubdomain.Middleware
     public class WellknownMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<WellknownMiddleware> _logger;
         private readonly CertificateClient _certificateClient;
         private readonly IOptions<AzureKeyVaultOptions> _keyVaultOption;
-        private readonly IOptions<List<AzurePrincipleAccount>> _accountOptions;
-        private readonly IOptions<List<ServiceBusInfoOptions>> serviceBusOptions;
         private readonly IAsymetricCryptoProvider _cryptoProvider;
-        private readonly IInMemoryMessageBus<ShortLivedSessionState> _sessions;
+        private readonly IMemoryCacheState<string, ShortLivedSessionState> _memoryCache;
 
         public WellknownMiddleware(RequestDelegate next
-            , ILoggerFactory loggerFactory
+            , ILogger<WellknownMiddleware> logger
             , CertificateClient certificateClient
             , IOptions<AzureKeyVaultOptions> serviceOption
-            , IOptions<List<AzurePrincipleAccount>> accountOptions 
             , IAsymetricCryptoProvider cryptoProvider
-            , IInMemoryMessageBus<ShortLivedSessionState> sessions) 
+            , IMemoryCacheState<string, ShortLivedSessionState> memoryCache) 
         {
             _next = next;
-            _loggerFactory = loggerFactory;
+            _logger = logger;
             _certificateClient = certificateClient;
             _keyVaultOption = serviceOption;
-            _accountOptions = accountOptions;
             _cryptoProvider = cryptoProvider;
-            _sessions = sessions;
+            _memoryCache = memoryCache;
         }
 
         public async Task InvokeAsync(HttpContext context) 
@@ -65,60 +65,159 @@ namespace Sample.EmployeeSubdomain.Middleware
                 await _next.Invoke(context);
                 return;
             }
-            var logger = _loggerFactory.CreateLogger<WellknownMiddleware>();
-            logger.LogInformation($"Processing secure connection session request");
-            if (context.Request.Method == "GET" && context.Request.Query["action"] == "publickey") //it work
+            _logger.LogInformation($"Processing secure connection session request");
+            if (context.Request.Method == "GET" && context.Request.Query["action"] == "publickey")
             {
-                logger.LogInformation("Retrieving certificate from {}", _keyVaultOption.Value.KeyVaultCertificateIdentifier);
-                var cer = await _certificateClient.GetCertificateAsync(_keyVaultOption.Value.KeyVaultCertificateIdentifier, CancellationToken.None);
-                if (cer == null) 
-                {
-                    throw new ApplicationException("Not found certificate");
-                }
-                var publicKeyWrapper = new PublicKeyWrapper();
-                publicKeyWrapper.PublicKey = Convert.ToBase64String(cer.Value.Cer);
-                context.Response.StatusCode = StatusCodes.Status200OK;
-                await context.Response.WriteAsync(JsonSerializer.Serialize(publicKeyWrapper));
-                return;
+                await ProcessGetPublicKey(context);
             }
             if (context.Request.Method == "POST")
             {
-                logger.LogInformation("Creating short lived session state");
-                context.Request.EnableBuffering();
-                using var ms = new MemoryStream();
-                await context.Request.Body.CopyToAsync(ms);
-                try
-                {
-                    var pointToPointSession = JsonSerializer.Deserialize<PointToPointSession>(Encoding.UTF8.GetString(ms.ToArray()));
-                    if (pointToPointSession == null
-                        || pointToPointSession.EncryptedSessionIdentifier.Length == 0
-                        || pointToPointSession.PublicKey.Length == 0)
-                    {
-                        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                        return;
-                    }
-                    //Decrypting session id that was encrypted with this service public key
-                    var plainIdentifier = await _cryptoProvider.Decrypt(Convert.FromBase64String(pointToPointSession.EncryptedSessionIdentifier), CancellationToken.None);
-                    //
-                    var encryptedWithExternalPublicKey = _cryptoProvider.Encrypt(Convert.FromBase64String(pointToPointSession.PublicKey), plainIdentifier, CancellationToken.None);
-                    var session = new ShortLivedSessionState()
-                    {
-                        ExternalPublicKey = pointToPointSession.PublicKey,
-                        PlainSessionIdentifier = Convert.ToBase64String(plainIdentifier),
-                        EncryptedSessionIdentifier = pointToPointSession.EncryptedSessionIdentifier,
-                        Expiry = TimeSpan.FromMinutes(20)
-                    };
-                    _sessions.Add(session.EncryptedSessionIdentifier, session);
-                    context.Response.StatusCode = 200;
-                    await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(Convert.ToBase64String(encryptedWithExternalPublicKey)));
-                    return;
-                }
-                catch (Exception e)
-                {
-                    throw;
-                }
+                await ProcessPostCreateSession(context);
             }
             await _next.Invoke(context);
+        }
+
+        private async Task ProcessPostCreateSession(HttpContext context)
+        {
+            _logger.LogInformation("Creating short lived session state");
+            context.Request.EnableBuffering();
+            using var ms = new MemoryStream();
+            try
+            {
+                await context.Request.Body.CopyToAsync(ms);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "An error ocurred when reading the request");
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.FailToReadRequest
+                });
+                return;
+            }
+            PointToPointSession? session;
+            try
+            {
+                session = JsonSerializer.Deserialize<PointToPointSession>(Encoding.UTF8.GetString(ms.ToArray()));
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, $"Deserialization of message content to {nameof(PointToPointSession)}");
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.DeserializationFail
+                });
+                return;
+            }
+            if (session == null
+                    || session.EncryptedSessionIdentifier.Length == 0
+                    || session.PublicKey.Length == 0)
+            {
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.DeserializationFail
+                });
+                return;
+            }
+            byte[] encryptedSessionIdBase64Bytes;
+            try
+            {
+                encryptedSessionIdBase64Bytes = Convert.FromBase64String(session.EncryptedSessionIdentifier);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "Converting encrypted session identifier to base 64 string fail");
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.Base64StringConvertionFail
+                });
+                return;
+            }
+            byte[] publicKeyBase64Bytes;
+            try
+            {
+                publicKeyBase64Bytes = Convert.FromBase64String(session.PublicKey);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "Converting to base 64 byte array fail");
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.Base64StringConvertionFail
+                });
+                return;
+            }
+            //Decrypting session id that was encrypted with this service public key
+            (bool wasDecrypted, byte[]? decryptedData, EncryptionDecryptionFail reason) =
+                await _cryptoProvider.Decrypt(encryptedSessionIdBase64Bytes, CancellationToken.None);
+            if (!wasDecrypted || decryptedData == null)
+            {
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.DecryptionFail
+                });
+                return;
+            }
+            (bool wasEncrypted, byte[]? encryptedData, EncryptionDecryptionFail encryptedReason) =
+                    _cryptoProvider.Encrypt(publicKeyBase64Bytes, decryptedData, CancellationToken.None);
+            if (!wasEncrypted || encryptedData == null)
+            {
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.EncryptFail
+                });
+                return;
+            }
+            var shortLivedSession = new ShortLivedSessionState()
+            {
+                ExternalPublicKey = session.PublicKey,
+                PlainSessionIdentifier = Convert.ToBase64String(decryptedData),
+                EncryptedSessionIdentifier = session.EncryptedSessionIdentifier
+            };
+            _memoryCache.Cache.GetOrCreate<ShortLivedSessionState>(
+                    shortLivedSession.EncryptedSessionIdentifier
+                    , (cacheEntry) =>
+                    {
+                        cacheEntry.SetValue(shortLivedSession);
+                        return shortLivedSession;
+                    });
+            context.Response.StatusCode = 200;
+            await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(Convert.ToBase64String(encryptedData)));
+            return;
+        }
+
+        private async Task ProcessGetPublicKey(HttpContext context)
+        {
+            _logger.LogInformation("Retrieving certificate from {}", _keyVaultOption.Value.KeyVaultCertificateIdentifier);
+            Response<KeyVaultCertificateWithPolicy> certificate;
+            try
+            {
+                certificate = await _certificateClient.GetCertificateAsync(
+                                _keyVaultOption.Value.KeyVaultCertificateIdentifier
+                                , CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "An error ocurred when downloading the certificate");
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.UnableToGetCertificate
+                });
+                return;
+            };
+            if (certificate.Value == null || certificate.Value.Cer == null)
+            {
+                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.UnableToGetCertificate
+                });
+                return;
+            }
+            var publicKeyWrapper = new PublicKeyWrapper();
+            publicKeyWrapper.PublicKey = Convert.ToBase64String(certificate.Value.Cer);
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsync(JsonSerializer.Serialize(publicKeyWrapper));
+            return;
         }
     }
 }

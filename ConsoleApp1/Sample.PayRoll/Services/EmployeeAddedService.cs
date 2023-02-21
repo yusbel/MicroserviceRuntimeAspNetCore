@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Azure.Amqp.Framing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sample.PayRoll.DatabaseContext;
@@ -39,101 +40,160 @@ namespace Sample.PayRoll.Services
         }
         public async Task<bool> Process(CancellationToken token)
         {
+            Task receiveMessageTask = null;
+            Task processingReceivedMsgTask = null;
+            Task sendAckTask = null;
             while (!token.IsCancellationRequested)
             {
-                await _serviceEmpAdded.Receive(token, async (inComingEvent) =>
+                if(receiveMessageTask == null
+                    || receiveMessageTask.IsCompleted
+                    || receiveMessageTask.IsFaulted
+                    || receiveMessageTask.IsCanceled
+                    || receiveMessageTask.IsCompletedSuccessfully) 
                 {
                     try
                     {
-                        using var scope = _serviceScopeFactory.CreateScope();
-                        var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
-                        dbContext.Add(inComingEvent);
-                        await dbContext.SaveChangesAsync();
-                        return true;
+                        receiveMessageTask = ReceiveMessage(token);
                     }
                     catch (Exception e)
                     {
-                        _logger.LogCritical("Exception occurred when saving entity {}", e);
-                        return false;
+                        _logger.LogCritical("An error ocurren when reading message from service bus {}", e);
                     }
-                }, "EmployeeAdded");
+                }
+                if(processingReceivedMsgTask == null
+                    || processingReceivedMsgTask.IsCompleted
+                    || processingReceivedMsgTask.IsFaulted
+                    || processingReceivedMsgTask.IsCanceled
+                    || processingReceivedMsgTask.IsCompletedSuccessfully) 
+                {
+                    try
+                    {
+                        processingReceivedMsgTask = ProcessReceivedMessage(token);
+                    }
+                    catch(Exception e) 
+                    {
+                        _logger.LogCritical("An error ocurred when processing message from database {}", e);
+                    }
+                }
+                if (sendAckTask == null
+                    || sendAckTask.IsCompleted
+                    || sendAckTask.IsFaulted
+                    || sendAckTask.IsCanceled
+                    || sendAckTask.IsCompletedSuccessfully) 
+                {
+                    try
+                    {
+                        sendAckTask = SendAcknowledgement(token);
+                    }
+                    catch (Exception e) 
+                    {
+                        _logger.LogCritical("An error ocurred when seingin acknowledgement {}", e);
+                    }
+                }
+                await Task.Delay(20000);
+            }
+            return true;
+        }
 
-                //Read from incoming event table
-                await _serviceEmpAdded.Process(
+        private Task ReceiveMessage(CancellationToken token) 
+        {
+            return _serviceEmpAdded.Receive(token, async (inComingEvent) =>
+            {
+                try
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                    dbContext.Add(inComingEvent);
+                    await dbContext.SaveChangesAsync();
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical("Exception occurred when saving entity {}", e);
+                    return false;
+                }
+            }, "EmployeeAdded");
+        }
+
+        private Task ProcessReceivedMessage(CancellationToken token) 
+        {
+            return _serviceEmpAdded.Process(
                     getInComingEvents: async () =>
-                                {
-                                    try
-                                    {
-                                        using var scope = _serviceScopeFactory.CreateScope();
-                                        var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
-                                        return await dbContext.InComingEvents
-                                        .Where(e => !e.IsDeleted && !e.WasAcknowledge && !e.WasProcessed)
-                                        .ToListAsync();
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        _logger.LogCritical("An error occurred when reading incomming events {}", e);
-                                        return Enumerable.Empty<InComingEventEntity>();
-                                    }
-                                },
-                    processDeryptedInComingMessage: async (decryptExtMsg) => 
-                                {
-                                    try
-                                    {
-                                        using var scope = _serviceScopeFactory.CreateScope();
-                                        var payRoll = scope.ServiceProvider.GetRequiredService<IPayRoll>();
-                                        var employeeAdded = _employeeAddedConverter.Convert(decryptExtMsg);
-                                        var rnd = new Random();
-                                        var salary = rnd.Next(100, 1000);
-                                        await payRoll.CreatePayRoll(employeeAdded.Id, salary, false);
-                                        return true;
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        _logger.LogCritical("An error occurrend processing incoming event {}", e);
-                                        return false;
-                                    }
-                                },
-                    updateEntity: async (inComingEvent) => 
-                                {
-                                    try
-                                    {
-                                        using var scope = _serviceScopeFactory.CreateScope();
-                                        var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
-                                        inComingEvent.WasProcessed = true;
-                                        dbContext.Entry(inComingEvent).State = EntityState.Modified;
-                                        await dbContext.SaveChangesAsync();
-                                        return true;
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        _logger.LogCritical("An error occurred when updating incoming event to was processed and acknoeledge {}", e);
-                                        return false;
-                                    }
-                                }, 
+                    {
+                        try
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                            return await dbContext.InComingEvents
+                            .Where(e => !e.IsDeleted && !e.WasAcknowledge && !e.WasProcessed)
+                            .ToListAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogCritical("An error occurred when reading incomming events {}", e);
+                            return Enumerable.Empty<InComingEventEntity>();
+                        }
+                    },
+                    processDeryptedInComingMessage: async (decryptExtMsg) =>
+                    {
+                        try
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var payRoll = scope.ServiceProvider.GetRequiredService<IPayRoll>();
+                            var employeeAdded = _employeeAddedConverter.Convert(decryptExtMsg);
+                            var rnd = new Random();
+                            var salary = rnd.Next(100, 1000);
+                            await payRoll.CreatePayRoll(employeeAdded.Id, salary, false);
+                            return true;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogCritical("An error occurrend processing incoming event {}", e);
+                            return false;
+                        }
+                    },
+                    updateEntity: async (inComingEvent) =>
+                    {
+                        try
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                            inComingEvent.WasProcessed = true;
+                            dbContext.Entry(inComingEvent).State = EntityState.Modified;
+                            await dbContext.SaveChangesAsync();
+                            return true;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogCritical("An error occurred when updating incoming event to was processed and acknoeledge {}", e);
+                            return false;
+                        }
+                    },
                     token: token);
+        }
 
-                //Send acknowledgement of message processed
-                await _serviceEmpAdded.SendAcknowledgement(
-                    getIncomingEventProcessed: async () => 
+        private Task SendAcknowledgement(CancellationToken token) 
+        {
+            return _serviceEmpAdded.SendAcknowledgement(
+                    getIncomingEventProcessed: async () =>
                     {
                         using var scope = _serviceScopeFactory.CreateScope();
                         var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
-                        try 
+                        try
                         {
                             return await dbContext.InComingEvents
                             .Where(e => !e.IsDeleted && e.WasProcessed && !e.WasAcknowledge)
                             .ToListAsync();
                         }
-                        catch(Exception e) 
+                        catch (Exception e)
                         {
                             _logger.LogCritical("An error occurred {}", e);
                             return Enumerable.Empty<InComingEventEntity>();
                         }
-                    }, 
-                    updateToProcessed: async (inComingEvent) => 
+                    },
+                    updateToProcessed: async (inComingEvent) =>
                     {
-                        try 
+                        try
                         {
                             using var scope = _serviceScopeFactory.CreateScope();
                             var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
@@ -142,16 +202,12 @@ namespace Sample.PayRoll.Services
                             await dbContext.SaveChangesAsync();
                             return true;
                         }
-                        catch (Exception e) 
+                        catch (Exception e)
                         {
                             _logger.LogCritical("An error occurred {}", e);
                             return false;
                         }
                     });
-
-                await Task.Delay(20000);
-            }
-            return true;
         }
     }
 }

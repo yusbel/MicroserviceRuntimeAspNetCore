@@ -3,6 +3,7 @@ using Azure.Security.KeyVault.Certificates;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System.Globalization;
 using System.Reflection.Metadata.Ecma335;
@@ -14,58 +15,98 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
     public class PointToPointChannel : PointToPointChannelRoot, IPointToPointChannel
     {
-        public TimeSpan Expiry { get; init; }
-        public string MyCertWithPrivateKey { get; init; }
-        public string MyCertWithPublicKeyOnly { get; init; }
-        public string ExternalCertWithPublicKeyOnly { get; init; }
-        public byte[] SessionIdentifierEncrypted { get; init; }
-        public string SessionIdentifier { get; init; }
-        public string Identifier { get; set; }
+        private readonly ILogger<PointToPointChannel> _logger;
+        private ChannelState _channelState;
+        public ChannelState ChannelState 
+        {
+            get 
+            {
+                return _channelState;
+            }
+            private set 
+            {
+                _channelState = value;
+            }
+        }
+        public PointToPointChannel(ILogger<PointToPointChannel> logger
+            , LoggerFactory loggerFactory) : base(loggerFactory.CreateLogger<PointToPointChannelRoot>())
+        {
+            _logger = logger;
+        }
 
-        public async Task<byte[]> DecryptContent(
+
+        public async Task<(bool wasDecrypted, byte[]? content, EncryptionDecryptionFail reason)> DecryptContent(
             string decryptEndpoint
             , byte[] encryptedData
-            , HttpClient httpClient
+            , IHttpClientResponseConverter httpClientResponseConverter
             , IAsymetricCryptoProvider cryptoProvider)
         {
             var wellKnownUrl = new Uri(decryptEndpoint);
             var createdOn = DateTime.Now.Ticks;
-            var baseSignature = $"{Convert.ToBase64String(SessionIdentifierEncrypted)}:{createdOn}:{Convert.ToBase64String(encryptedData)}";
-            var signature = await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature));
+            if(string.IsNullOrEmpty(_channelState.SessionIdentifier) 
+                || _channelState.SessionIdentifierEncrypted == null
+                || encryptedData == null) 
+            {
+                return (false, default, default);
+            }
+            var baseSignature = $"{Convert.ToBase64String(_channelState.SessionIdentifierEncrypted)}:{createdOn}:{Convert.ToBase64String(encryptedData)}";
+            (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
+                await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature));
+            if(!signature.wasCreated || signature.data == null) 
+            {
+                return (false, default, default);
+            }
             var data = new EncryptedData() 
             { 
                 Encrypted = Convert.ToBase64String(encryptedData),
-                Signature = Convert.ToBase64String(signature), 
+                Signature = Convert.ToBase64String(signature.data), 
                 CreatedOn = createdOn, 
-                SessionEncryptedIdentifier = Convert.ToBase64String(SessionIdentifierEncrypted)
+                SessionEncryptedIdentifier = Convert.ToBase64String(_channelState.SessionIdentifierEncrypted)
             };
             var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data));
-            var response = await httpClient.PostAsync(wellKnownUrl, content);
-            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            var result = await httpClientResponseConverter.InvokePost<EncryptedData, InValidHttpResponseMessage>(wellKnownUrl, content);
+            
+            if (!result.isValid || result.invalidResponse == null)
             {
-                throw new ApplicationException($"Content encryption with decrypt endpoint fail with status code {response.StatusCode}");
+                return (false, default, EncryptionDecryptionFail.SessionIsInvalid);
             }
-            var responseEncrypted = System.Text.Json.JsonSerializer.Deserialize<EncryptedData>(await response.Content.ReadAsStringAsync()); 
-            if(responseEncrypted == null ) 
+            if (result.data == null) 
             {
-                throw new ApplicationException("Invalid response from Decrypt endpoint");
+                return (false, default, EncryptionDecryptionFail.DeserializationFail);
             }
-            var baseSign = $"{responseEncrypted.SessionEncryptedIdentifier}:{responseEncrypted.CreatedOn}:{responseEncrypted.Encrypted}";
-            var isValidResponse = cryptoProvider.VerifySignature(
-                Convert.FromBase64String(ExternalCertWithPublicKeyOnly)
-                , Convert.FromBase64String(responseEncrypted.Signature)
+            var baseSign = $"{result.data.SessionEncryptedIdentifier}:{result.data.CreatedOn}:{result.data.Encrypted}";
+            (bool wasValid, EncryptionDecryptionFail reason) isValidResponse = cryptoProvider.VerifySignature(
+                Convert.FromBase64String(_channelState.ExternalCertWithPublicKeyOnly)
+                , Convert.FromBase64String(result.data.Signature)
                 , Encoding.UTF8.GetBytes(baseSign));
-            if (!isValidResponse) 
+            if (!isValidResponse.wasValid) 
             {
-                throw new ApplicationException("Invalid respond from decrypt endpoint");
+                return (false, default, EncryptionDecryptionFail.VerifySignature);
             }
-            var plainData = await cryptoProvider.Decrypt(
-                Convert.FromBase64String(responseEncrypted.Encrypted)
-                , CancellationToken.None);
-            return plainData;
+            (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainData = 
+                await cryptoProvider.Decrypt(Convert.FromBase64String(result.data.Encrypted)
+                                                , CancellationToken.None);
+            if (!plainData.wasDecrypted || plainData.data == null) 
+            {
+                return (false, default, default);
+            }
+            return (true, plainData.data, default);
         }
-
-        public async Task<PointToPointChannel> Create(
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="identifier"></param>
+        /// <param name="externalWellKnownEndpoint"></param>
+        /// <param name="certificateClient"></param>
+        /// <param name="options"></param>
+        /// <param name="httpClient"></param>
+        /// <param name="externalServiceKeyProvider"></param>
+        /// <param name="loggerFactory"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        /// <exception cref=""
+        /// <exception cref="ApplicationException">Certificate miss public or private key</exception>
+        public async Task<(bool wasCreated, PointToPointChannel? channel)> Create(
             string identifier
             , string externalWellKnownEndpoint
             , CertificateClient certificateClient
@@ -84,7 +125,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             catch (Exception e)
             {
                 logger.LogError("Downloading certificate fail with message Message:{} StackTrace: {}", e.Message, e.StackTrace);
-                throw;
+                return (false, default);
             }
             logger.LogInformation("====Sucessful download of payroll certificate=====");
             if (certificate == null
@@ -95,41 +136,65 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
                 throw new ApplicationException("Invalid certificate");
             }
             // Retrieve public key from wellknown endpoint by passing a query string?action=publickey
-            var externalPublicCert = await externalServiceKeyProvider.GetExternalPublicKey($"{externalWellKnownEndpoint}", httpClient, options, token);
+            (bool wasReceived, byte[]? data, EncryptionDecryptionFail reason) externalPublicCert = 
+                await externalServiceKeyProvider.GetExternalPublicKey($"{externalWellKnownEndpoint}"
+                                                                        , httpClient
+                                                                        , options
+                                                                        , token);
+            if (!externalPublicCert.wasReceived || externalPublicCert.data == null) 
+            {
+                return (false, default);
+            }
             // Generate session identifier using Guid.NewGuid
             var sessionIdentifier = Guid.NewGuid().ToString();
             // Encrypt session with the receiver publickey
-            var encryptedSession = EncryptWithPublicKey(externalPublicCert, Encoding.UTF8.GetBytes(sessionIdentifier));
+            var encryptedSession = EncryptWithPublicKey(externalPublicCert.data, Encoding.UTF8.GetBytes(sessionIdentifier));
+            if (!encryptedSession.wasEncrypted || encryptedSession.data == null) 
+            {
+                return (false, default);
+            }
             // Invoke wellknown endpoint with ?action=createSession and publicKey with encryptedSessionIdentifier
             var myCertWithPublicKey = await GetMyCertPublicKey(certificateClient, options, token);
+            if (!myCertWithPublicKey.wasValid || myCertWithPublicKey.data == null) 
+            {
+                return (false, default);
+            }
             var session = new PointToPointSession()
             {
-                EncryptedSessionIdentifier = Convert.ToBase64String(encryptedSession),
-                PublicKey = Convert.ToBase64String(myCertWithPublicKey),
+                EncryptedSessionIdentifier = Convert.ToBase64String(encryptedSession.data),
+                PublicKey = Convert.ToBase64String(myCertWithPublicKey.data),
             };
-            var sessionIdEncryptedWithMyPublicKey = await CreateSessionAndGetSessionIdEncrypted(session
-                , httpClient
-                , token
-                , externalWellKnownEndpoint);
-            // Wellknown endpoint decrypt the session id using the service private key and encrypt sessionIdentifier using the service publickey
-            var sessionIdDecryptedWithMyPrivateKey = await DecryptWithMyPrivateKey(sessionIdEncryptedWithMyPublicKey
-                , certificateClient
-                , options
-                , token);
-            // Valid that the response encrypted session identifier is valid and create a channel with the welKnownendpoitn as identifier, sessionid and both public keys
-            if (sessionIdDecryptedWithMyPrivateKey.Item1 == sessionIdentifier)
+            (bool wasValid, string? sessionId) sessionIdEncryptedWithMyPublicKey = 
+                await CreateSessionAndGetSessionIdEncrypted(session
+                                                            , httpClient
+                                                            , token
+                                                            , externalWellKnownEndpoint);
+            if (!sessionIdEncryptedWithMyPublicKey.wasValid || string.IsNullOrEmpty(sessionIdEncryptedWithMyPublicKey.sessionId)) 
             {
-                return new PointToPointChannel()
-                {
-                    ExternalCertWithPublicKeyOnly = Convert.ToBase64String(externalPublicCert),
-                    MyCertWithPrivateKey = Convert.ToBase64String(sessionIdDecryptedWithMyPrivateKey.Item2),
-                    MyCertWithPublicKeyOnly = Convert.ToBase64String(myCertWithPublicKey),
-                    SessionIdentifier = sessionIdentifier,
-                    SessionIdentifierEncrypted = encryptedSession,
-                    Identifier = identifier
-                };
+                return (false, default);
             }
-            return null;
+            // Wellknown endpoint decrypt the session id using the service private key and encrypt sessionIdentifier using the service publickey
+            (bool wasDecrypted, string? data, byte[]? privateKey) sessionIdDecryptedWithMyPrivateKey = 
+                await DecryptWithMyPrivateKey(sessionIdEncryptedWithMyPublicKey.sessionId
+                                                , certificateClient
+                                                , options
+                                                , token);
+            if(sessionIdDecryptedWithMyPrivateKey.data == null 
+                || !sessionIdDecryptedWithMyPrivateKey.wasDecrypted
+                || sessionIdDecryptedWithMyPrivateKey.privateKey == null) 
+            {
+                return (false, default);
+            }
+            ChannelState = new ChannelState()
+                                        {
+                                            ExternalCertWithPublicKeyOnly = Convert.ToBase64String(externalPublicCert.data),
+                                            MyCertWithPrivateKey = Convert.ToBase64String(sessionIdDecryptedWithMyPrivateKey.privateKey),
+                                            MyCertWithPublicKeyOnly = Convert.ToBase64String(myCertWithPublicKey.data),
+                                            SessionIdentifier = sessionIdentifier,
+                                            SessionIdentifierEncrypted = encryptedSession.data,
+                                            Identifier = identifier
+                                        };
+            return (true, this);
         }
 
     }

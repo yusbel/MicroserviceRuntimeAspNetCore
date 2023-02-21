@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sample.Sdk.Core.Security.Providers.Protocol.State;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,10 +9,10 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
 {
     public interface ISignatureVerifier
     {
-        public Task<bool> VerifySignature(byte[] hashValue, byte[] baseSignature);
+        public Task<(bool wasValid, EncryptionDecryptionFail reason)> VerifySignature(byte[] hashValue, byte[] baseSignature);
 
-        public bool VerifySignature(byte[] publicKey, byte[] hashValue, byte[] baseSignature);
-        public Task<byte[]> CreateSignature(byte[] baseString);
+        public (bool wasValid, EncryptionDecryptionFail reason) VerifySignature(byte[] publicKey, byte[] hashValue, byte[] baseSignature);
+        public Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> CreateSignature(byte[] baseString);
 
     }
 }

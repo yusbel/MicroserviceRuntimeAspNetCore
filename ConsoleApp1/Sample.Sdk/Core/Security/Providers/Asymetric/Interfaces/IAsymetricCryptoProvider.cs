@@ -1,4 +1,6 @@
-﻿using Sample.Sdk.Core.Security.Providers.Symetric;
+﻿using Microsoft.Azure.Amqp.Framing;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
+using Sample.Sdk.Core.Security.Providers.Symetric;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +16,8 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
     /// </summary>
     public interface IAsymetricCryptoProvider : ISignatureVerifier
     {
-        Task<byte[]> Decrypt(byte[] data, CancellationToken token);
-        Task<byte[]> Encrypt(byte[] data, CancellationToken token);
-        byte[] Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
+        Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Decrypt(byte[] data, CancellationToken token);
+        Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(byte[] data, CancellationToken token);
+        (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
     }
 }

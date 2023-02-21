@@ -1,4 +1,5 @@
-﻿using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+﻿using Microsoft.Extensions.Logging;
+using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,15 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
     public class AesSymetricCryptoProvider : ISymetricCryptoProvider
     {
         private const int KeySize = 256;
-        public bool TryDecrypt(byte[] data, byte[] key, byte[] iv, out SymetricResult result)
+        private readonly ILogger<AesSymetricCryptoProvider> _logger;
+
+        public AesSymetricCryptoProvider(
+            ILogger<AesSymetricCryptoProvider> logger) 
+        {
+            _logger = logger;
+        }
+        
+        public bool TryDecrypt(byte[] data, byte[] key, byte[] iv, out SymetricResult? result)
         {
             try
             {
@@ -30,24 +39,35 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
             }
             catch (Exception e)
             {
-                throw;
+                _logger.LogCritical($"Symetric decript fail {e}");
+                result = default;
+                return false;
             }
         }
 
 
-        public bool TryEncrypt(byte[] data, out SymetricResult result)
+        public bool TryEncrypt(byte[] data, out SymetricResult? result)
         {
-            using var aesCng = AesCng.Create();
-            var key = aesCng.Key;
-            var iv = aesCng.IV;
-            var encryptedData = aesCng.EncryptCbc(data, iv, PaddingMode.PKCS7);
-            result = new SymetricResult() 
+            try
             {
-                 Key = key,
-                 Iv = iv,
-                 EncryptedData = encryptedData.ToArray()
-            };
-            return true;
+                using var aesCng = AesCng.Create();
+                var key = aesCng.Key;
+                var iv = aesCng.IV;
+                var encryptedData = aesCng.EncryptCbc(data, iv, PaddingMode.PKCS7);
+                result = new SymetricResult()
+                {
+                    Key = key,
+                    Iv = iv,
+                    EncryptedData = encryptedData.ToArray()
+                };
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical("An error occurred when encrypting", e);
+                result = default;
+                return false;
+            }
         }
     }
 }

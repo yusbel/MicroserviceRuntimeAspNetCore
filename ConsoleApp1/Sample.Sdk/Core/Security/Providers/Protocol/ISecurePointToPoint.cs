@@ -4,12 +4,15 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
     public interface ISecurePointToPoint
     {
-        Task<byte[]> Decrypt(string wellknownSecurityEndpoint
+        Task<(bool wasDecrypted, byte[]? data, State.EncryptionDecryptionFail reason)> Decrypt(
+            string wellknownSecurityEndpoint
             , string decryptEndpoint
             , byte[] encryptedData
             , IAsymetricCryptoProvider cryptoProvider
             , CancellationToken token);
 
-        Task<PointToPointChannel> GetOrCreate(string identifier);
+        Task<(bool wasCreated, PointToPointChannel? channel)> GetOrCreateSessionChannel(
+            string identifier
+            , CancellationToken token);
     }
 }

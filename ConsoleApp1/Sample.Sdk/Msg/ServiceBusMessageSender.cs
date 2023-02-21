@@ -5,6 +5,7 @@ using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
@@ -32,6 +33,7 @@ namespace Sample.Sdk.Msg
             , ISymetricCryptoProvider cryptoProvider
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , HttpClient httpClient
+            , IHttpClientResponseConverter httpResponseConverter
             , IOptions<AzureKeyVaultOptions> keyVaultOptions
             , ISecurePointToPoint securePointToPoint
             , ISecurityEndpointValidator validator) : 
@@ -41,9 +43,11 @@ namespace Sample.Sdk.Msg
                 , cryptoProvider
                 , externalServiceKeyProvider
                 , httpClient
+                , httpResponseConverter
                 , keyVaultOptions
                 , securePointToPoint
-                , validator)
+                , validator
+                , loggerFactory.CreateLogger<ServiceBusRoot>())
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }

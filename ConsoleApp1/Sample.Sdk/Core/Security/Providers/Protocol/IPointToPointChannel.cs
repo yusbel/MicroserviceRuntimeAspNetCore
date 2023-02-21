@@ -2,12 +2,14 @@
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 
 namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
     public interface IPointToPointChannel   
     {
-        Task<PointToPointChannel> Create(string identifier
+        Task<(bool wasCreated, PointToPointChannel? channel)> Create(string identifier
             , string externalWellKnownEndpoint
             , CertificateClient certificateClient
             , AzureKeyVaultOptions options
@@ -15,9 +17,9 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , ILoggerFactory loggerFactory
             , CancellationToken token);
-        Task<byte[]> DecryptContent(string externalWellknownEndpoint
+        Task<(bool wasDecrypted, byte[]? content, EncryptionDecryptionFail reason)> DecryptContent(string externalWellknownEndpoint
             , byte[] encryptedData
-            , HttpClient httpClient
+            , IHttpClientResponseConverter httpClientResponseConverter
             , IAsymetricCryptoProvider cryptoProvider);
     }
 }

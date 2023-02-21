@@ -11,6 +11,8 @@ using Azure.ResourceManager.Resources;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
+using Microsoft.Extensions.Logging;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 
 namespace Sample.Sdk.Core
 {
@@ -20,36 +22,50 @@ namespace Sample.Sdk.Core
         private readonly IOptions<CustomProtocolOptions> _protocolOptions;
         private readonly ISymetricCryptoProvider _cryptoProvider;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
+        private readonly ILogger<BaseObject<T>> _logger;
 
         public BaseObject(IMessageBusSender senderMessageDurable
             , IOptions<CustomProtocolOptions> protocolOptions
             , ISymetricCryptoProvider cryptoProvider
-            , IAsymetricCryptoProvider asymetricCryptoProvider)
+            , IAsymetricCryptoProvider asymetricCryptoProvider
+            , ILogger<BaseObject<T>> logger)
         {
             (_msgSender) = (senderMessageDurable);
             _protocolOptions = protocolOptions;
             _cryptoProvider = cryptoProvider;
             _asymetricCryptoProvider = asymetricCryptoProvider;
+            _logger = logger;
         }
-
         protected abstract Task Save<TE>(TE message, bool sendNotification) where TE : ExternalMessage;
         protected abstract Task Save();
         protected abstract void LogMessage();
-        protected async Task<EncryptedMessageMetadata> EncryptExternalMessage<TC>(TC toEncrypt) where TC : ExternalMessage
+        protected async Task<(bool wasEncrypted, EncryptedMessageMetadata? msg)> EncryptExternalMessage<TC>(TC toEncrypt) where TC : ExternalMessage
         {
             var plainData = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(toEncrypt));
             if (_cryptoProvider.TryEncrypt(plainData, out var result))
             {
-                var key = Convert.ToBase64String(await _asymetricCryptoProvider.Encrypt(
-                                                            result.Key
-                                                            , CancellationToken.None));
-                var iv = Convert.ToBase64String(await _asymetricCryptoProvider.Encrypt(
-                                                            result.Iv
-                                                            , CancellationToken.None));
+                (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) keyEncrypted = 
+                    await _asymetricCryptoProvider.Encrypt(result.Key, CancellationToken.None);
+                if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted) 
+                {
+                    return (false, default);
+                }
+                (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) ivEncrypted = 
+                    await _asymetricCryptoProvider.Encrypt(result.Iv, CancellationToken.None);
+                if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null) 
+                {
+                    return (false, default);
+                }
+                var key = Convert.ToBase64String(keyEncrypted.data);
+                var iv = Convert.ToBase64String(ivEncrypted.data);
                 var createdOn = DateTime.Now.Ticks;
                 var encryptedContent = Convert.ToBase64String(result.EncryptedData);
-                var signature = await _asymetricCryptoProvider.CreateSignature(
-                                                Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"));
+                (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
+                    await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"));
+                if (!signature.wasCreated || signature.data == null) 
+                {
+                    return (false, default);
+                }
                 var encryptedMsg = new EncryptedMessageMetadata()
                 {
                     CorrelationId = toEncrypt.CorrelationId,
@@ -60,13 +76,13 @@ namespace Sample.Sdk.Core
                     AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint,
                     EncryptedEncryptionIv = iv,
                     EncryptedEncryptionKey = key,
-                    Signature = Convert.ToBase64String(signature),
+                    Signature = Convert.ToBase64String(signature.data),
                     EncryptedContent = encryptedContent
                 };
-                return encryptedMsg;
+                return (true, encryptedMsg);
             }
             
-            return null;
+            return (false, default);
         }
     } 
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Sample.Sdk.AspNetCore.Middleware.Data;
+using Sample.Sdk.Core.Http.Data;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.InMemory;
@@ -17,20 +18,20 @@ namespace Sample.Sdk.AspNetCore.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly IProcessAcknowledgement _processAcknowledgement;
-        private readonly IInMemoryMessageBus<ShortLivedSessionState> _shortLivedSessions;
+        private readonly IMemoryCacheState<string, ShortLivedSessionState> _memoryCache;
         private readonly IAsymetricCryptoProvider _asymCryptoProvider;
         private readonly ILogger<CustomProtocolAcknowledgementMiddleware> _logger;
 
         public CustomProtocolAcknowledgementMiddleware(
             RequestDelegate next
             , IProcessAcknowledgement processAcknowledgement
-            , IInMemoryMessageBus<ShortLivedSessionState> shortLivedSessions
+            , IMemoryCacheState<string, ShortLivedSessionState> memoryCache
             , IAsymetricCryptoProvider asymCryptoProvider
             , ILoggerFactory loggerFactory) 
         {
             _next = next;
             _processAcknowledgement = processAcknowledgement;
-            _shortLivedSessions = shortLivedSessions;
+            _memoryCache = memoryCache;
             _asymCryptoProvider = asymCryptoProvider;
             _logger = loggerFactory.CreateLogger<CustomProtocolAcknowledgementMiddleware>();
         }
@@ -43,29 +44,56 @@ namespace Sample.Sdk.AspNetCore.Middleware
             {
                 context.Request.EnableBuffering();
                 using var ms = new MemoryStream();
-                await context.Request.Body.CopyToAsync(ms);
-                var ackMsg = System.Text.Json.JsonSerializer.Deserialize<MessageProcessedAcknowledgement>(ms.ToArray());
-                if(ackMsg == null) 
+                try
                 {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    context.Response.ContentType = "application/json";
-                    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new AcknowledgeResponse()
-                    {
-                        Description = $"Message content is not of type {nameof(MessageProcessedAcknowledgement)}"
-                    }));
+                    await context.Request.Body.CopyToAsync(ms);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An error occurred when reading the request");
+                    await context.Response.CreateFailAcknowledgement(AcknowledgementResponseType.ReadingRequestFail);
                     return;
                 }
-                //get session
-                if (_shortLivedSessions.TryGet(ackMsg.PointToPointSessionIdentifier, out var sessions)) 
+                MessageProcessedAcknowledgement? ackMsg;
+                try
                 {
-                    var session = sessions.First();
+                    ackMsg = System.Text.Json.JsonSerializer.Deserialize<MessageProcessedAcknowledgement>(ms.ToArray());
+                    if (ackMsg == null)
+                    {
+                        await context.Response.CreateFailAcknowledgement(AcknowledgementResponseType.DeserializingAcknowledgementFail);
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An error occurred where deserializing acknowledgement request");
+                    await context.Response.CreateFailAcknowledgement(AcknowledgementResponseType.DeserializingAcknowledgementFail);
+                    return;
+                }
+                
+                //get session
+                if (_memoryCache.Cache.TryGetValue<ShortLivedSessionState>(ackMsg.PointToPointSessionIdentifier, out var session)) 
+                {
                     //valid signature
                     var baseSign = $"{ackMsg.PointToPointSessionIdentifier}:{ackMsg.CreatedOn}:{ackMsg.EncryptedExternalMessage}";
-                    var isValidSignature = _asymCryptoProvider.VerifySignature(
-                        Convert.FromBase64String(session.ExternalPublicKey)
-                        , Convert.FromBase64String(ackMsg.Signature)
-                        , Encoding.UTF8.GetBytes(baseSign));
-                    if (isValidSignature) 
+                    byte[] publicKey;
+                    byte[] signature;
+                    (bool isValid, EncryptionDecryptionFail reason) signatureVerification;
+                    try
+                    {
+                        signatureVerification = _asymCryptoProvider.VerifySignature(
+                                                        Convert.FromBase64String(session.ExternalPublicKey)
+                                                        , Convert.FromBase64String(ackMsg.Signature)
+                                                        , Encoding.UTF8.GetBytes(baseSign));
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogCritical(e, "An error ocurred when converting to byte array from base 64 string");
+                        await context.Response.CreateFailAcknowledgement(AcknowledgementResponseType.FromBase64ToByArrayFail);
+                        return;
+                    }
+
+                    if (signatureVerification.isValid)
                     {
                         await _processAcknowledgement.Process(ackMsg);
                         context.Response.StatusCode = StatusCodes.Status200OK;

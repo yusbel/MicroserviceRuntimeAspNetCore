@@ -10,6 +10,7 @@ using Sample.Sdk.Core.Http.Interfaces;
 using Sample.Sdk.Core.Http.Request;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,8 +57,13 @@ namespace Sample.Sdk.Core.Http
             }
             if (request.Content != null) 
             {
-                var plainContent = await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), token);
-                request.Content = new ByteArrayContent(plainContent);
+                (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainContent = 
+                    await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), token);
+                if (!plainContent.wasDecrypted || plainContent.data == null) 
+                {
+                    return request;
+                }
+                request.Content = new ByteArrayContent(plainContent.data);
             }
             //Decrypting headers
             if (request.Headers.Any(h => h.Key.StartsWith(EncryptedHeaderPrefix)))
@@ -67,9 +73,13 @@ namespace Sample.Sdk.Core.Http
                     .ForEach(async header => 
                     {
                         var encryptedStr = string.Join(",", header.Value);
-                        var plainStr = await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), token);
-                        header.Value.ToList().RemoveAll(h => h.Length > 0);
-                        header.Value.ToList().Add(Encoding.UTF8.GetString(plainStr));
+                        (bool wasDecrypt, byte[]? data, EncryptionDecryptionFail reason) plainStr = 
+                            await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), token);
+                        if(plainStr.wasDecrypt && plainStr.data != null) 
+                        {
+                            header.Value.ToList().RemoveAll(h => h.Length > 0);
+                            header.Value.ToList().Add(Encoding.UTF8.GetString(plainStr.data));
+                        }
                     });
             }
             var headerEncrypted = request.Headers.ToList().FirstOrDefault(h => h.Key == MessageEncrypted);
@@ -102,8 +112,13 @@ namespace Sample.Sdk.Core.Http
             var encryptedTypeMsg = (EncryptedHttpRequestMessage)request;
             if (encryptedTypeMsg.Content != null) 
             {
-                var encryptedContent = await _cryptoProvider.Encrypt(await encryptedTypeMsg.Content.ReadAsByteArrayAsync(), token);
-                request.Content = new ByteArrayContent(encryptedContent);
+                (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedContent = 
+                    await _cryptoProvider.Encrypt(await encryptedTypeMsg.Content.ReadAsByteArrayAsync(), token);
+                if (!encryptedContent.wasDecrypted || encryptedContent.data == null) 
+                {
+                    return request;
+                }
+                request.Content = new ByteArrayContent(encryptedContent.data);
                 isEncrypted = true;
             }
             if(encryptedTypeMsg.Headers.Any() 
@@ -115,9 +130,13 @@ namespace Sample.Sdk.Core.Http
                     .ForEach(async header =>
                                     {
                                         var strToEncrypt = String.Join(",", header.Value);
-                                        var encryptedHeader = await _cryptoProvider.Encrypt(Encoding.UTF8.GetBytes(strToEncrypt), token);
-                                        header.Value.ToList().RemoveAll(str => str.Length > 0);
-                                        header.Value.ToList().Add(Encoding.UTF8.GetString(encryptedHeader));
+                                        (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedHeader = 
+                                            await _cryptoProvider.Encrypt(Encoding.UTF8.GetBytes(strToEncrypt), token);
+                                        if(encryptedHeader.wasEncrypted && encryptedHeader.data != null) 
+                                        {
+                                            header.Value.ToList().RemoveAll(str => str.Length > 0);
+                                            header.Value.ToList().Add(Encoding.UTF8.GetString(encryptedHeader.data));
+                                        }
                                     });
                 isEncrypted = true;
             }

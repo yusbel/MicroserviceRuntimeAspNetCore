@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Sample.Sdk;
+using Sample.Sdk.AspNetCore.Middleware;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.InMemory;
@@ -16,19 +19,18 @@ namespace Sample.EmployeeSubdomain.Middleware
 {
     public class CustomSecureTransparentEncryptionMiddleware
     {
-        private readonly IInMemoryMessageBus<ShortLivedSessionState> _sessions;
+        private readonly IMemoryCacheState<string, ShortLivedSessionState> _memoryCache;
         private readonly ILogger<CustomSecureTransparentEncryptionMiddleware> _logger;
         private readonly RequestDelegate _next;
         private readonly IAsymetricCryptoProvider _cryptoProvider;
 
         public CustomSecureTransparentEncryptionMiddleware(
-            IInMemoryMessageBus<ShortLivedSessionState> messageBus
+            IMemoryCacheState<string, ShortLivedSessionState> memoryCache
             , ILoggerFactory loggerFactory
             , RequestDelegate next
             , IAsymetricCryptoProvider cryptoProvider)
         {
-            Guard.ThrowWhenNull(messageBus);
-            _sessions = messageBus;
+            _memoryCache = memoryCache;
             _logger = loggerFactory.CreateLogger<CustomSecureTransparentEncryptionMiddleware>();
             _next = next;
             _cryptoProvider = cryptoProvider;
@@ -43,60 +45,145 @@ namespace Sample.EmployeeSubdomain.Middleware
             }
             _logger.LogInformation($"Processing request");
             using var ms = new MemoryStream();
-            await context.Request.Body.CopyToAsync(ms);
-            var encryptedData = System.Text.Json.JsonSerializer.Deserialize<EncryptedData>(Encoding.UTF8.GetString(ms.ToArray()));
-            if(encryptedData == null ) 
+            try
             {
-                context.Response.StatusCode = StatusCodes.Status400BadRequest; 
+                await context.Request.Body.CopyToAsync(ms);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "An error ocurred when reading the request");
+                await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage() 
+                { 
+                    Reason =  EncryptionDecryptionFail.FailToReadRequest
+                });
                 return;
             }
-            if (_sessions.TryGet(encryptedData.SessionEncryptedIdentifier, out var shortLivedSessions)) 
+            EncryptedData? encryptedData;
+            try
             {
-                var shortLivedSession = shortLivedSessions.ToList().FirstOrDefault();
-                if (shortLivedSession == null)
+                encryptedData = System.Text.Json.JsonSerializer.Deserialize<EncryptedData>(Encoding.UTF8.GetString(ms.ToArray()));
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "An error ocurred when deserializing encrypted data");
+                await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage() 
                 {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest; 
-                    return;
-                }
+                    Reason = EncryptionDecryptionFail.DeserializationFail
+                });
+                return;
+            }
+            if(encryptedData == null ) 
+            {
+                await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                {
+                    Reason = EncryptionDecryptionFail.DeserializationFail
+                });
+                return;
+            }
+            if (_memoryCache.Cache.TryGetValue<ShortLivedSessionState>(encryptedData.SessionEncryptedIdentifier, out var shortLivedSession))
+            {
                 if (!IsSenderValid(encryptedData, shortLivedSession)) 
                 {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage() 
+                    {
+                        Reason= EncryptionDecryptionFail.InValidSender, 
+                        PointToPointSessionIdentifier = encryptedData.SessionEncryptedIdentifier
+
+                    });
                     return;
                 }
-                var plainData = await _cryptoProvider.Decrypt(
-                    Convert.FromBase64String(encryptedData.Encrypted)
-                    , CancellationToken.None);
-
+                var result = await _cryptoProvider.Decrypt(
+                                                Convert.FromBase64String(encryptedData.Encrypted)
+                                                , CancellationToken.None);
+                if (!result.wasDecrypted || result.data == null) 
+                {
+                    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                    {
+                        PointToPointSessionIdentifier = encryptedData.SessionEncryptedIdentifier, 
+                        Reason = result.reason
+                    });
+                    return;
+                }
+                byte[] externalPublicKeyBase64String;
+                try 
+                {
+                    externalPublicKeyBase64String = Convert.FromBase64String(shortLivedSession.ExternalPublicKey);
+                }
+                catch(Exception e) 
+                {
+                    _logger.LogCritical(e, "An error ocurred converting string to by array");
+                    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                    {
+                        Reason = EncryptionDecryptionFail.Base64StringConvertionFail
+                    });
+                    return;
+                }
                 //Encrypt with external public key
-                var contentEncrypted = _cryptoProvider.Encrypt(
-                                                    Convert.FromBase64String(shortLivedSession.ExternalPublicKey)
-                                                    , plainData
-                                                    , CancellationToken.None);
+                (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) contentEncrypted = 
+                    _cryptoProvider.Encrypt(externalPublicKeyBase64String
+                                            , result.data
+                                            , CancellationToken.None);
+                if (!contentEncrypted.wasEncrypted || contentEncrypted.data == null) 
+                {
+                    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                    {
+                        Reason = EncryptionDecryptionFail.EncryptFail
+                    });
+                    return;
+                }
+                string contentEncryptedBase64;
+                try
+                {
+                    contentEncryptedBase64 = Convert.ToBase64String(contentEncrypted.data);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogCritical(e, "An error ocurred when converting to base 64 string");
+                    throw;
+                }
                 //Signature with my private key
                 var createdOn = DateTime.Now.Ticks;
-                var baseSign = $"{encryptedData.SessionEncryptedIdentifier}:{createdOn}:{Convert.ToBase64String(contentEncrypted)}";
-                var singnature = await _cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign));
+                var baseSign = $"{encryptedData.SessionEncryptedIdentifier}:{createdOn}:{contentEncryptedBase64}";
+                (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) singnature = 
+                                    await _cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign));
+                if (!singnature.wasCreated || singnature.data == null) 
+                {
+                    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                    {
+                        Reason = EncryptionDecryptionFail.SignatureCreationFail
+                    });
+                    return;
+                }
                 var reponseEncryptedData = new EncryptedData() 
                 {
                     CreatedOn= createdOn, 
-                    Encrypted = Convert.ToBase64String(contentEncrypted), 
+                    Encrypted = contentEncryptedBase64, 
                     SessionEncryptedIdentifier = encryptedData.SessionEncryptedIdentifier,
-                    Signature = Convert.ToBase64String(singnature)
+                    Signature = Convert.ToBase64String(singnature.data)
                 };
                 context.Response.StatusCode = StatusCodes.Status200OK;
                 await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(reponseEncryptedData)));
                 return;
             }
-            await _next(context);
+            //Session was not found
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new InValidHttpResponseMessage() 
+            { 
+                PointToPointSessionIdentifier = encryptedData.SessionEncryptedIdentifier, 
+                Reason = EncryptionDecryptionFail.SessionIsInvalid
+            }));
+            return;
         }
 
         private bool IsSenderValid(EncryptedData? encryptedData, ShortLivedSessionState? shortLivedSession)
         {
-            var baseSig = $"{encryptedData?.SessionEncryptedIdentifier}:{encryptedData?.CreatedOn}:{encryptedData.Encrypted}";
-            return _cryptoProvider.VerifySignature(
-                Convert.FromBase64String(shortLivedSession.ExternalPublicKey)
-                , Convert.FromBase64String(encryptedData.Signature)
-                , Encoding.UTF8.GetBytes(baseSig));
+            var baseSig = $"{encryptedData?.SessionEncryptedIdentifier}:{encryptedData?.CreatedOn}:{encryptedData?.Encrypted}";
+            (bool wasVerified, EncryptionDecryptionFail reason) result = 
+                _cryptoProvider.VerifySignature(Convert.FromBase64String(shortLivedSession.ExternalPublicKey)
+                                                , Convert.FromBase64String(encryptedData.Signature)
+                                                , Encoding.UTF8.GetBytes(baseSig));
+            return result.wasVerified;
         }
     }
 }

@@ -4,12 +4,14 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.InMemory;
@@ -30,6 +32,10 @@ namespace Sample.Sdk
     {
         public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration, string serviceBusInfoSection = "")
         {
+            services.AddSingleton<IMemoryCacheState<string, ShortLivedSessionState>, MemoryCacheState<string, ShortLivedSessionState>>();
+            services.AddTransient<IMemoryCache, MemoryCache>();
+            services.ConfigureOptions<MemoryCacheOptions>();
+
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
             services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
             services.AddTransient<IPointToPointChannel, PointToPointChannel>();
