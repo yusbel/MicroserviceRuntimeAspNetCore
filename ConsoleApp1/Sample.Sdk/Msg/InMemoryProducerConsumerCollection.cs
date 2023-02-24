@@ -20,18 +20,18 @@ namespace Sample.Sdk.Msg
     /// Use memory cache to keep track of item taked to avoid duplicate for 10 minutes
     /// </summary>
     /// <typeparam name="T">Is a class</typeparam>
-    public class InMemoryProducerConsumerCollection<T> : IInMemoryProducerConsumerCollection<T> where T : class, IMessageIdentifier
+    public class InMemoryProducerConsumerCollection<TList, T> : IInMemoryProducerConsumerCollection<TList, T> where T : class, IMessageIdentifier where TList : class
     {
         private readonly BlockingCollection<T> _state = new BlockingCollection<T>();
         private readonly IMemoryCacheState<string, string> _identifiersCache;
-        private readonly ILogger<InMemoryProducerConsumerCollection<T>> _logger;
+        private readonly ILogger<InMemoryProducerConsumerCollection<TList, T>> _logger;
         private readonly object _lock = new object();
 
         public int Count => _state.Count;
 
         public InMemoryProducerConsumerCollection(
             IMemoryCacheState<string, string> identifiersCache,
-            ILogger<InMemoryProducerConsumerCollection<T>> logger)
+            ILogger<InMemoryProducerConsumerCollection<TList, T>> logger)
         {
             _identifiersCache = identifiersCache;
             _logger = logger;

@@ -1,6 +1,8 @@
-﻿namespace Sample.Sdk.Msg.Interfaces
+﻿
+
+namespace Sample.Sdk.Msg.Interfaces
 {
-    public interface IInMemoryProducerConsumerCollection<T> where T : class
+    public interface IInMemoryProducerConsumerCollection<TListType, T> where T : class where TListType : class
     {
         public int Count { get; }
         bool TryAdd(T item);

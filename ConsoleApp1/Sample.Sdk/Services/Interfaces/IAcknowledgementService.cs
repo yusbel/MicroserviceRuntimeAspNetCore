@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services.Interfaces
 {
-    internal interface IAcknowledgementService
+    public interface IAcknowledgementService
     {
         Task<bool> SendAcknowledgement(
             Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services.Interfaces
 {
-    internal interface IDecryptorService
+    public interface IDecryptorService
     {
         Task<(bool wasDecrypted, ExternalMessage? message, EncryptionDecryptionFail reason)>
         GetDecryptedExternalMessage(

@@ -19,6 +19,7 @@ using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.InMemoryListMessage;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services;
 using Sample.Sdk.Services.Interfaces;
@@ -41,7 +42,19 @@ namespace Sample.Sdk
             services.AddTransient<IMemoryCache, MemoryCache>();
             services.Configure<MemoryCacheOptions>(configuration);
             services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
-            services.AddSingleton< IInMemoryProducerConsumerCollection<InComingEventEntity>, InMemoryProducerConsumerCollection<InComingEventEntity>>();
+            
+            services.AddSingleton<IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>
+                , InMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>>();
+            services.AddSingleton<IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>
+                , InMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>>();
+            services.AddSingleton<IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>
+                , InMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>>();
+            services.AddSingleton<IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>
+                , InMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>>();
+            services.AddSingleton<IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>
+                , InMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>>();
+
+            
 
             services.AddTransient<IDecryptorService, DecryptorService>();
             services.AddTransient<IAcknowledgementService, AcknowledgementService>();
