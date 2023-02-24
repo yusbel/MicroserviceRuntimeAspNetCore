@@ -22,13 +22,13 @@ namespace Sample.Sdk.Core
         private readonly IOptions<CustomProtocolOptions> _protocolOptions;
         private readonly ISymetricCryptoProvider _cryptoProvider;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
-        private readonly ILogger<BaseObject<T>> _logger;
+        private readonly ILogger _logger;
 
         public BaseObject(IMessageBusSender senderMessageDurable
             , IOptions<CustomProtocolOptions> protocolOptions
             , ISymetricCryptoProvider cryptoProvider
             , IAsymetricCryptoProvider asymetricCryptoProvider
-            , ILogger<BaseObject<T>> logger)
+            , ILogger logger)
         {
             (_msgSender) = (senderMessageDurable);
             _protocolOptions = protocolOptions;
@@ -36,23 +36,30 @@ namespace Sample.Sdk.Core
             _asymetricCryptoProvider = asymetricCryptoProvider;
             _logger = logger;
         }
-        protected abstract Task Save<TE>(TE message, bool sendNotification) where TE : ExternalMessage;
-        protected abstract Task Save();
+        protected abstract Task<bool> Save<TE>(TE message, CancellationToken token, bool sendNotification) where TE : ExternalMessage;
+        protected abstract Task Save(CancellationToken token);
         protected abstract void LogMessage();
-        protected async Task<(bool wasEncrypted, EncryptedMessageMetadata? msg)> EncryptExternalMessage<TC>(TC toEncrypt) where TC : ExternalMessage
+
+        /// <summary>
+        /// Encrypt external message. Do not raise exception.
+        /// </summary>
+        /// <typeparam name="TC"></typeparam>
+        /// <param name="toEncrypt"></param>
+        /// <returns></returns>
+        protected async Task<(bool wasEncrypted, EncryptedMessageMetadata? msg)> EncryptExternalMessage<TC>(TC toEncrypt, CancellationToken token) where TC : ExternalMessage
         {
             var plainData = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(toEncrypt));
             if (_cryptoProvider.TryEncrypt(plainData, out var result))
             {
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) keyEncrypted = 
-                    await _asymetricCryptoProvider.Encrypt(result.Key, CancellationToken.None);
-                if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted) 
+                    await _asymetricCryptoProvider.Encrypt(result!.Key, token);
+                if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted || token.IsCancellationRequested) 
                 {
                     return (false, default);
                 }
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) ivEncrypted = 
-                    await _asymetricCryptoProvider.Encrypt(result.Iv, CancellationToken.None);
-                if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null) 
+                    await _asymetricCryptoProvider.Encrypt(result.Iv, token);
+                if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null || token.IsCancellationRequested) 
                 {
                     return (false, default);
                 }
@@ -61,8 +68,8 @@ namespace Sample.Sdk.Core
                 var createdOn = DateTime.Now.Ticks;
                 var encryptedContent = Convert.ToBase64String(result.EncryptedData);
                 (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
-                    await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"));
-                if (!signature.wasCreated || signature.data == null) 
+                    await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"), token);
+                if (!signature.wasCreated || signature.data == null || token.IsCancellationRequested) 
                 {
                     return (false, default);
                 }

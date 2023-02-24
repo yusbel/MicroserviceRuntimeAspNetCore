@@ -42,7 +42,7 @@ namespace Sample.EmployeeSubdomain
             Guard.ThrowWhenNull(entityContext, loggerFactory, messageSender);
             _logger = loggerFactory.CreateLogger<Employee>();
         }
-        public async Task<EmployeeEntity> CreateAndSave(string name, string email)
+        public async Task<EmployeeEntity> CreateAndSave(string name, string email, CancellationToken token)
         {
             _employee = new EmployeeEntity { Name = name, Email = email };
             try
@@ -52,21 +52,21 @@ namespace Sample.EmployeeSubdomain
                     Key = _employee.Id.ToString(),
                     CorrelationId = _employee.Id.ToString(),
                     Content = System.Text.Json.JsonSerializer.Serialize(_employee)
-                }, sendNotification: true);
+                }, token, sendNotification: true);
             }
             catch (Exception e)
             {
-                _logger.LogCritical("Creating and saving raised an error: {} {}", e.Message, e.StackTrace);
+                _logger.LogCritical(e, "Creating and saving raised an error");
             }
             return _employee;
         }
-        public async Task<EmployeeEntity> GetEmployee(Guid id)
+        public async Task<EmployeeEntity> GetEmployee(Guid id, CancellationToken token)
         {
-            return await GetEntityById(id);
+            return await GetEntityById(id, token);
         }
-        protected override EmployeeEntity GetInMemoryEntity() => _employee;
+        protected override EmployeeEntity? GetInMemoryEntity() => _employee;
         protected override void AttachEntity(EmployeeEntity entity) => _employee = entity;
-        private EmployeeEntity _employee;
+        private EmployeeEntity? _employee;
 
     }
 }

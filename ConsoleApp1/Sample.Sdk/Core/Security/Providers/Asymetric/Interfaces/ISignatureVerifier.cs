@@ -9,10 +9,10 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
 {
     public interface ISignatureVerifier
     {
-        public Task<(bool wasValid, EncryptionDecryptionFail reason)> VerifySignature(byte[] hashValue, byte[] baseSignature);
+        public Task<(bool wasValid, EncryptionDecryptionFail reason)> VerifySignature(byte[] hashValue, byte[] baseSignature, CancellationToken token);
 
-        public (bool wasValid, EncryptionDecryptionFail reason) VerifySignature(byte[] publicKey, byte[] hashValue, byte[] baseSignature);
-        public Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> CreateSignature(byte[] baseString);
+        public (bool wasValid, EncryptionDecryptionFail reason) VerifySignature(byte[] publicKey, byte[] hashValue, byte[] baseSignature, CancellationToken token);
+        public Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> CreateSignature(byte[] baseString, CancellationToken token);
 
     }
 }

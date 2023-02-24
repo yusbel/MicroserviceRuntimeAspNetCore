@@ -10,6 +10,8 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using ConsoleApp1;
 
+Console.WriteLine($"Processor count ${Environment.ProcessorCount}");
+
 Console.WriteLine("Hello World");
 //var logger = LoggerFactory.Create((builder) => { builder.AddConsole(); }).CreateLogger("");
 

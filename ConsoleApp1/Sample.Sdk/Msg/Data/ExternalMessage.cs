@@ -7,10 +7,21 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg.Data
 {
-    public class ExternalMessage
+    public class ExternalMessage : IMessageIdentifier
     {
         public string Key { get; set; }
         public string CorrelationId { get; set; }
         public string Content { get; set; }
+        public string Id 
+        { 
+            get 
+            {
+                return Key;
+            } 
+            set 
+            {
+                Key = value; 
+            }
+        }
     }
 }

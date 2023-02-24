@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Sample.PayRoll.Entities;
+using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.EntityModel;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,10 @@ using System.Transactions;
 
 namespace Sample.PayRoll.DatabaseContext
 {
-    public class PayRollContext : DbContext
+    /// <summary>
+    /// PayRool
+    /// </summary>
+    public class PayRollContext : ServiceDbContext
     {
         public PayRollContext(DbContextOptions options) : base(options) { }
 
@@ -21,10 +25,7 @@ namespace Sample.PayRoll.DatabaseContext
         }
 
         public DbSet<PayRollEntity> PayRolls { get; set; }
-
-        public DbSet<TransactionEntity> Transactions { get; set; }
-
-        public DbSet<InComingEventEntity> InComingEvents { get; set; }
+        
 
     }
 }

@@ -179,6 +179,7 @@ namespace Sample.EmployeeSubdomain.Middleware
                     , (cacheEntry) =>
                     {
                         cacheEntry.SetValue(shortLivedSession);
+                        cacheEntry.SetAbsoluteExpiration(TimeSpan.FromMilliseconds(100));
                         return shortLivedSession;
                     });
             context.Response.StatusCode = 200;

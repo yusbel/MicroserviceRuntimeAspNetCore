@@ -12,17 +12,7 @@ namespace Sample.Sdk.Msg.Interfaces
     {
         public Task<ExternalMessage> Receive(
             CancellationToken token
-            , Func<InComingEventEntity, Task<bool>> saveEntity
+            , Func<InComingEventEntity, CancellationToken, Task<bool>> saveEntity
             , string queueName = "");
-
-        public Task<bool> Process(
-            Func<Task<IEnumerable<InComingEventEntity>>> getInComingEvents
-            , Func<ExternalMessage, Task<bool>> processDeryptedInComingMessage
-            , Func<InComingEventEntity, Task<bool>> updateEntity
-            , CancellationToken token);
-
-        Task<bool> SendAcknowledgement(
-            Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed
-            , Func<InComingEventEntity, Task<bool>> updateToProcessed);
     }
 }   

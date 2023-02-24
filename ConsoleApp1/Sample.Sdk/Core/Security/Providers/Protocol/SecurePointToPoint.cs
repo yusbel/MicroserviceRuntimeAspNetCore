@@ -5,8 +5,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.InMemory;
 using Sample.Sdk.Msg.Data;
 using System;
@@ -29,6 +31,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
         private readonly IPointToPointChannel _pointToPointChannel;
         private readonly IExternalServiceKeyProvider _externalServiceKeyProvider;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<SecurePointToPoint> _logger;
         private readonly AzureKeyVaultOptions _serviceOptions;
         public SecurePointToPoint(
             IInMemoryMessageBus<PointToPointChannel> sessions
@@ -38,7 +41,8 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , IHttpClientResponseConverter httpClientResponseConverter
             , IPointToPointChannel pointToPointChannel
             , IExternalServiceKeyProvider externalServiceKeyProvider
-            , ILoggerFactory loggerFactory)
+            , ILoggerFactory loggerFactory
+            , ILogger<SecurePointToPoint> logger)
         {
             Guard.ThrowWhenNull(sessions, options, certificateClient);
             _sessions = sessions;
@@ -48,6 +52,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             _pointToPointChannel = pointToPointChannel;
             _externalServiceKeyProvider = externalServiceKeyProvider;
             _loggerFactory = loggerFactory;
+            _logger = logger;
             _serviceOptions = serviceOptions.Value;
         }
 
@@ -58,17 +63,29 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
         /// <param name="wellknownSecurityEndpoint"></param>
         /// <returns></returns>
         /// <exception cref="ApplicationException"></exception>
-        public async Task<(bool wasDecrypted, byte[]? data, State.EncryptionDecryptionFail reason)> Decrypt(string wellknownSecurityEndpoint
+        public async Task<(bool wasDecrypted, byte[]? data, State.EncryptionDecryptionFail reason)> 
+            Decrypt(string wellknownSecurityEndpoint
             , string decryptEndpoint
             , byte[] encryptedData
             , IAsymetricCryptoProvider cryptoProvider
             , CancellationToken token)
         {
             if (string.IsNullOrEmpty(wellknownSecurityEndpoint))
+                throw new ArgumentNullException(nameof(wellknownSecurityEndpoint));
+            if (token.IsCancellationRequested)
+                return (false, default, State.EncryptionDecryptionFail.TaskCancellationWasRequested);
+
+            byte[] wellknowbytes;
+            try
             {
-                throw new ApplicationException("Invalid wellknown encryption endpoint");
+                wellknowbytes = Encoding.UTF8.GetBytes(wellknownSecurityEndpoint);
             }
-            var identifier = Convert.ToBase64String(Encoding.UTF8.GetBytes(wellknownSecurityEndpoint));
+            catch (Exception e)
+            {
+                AggregateExceptionExtensions.LogException(e, _logger, "failt to convert to byte array");
+                return (false, default, State.EncryptionDecryptionFail.Base64StringConvertionFail);
+            }
+            var identifier = Convert.ToBase64String(wellknowbytes);
             return await GetPlainData(identifier
                                             , token
                                             , new DecryptContentDependency() 
@@ -90,7 +107,12 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , (bool wasDecrypted, byte[]? data, State.EncryptionDecryptionFail reason) result
             , int counter)
         {
-            PointToPointChannel channel = null;
+            PointToPointChannel? channel = null;
+            if (token.IsCancellationRequested)
+            {
+                result.reason = State.EncryptionDecryptionFail.TaskCancellationWasRequested;
+                return result;
+            }
             if (counter == 3) 
             {
                 result.reason = State.EncryptionDecryptionFail.MaxReryReached;
@@ -117,7 +139,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             {
                 await Task.Delay(1000);
             }
-            if(channel== null) 
+            if(channel == null) 
             {
                 (bool wasCreated, PointToPointChannel? channel) channelCreated =
                     await GetOrCreateSessionChannel(sessionIdentifier, token);
@@ -133,7 +155,8 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
                                     decryptContentDependency.DecryptEndpoint
                                     , decryptContentDependency.EncryptedData
                                     , decryptContentDependency.ResponseConverter
-                                    , decryptContentDependency.CryptoProvider);
+                                    , decryptContentDependency.CryptoProvider
+                                    , token);
             }
             else
             {
@@ -160,7 +183,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             try
             {   
-                (bool wasCreated, PointToPointChannel? channel) channelCreated = 
+                (bool wasCreated, PointToPointChannel? channel, EncryptionDecryptionFail reason) channelCreated = 
                     await _pointToPointChannel.Create(identifier
                                                         , _options.Value.WellknownSecurityEndpoint
                                                         , _certificateClient

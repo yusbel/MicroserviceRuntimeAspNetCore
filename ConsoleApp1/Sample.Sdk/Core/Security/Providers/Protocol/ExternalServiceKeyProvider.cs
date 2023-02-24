@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,10 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , AzureKeyVaultOptions options
             , CancellationToken token)
         {
+            if (token.IsCancellationRequested) 
+            {
+                return (false, default, EncryptionDecryptionFail.TaskCancellationWasRequested);
+            }
             HttpResponseMessage responseMessage;
             try
             {
@@ -30,18 +35,36 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error ocurred when retrievign public key");
+                AggregateExceptionExtensions.LogException(e, _logger, "Fail to retrieve public key");
                 return (false, default(byte[]?), EncryptionDecryptionFail.NoPublicKey);
+            }
+            if(token.IsCancellationRequested) 
+            {
+                return (false, default, EncryptionDecryptionFail.TaskCancellationWasRequested);
+            }
+            PublicKeyWrapper? publicKeyWrapper = null;
+            try
+            {
+                publicKeyWrapper = System.Text.Json.JsonSerializer.Deserialize<PublicKeyWrapper>(await responseMessage.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                AggregateExceptionExtensions.LogException(e, _logger, "");
+                return (false, default, EncryptionDecryptionFail.DeserializationFail);
+            }
+            if (publicKeyWrapper == null) 
+            {
+                _logger.LogCritical("Unable to deserialize to public key wrapper");
+                return (false, default, default);
             }
             try
             {
-                var publicKeyWrapper = System.Text.Json.JsonSerializer.Deserialize<PublicKeyWrapper>(await responseMessage.Content.ReadAsStringAsync());
                 var certificate = new X509Certificate2(Convert.FromBase64String(publicKeyWrapper.PublicKey));
                 return (true, Convert.FromBase64String(publicKeyWrapper.PublicKey), EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error occurred when retrieving the public key");
+                AggregateExceptionExtensions.LogException(e, _logger, "Failt to extract public key");
                 return (false, default(byte[]?), EncryptionDecryptionFail.InValidPublicKey);
             }
         }

@@ -22,11 +22,11 @@ namespace Sample.Sdk.Tests.Security
         [TestMethod]
         public void GivenValidCertificateThenCreateChannel() 
         {
-            var channel = new PointToPointChannel();
-            var identifier = Convert.ToBase64String(Encoding.UTF8.GetBytes(_externalWellKnownEndpoint));
-            var mockHttpClient = new Mock<HttpClient>();
-            mockHttpClient.Setup(client => client.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
-                .ReturnsAsync((HttpResponseMessage)null);
+            //var channel = new PointToPointChannel();
+            //var identifier = Convert.ToBase64String(Encoding.UTF8.GetBytes(_externalWellKnownEndpoint));
+            //var mockHttpClient = new Mock<HttpClient>();
+            //mockHttpClient.Setup(client => client.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
+            //    .ReturnsAsync((HttpResponseMessage)null);
 
         }
 

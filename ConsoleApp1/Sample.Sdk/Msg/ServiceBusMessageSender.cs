@@ -9,7 +9,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
-using Sample.Sdk.Services;
+using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ namespace Sample.Sdk.Msg
     /// <summary>
     /// 
     /// </summary>
-    public partial class ServiceBusMessageSender : ServiceBusRoot, IMessageBusSender
+    public partial class ServiceBusMessageSender : ServiceRoot, IMessageBusSender
     {
         private ILogger<ServiceBusMessageSender> _logger;
         public ServiceBusMessageSender(ILoggerFactory loggerFactory
@@ -47,7 +47,7 @@ namespace Sample.Sdk.Msg
                 , keyVaultOptions
                 , securePointToPoint
                 , validator
-                , loggerFactory.CreateLogger<ServiceBusRoot>())
+                , loggerFactory.CreateLogger<ServiceRoot>())
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }

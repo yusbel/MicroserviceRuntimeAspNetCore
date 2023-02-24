@@ -25,7 +25,8 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.State
         InValidPublicKey,
         Base64StringConvertionFail,
         InValidAcknowledgementUri,
-        FailToReadRequest
+        FailToReadRequest,
+        TaskCancellationWasRequested
     }
 
     public enum AcknowledgementResponseType

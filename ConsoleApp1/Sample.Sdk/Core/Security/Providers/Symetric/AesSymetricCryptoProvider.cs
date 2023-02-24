@@ -39,7 +39,7 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
             }
             catch (Exception e)
             {
-                _logger.LogCritical($"Symetric decript fail {e}");
+                _logger.LogCritical(e, "Symetric decript fail");
                 result = default;
                 return false;
             }

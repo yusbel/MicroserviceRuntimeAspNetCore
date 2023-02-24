@@ -9,7 +9,8 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
     public interface IPointToPointChannel   
     {
-        Task<(bool wasCreated, PointToPointChannel? channel)> Create(string identifier
+        Task<(bool wasCreated, PointToPointChannel? channel, EncryptionDecryptionFail reason)> 
+            Create(string identifier
             , string externalWellKnownEndpoint
             , CertificateClient certificateClient
             , AzureKeyVaultOptions options
@@ -20,6 +21,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
         Task<(bool wasDecrypted, byte[]? content, EncryptionDecryptionFail reason)> DecryptContent(string externalWellknownEndpoint
             , byte[] encryptedData
             , IHttpClientResponseConverter httpClientResponseConverter
-            , IAsymetricCryptoProvider cryptoProvider);
+            , IAsymetricCryptoProvider cryptoProvider
+            , CancellationToken token);
     }
 }

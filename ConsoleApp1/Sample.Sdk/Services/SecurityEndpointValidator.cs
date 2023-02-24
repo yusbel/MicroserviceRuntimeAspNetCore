@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Security;
+using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

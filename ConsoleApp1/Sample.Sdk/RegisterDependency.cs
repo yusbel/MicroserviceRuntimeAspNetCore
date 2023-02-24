@@ -11,12 +11,17 @@ using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
+using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory;
+using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services;
+using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,8 +39,12 @@ namespace Sample.Sdk
         {
             services.AddSingleton<IMemoryCacheState<string, ShortLivedSessionState>, MemoryCacheState<string, ShortLivedSessionState>>();
             services.AddTransient<IMemoryCache, MemoryCache>();
-            services.ConfigureOptions<MemoryCacheOptions>();
+            services.Configure<MemoryCacheOptions>(configuration);
+            services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
+            services.AddSingleton< IInMemoryProducerConsumerCollection<InComingEventEntity>, InMemoryProducerConsumerCollection<InComingEventEntity>>();
 
+            services.AddTransient<IDecryptorService, DecryptorService>();
+            services.AddTransient<IAcknowledgementService, AcknowledgementService>();
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
             services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
             services.AddTransient<IPointToPointChannel, PointToPointChannel>();

@@ -107,7 +107,7 @@ namespace Sample.EmployeeSubdomain.Services
         {
             var employee = _serviceScopeFactory.CreateAsyncScope().ServiceProvider.GetRequiredService<IEmployee>();
             int counter = 0;
-            await employee.CreateAndSave("Yusbel", "Garcia Diaz");
+            await employee.CreateAndSave("Yusbel", "Garcia Diaz", CancellationToken.None);
             return;
             //while (employee != null)
             //{

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Sample.Sdk.Core.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,17 +21,17 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
             _httpClient = httpClient;
             _logger = logger;
         }
-        public async Task<(bool isValid, T? data, TInvalid? invalidResponse)> InvokePost<T, TInvalid>(Uri uri, HttpContent content) where T : class where TInvalid : class
+        public async Task<(bool isValid, T? data, TInvalid? invalidResponse)> 
+            InvokePost<T, TInvalid>(Uri uri, HttpContent content, CancellationToken token) where T : class where TInvalid : class
         {
-            _logger.LogInformation("Invoking endppoint {}", uri);
             HttpResponseMessage responseMessage;
             try
             {
-                responseMessage = await _httpClient.PostAsync(uri, content);
+                responseMessage = await _httpClient.PostAsync(uri, content, token);
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error ocurred when calling the acknowledgement endpoint");
+                e.LogException(_logger, "An error ocurred when calling the acknowledgement endpoint");
                 return (false, default(T?), default(TInvalid?));
             } 
             if (responseMessage.IsSuccessStatusCode)
@@ -43,7 +44,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
                 }
                 catch(Exception e) 
                 {
-                    _logger.LogCritical(e, $"An error occurred when deserializing to {nameof(T)}");
+                    e.LogException(_logger, $"An error occurred when deserializing to {nameof(T)}");
                     return (false, default(T?), default(TInvalid?));
                 }
             }
@@ -54,7 +55,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, $"An error ocurred when deserializing the response of type {nameof(TInvalid)}");
+                e.LogException(_logger, $"An error ocurred when deserializing the response of type {nameof(TInvalid)}");
                 return (false, default, default);
             }
         }

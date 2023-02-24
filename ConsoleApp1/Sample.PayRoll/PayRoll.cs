@@ -37,12 +37,12 @@ namespace Sample.PayRoll
         }
         protected override void AttachEntity(PayRollEntity entity) => _payRollEntity = entity;
         private PayRollEntity? _payRollEntity;
-        protected override PayRollEntity GetInMemoryEntity() => _payRollEntity ?? new PayRollEntity();
+        protected override PayRollEntity? GetInMemoryEntity() => _payRollEntity ?? new PayRollEntity();
 
-        public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail)
+        public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail, CancellationToken token)
         {
             _payRollEntity = new PayRollEntity() { EmployeeIdentifier = employeeIdentifier, MonthlySalary = monthlySalary, MailPaperRecord = sendMail, Id = Guid.NewGuid().ToString() };
-            await Save();
+            await Save(token);
             return true;
         }
     }

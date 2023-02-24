@@ -27,7 +27,6 @@
   <ItemGroup>
     <Folder Include="Core\Http\Response\" />
     <Folder Include="Core\Security\Providers\Signature\" />
-    <Folder Include="Core\Security\Services\" />
   </ItemGroup>
 
 </Project>

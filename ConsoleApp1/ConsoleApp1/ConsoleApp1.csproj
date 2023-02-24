@@ -28,16 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Sample.EmployeeSubdomain\Sample.EmployeeSubdomain.csproj" />
-    <ProjectReference Include="..\Sample.PayRoll\Sample.PayRoll.csproj" />
-    <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Cert\localhostcert.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

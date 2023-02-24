@@ -19,6 +19,7 @@ using Sample.Sdk.Core.Security;
 using Sample.PayRoll.Services.Processors.Converter;
 using Sample.Sdk.Services.Interfaces;
 using Sample.PayRoll.Services.Processors;
+using Sample.PayRoll.Services.HostedServices;
 
 namespace Sample.PayRoll
 {
@@ -27,14 +28,12 @@ namespace Sample.PayRoll
         public static IServiceCollection AddPayRollServiceDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddTransient<IMessageConverter<EmployeeDto>, EmployeeAddedConverter>();
-            services.AddTransient<IMessageProcessor<EmployeeDto>, EmployeeAddedProcessor>();
             services.AddTransient<IPayRoll, PayRoll>();
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();
             services.AddTransient<IMessageBusSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageBusSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageBusReceiver<EmployeeAdded>, ServiceBusMessageReceiver<EmployeeAdded>>();
             services.AddHostedService<EmployeeAddedHostedService>();
-            services.AddTransient<IEmployeeAddedService, EmployeeAddedService>();
             
             //Configuration Options
             services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.Identifier));

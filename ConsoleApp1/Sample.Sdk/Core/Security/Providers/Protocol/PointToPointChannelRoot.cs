@@ -1,7 +1,10 @@
 ﻿using Azure;
 using Azure.Security.KeyVault.Certificates;
+using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -29,7 +32,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e) 
             {
-                _logger.LogCritical(e, "An error ocurred when downloading the certificate");
+                AggregateExceptionExtensions.LogException(e, _logger, "Downlaoding certificate fail");
                 return (false, default, default);
             }
             RSA? rsa;
@@ -39,9 +42,11 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e) 
             {
-                _logger.LogCritical(e, "An error ocurred when decrypting with private key. The certificate does not contin a private key");
+                AggregateExceptionExtensions.LogException(e, _logger, "An error ocurred when decrypting with private key. The certificate does not contin a private key");
                 return (false, default, default);
             }
+            if(token.IsCancellationRequested) 
+                return (false, default, default);
             try
             {
                 var plainData = rsa?.Decrypt(Convert.FromBase64String(encryptedData), RSAEncryptionPadding.Pkcs1);
@@ -64,17 +69,43 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
         /// <param name="cert">Public key</param>
         /// <param name="plainText">Text to encrypt</param>
         /// <returns></returns>
-        protected (bool wasEncrypted, byte[]? data) EncryptWithPublicKey(byte[] cert, byte[] plainText)
-        {   
+        protected (bool wasEncrypted, byte[]? data) EncryptWithPublicKey(byte[] cert, byte[] plainText, CancellationToken token)
+        {
+            X509Certificate2 certificate;
             try
             {
-                var certificate = new X509Certificate2(cert);
-                var encryptedData = certificate.GetRSAPublicKey().Encrypt(plainText, RSAEncryptionPadding.Pkcs1);
+                certificate = new X509Certificate2(cert);
+            }
+            catch (Exception e)
+            {
+                AggregateExceptionExtensions.LogException(e, _logger, "An error ocurred when encrypting with public key");
+                return (false, default);
+            }
+            RSA? rsa;
+            try
+            {
+                rsa = certificate.GetRSAPublicKey();
+            }
+            catch (Exception e)
+            {
+                AggregateExceptionExtensions.LogException(e, _logger); 
+                return (false, default);
+            }
+            if (rsa == null)
+            {
+                _logger.LogCritical("RSA public key return null");
+                return (false, default);
+            }
+            if(token.IsCancellationRequested) 
+                return (false, default);
+            try
+            {
+                var encryptedData = rsa.Encrypt(plainText, RSAEncryptionPadding.Pkcs1);
                 return (true, encryptedData);
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error ocurred when encrypting with public key");
+                AggregateExceptionExtensions.LogException(e, _logger, "Error ocurred when encrypting data");
                 return (false, default);
             }
         }
@@ -93,7 +124,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error ocurred getting certificate");
+                AggregateExceptionExtensions.LogException(e, _logger, "Getting ccertificate fail");
                 return (false, default);
             }
         }
@@ -103,7 +134,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , CancellationToken token
             , string externalWellknownEndpoint)
         {
-            if (session == null || httpClient == null || string.IsNullOrEmpty(externalWellknownEndpoint)) 
+            if (session == null || httpClient == null || string.IsNullOrEmpty(externalWellknownEndpoint) || token.IsCancellationRequested) 
             {
                 return (false, default);
             }
@@ -116,7 +147,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "An error ocurred when getting the session from wellknown endpoint");
+                AggregateExceptionExtensions.LogException(e, _logger, "Fail creating session with external service");
                 return (false, default);
             }
         }

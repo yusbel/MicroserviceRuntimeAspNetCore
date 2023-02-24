@@ -28,12 +28,12 @@ Environment.SetEnvironmentVariable("AZURE_TENANT_ID", "c8656f45-daf5-42c1-9b29-a
 
 IHost employeeHost = Host.CreateDefaultBuilder(args)
                 //called before any other configuration to avoid overriding any services configuration
-                .ConfigureWebHost(webHost =>
+                .ConfigureWebHost(host =>
                 {
-                    webHost.UseEnvironment("Development");
-                    webHost.CaptureStartupErrors(true);
-                    webHost.UseStartup<EmployeeAppStartup>();
-                    webHost.UseKestrel(options =>
+                    host.UseEnvironment("Development");
+                    host.CaptureStartupErrors(true);
+                    host.UseStartup<EmployeeAppStartup>();
+                    host.UseKestrel(options =>
                     {
                         options.DisableStringReuse = true;
                         options.ListenLocalhost(5500);
@@ -66,4 +66,5 @@ IHost employeeHost = Host.CreateDefaultBuilder(args)
 //await RegisterNotifier.WebHook();
 
 Console.WriteLine("========================Employee Service=================================");
+
 await employeeHost.RunAsync();

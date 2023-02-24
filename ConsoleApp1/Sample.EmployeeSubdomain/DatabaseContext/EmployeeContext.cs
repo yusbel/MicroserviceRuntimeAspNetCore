@@ -9,11 +9,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.EmployeeSubdomain.Entities;
 using Sample.EmployeeSubdomain.Settings;
+using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.EntityModel;
 
 namespace Sample.EmployeeSubdomain.DatabaseContext
 {
-    public class EmployeeContext : DbContext
+    public class EmployeeContext : ServiceDbContext
     {
         private readonly ILogger<EmployeeContext> _logger;
         private readonly string _connStr = string.Empty;
@@ -49,7 +50,6 @@ namespace Sample.EmployeeSubdomain.DatabaseContext
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<EmployeeEntity> Employees { get; set; }
-        public DbSet<ExternalEventEntity> ExternalEvents { get; set; }
-        public DbSet<TransactionEntity> Transactions { get; set; }
+        
     }
 }
