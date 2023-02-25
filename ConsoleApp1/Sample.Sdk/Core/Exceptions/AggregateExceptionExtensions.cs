@@ -16,7 +16,7 @@ namespace Sample.Sdk.Core.Exceptions
         /// <param name="logger">Logger to log the exception</param>
         /// <param name="objects">Params to log</param>
         /// <returns></returns>
-        public static (bool wasHandle, Exception? e) LogException(this Exception e, ILogger logger, params object[] objects) 
+        public static (bool wasHandle, Exception? e) LogCriticalException(this Exception e, ILogger logger, params object[] objects) 
         {
             if (e == null || logger == null) 
             {

@@ -32,7 +32,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e) 
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Downlaoding certificate fail");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Downlaoding certificate fail");
                 return (false, default, default);
             }
             RSA? rsa;
@@ -42,7 +42,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e) 
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "An error ocurred when decrypting with private key. The certificate does not contin a private key");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "An error ocurred when decrypting with private key. The certificate does not contin a private key");
                 return (false, default, default);
             }
             if(token.IsCancellationRequested) 
@@ -78,7 +78,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "An error ocurred when encrypting with public key");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "An error ocurred when encrypting with public key");
                 return (false, default);
             }
             RSA? rsa;
@@ -88,7 +88,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger); 
+                AggregateExceptionExtensions.LogCriticalException(e, _logger); 
                 return (false, default);
             }
             if (rsa == null)
@@ -105,7 +105,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Error ocurred when encrypting data");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Error ocurred when encrypting data");
                 return (false, default);
             }
         }
@@ -124,7 +124,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Getting ccertificate fail");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Getting ccertificate fail");
                 return (false, default);
             }
         }
@@ -147,7 +147,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Fail creating session with external service");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Fail creating session with external service");
                 return (false, default);
             }
         }

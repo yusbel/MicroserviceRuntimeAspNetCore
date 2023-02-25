@@ -39,18 +39,27 @@ namespace Sample.Sdk
         public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration, string serviceBusInfoSection = "")
         {
             services.AddSingleton<IMemoryCacheState<string, ShortLivedSessionState>, MemoryCacheState<string, ShortLivedSessionState>>();
+            services.AddTransient<IMemoryCacheState<string, string>, MemoryCacheState<string, string>>();
             services.AddTransient<IMemoryCache, MemoryCache>();
+            
             services.Configure<MemoryCacheOptions>(configuration);
             services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
-            
+
+            services.AddSingleton<IInMemoryProducerConsumerCollection<CompletedMessageInMemoryList, InComingEventEntity>
+                , InMemoryProducerConsumerCollection<CompletedMessageInMemoryList, InComingEventEntity>>();
+
             services.AddSingleton<IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>
                 , InMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>>();
+
             services.AddSingleton<IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>
                 , InMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>>();
+
             services.AddSingleton<IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>
                 , InMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>>();
+
             services.AddSingleton<IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>
                 , InMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>>();
+
             services.AddSingleton<IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>
                 , InMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>>();
 

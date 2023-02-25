@@ -134,7 +134,7 @@ namespace Sample.Sdk.AspNetCore.Middleware
             }
             catch (Exception e) 
             {
-                e.LogException(_logger, "An error ocurred");
+                e.LogCriticalException(_logger, "An error ocurred");
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 return;
             }

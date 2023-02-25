@@ -1,4 +1,5 @@
-﻿using Sample.Sdk.EntityModel;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Converter;
@@ -16,13 +17,23 @@ namespace Sample.Sdk.Services.Interfaces
     /// <typeparam name="T"></typeparam>
     public interface IMessageComputation<T> : IExternalMessageConverter<T> where T : class, IMessageIdentifier
     {
-        Task<bool> SaveInComingEventEntity(InComingEventEntity eventEntity, CancellationToken cancellationToken);
+        Task<bool> SaveInComingEventEntity(
+                            IServiceScope serviceScope,
+                            InComingEventEntity eventEntity, 
+                            CancellationToken cancellationToken);
         Task<IEnumerable<InComingEventEntity>> GetInComingEventsAsync(
+                                            IServiceScope serviceScope,
                                             Func<InComingEventEntity, bool> condition,
                                             CancellationToken cancellationToken);
-        Task<bool> ProcessExternalMessage(ExternalMessage externalMessage, CancellationToken cancellationToken);
+        Task<bool> ProcessExternalMessage(
+                                        IServiceScope serviceScope, 
+                                        ExternalMessage externalMessage, 
+                                        CancellationToken cancellationToken);
 
-        Task<bool> UpdateInComingEventEntity(InComingEventEntity eventEntity, CancellationToken cancellationToken);
+        Task<bool> UpdateInComingEventEntity(
+                        IServiceScope serviceScope, 
+                        InComingEventEntity eventEntity, 
+                        CancellationToken cancellationToken);
 
     }
 }

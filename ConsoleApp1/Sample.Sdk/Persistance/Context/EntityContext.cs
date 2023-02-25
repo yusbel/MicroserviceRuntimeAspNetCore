@@ -46,7 +46,7 @@ namespace Sample.Sdk.Persistance.Context
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "Exception ocurred when retieving a user by id");
+                e.LogCriticalException(_logger, "Exception ocurred when retieving a user by id");
                 throw;
             }
         }
@@ -80,7 +80,7 @@ namespace Sample.Sdk.Persistance.Context
                 }
                 catch (Exception e) 
                 {
-                    AggregateExceptionExtensions.LogException(e, _logger, "Removing transaction from the table transaction log fail.");
+                    AggregateExceptionExtensions.LogCriticalException(e, _logger, "Removing transaction from the table transaction log fail.");
                 }
             });
             return true;

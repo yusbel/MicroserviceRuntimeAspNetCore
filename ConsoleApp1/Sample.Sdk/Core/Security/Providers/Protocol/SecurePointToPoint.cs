@@ -82,7 +82,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "failt to convert to byte array");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "failt to convert to byte array");
                 return (false, default, State.EncryptionDecryptionFail.Base64StringConvertionFail);
             }
             var identifier = Convert.ToBase64String(wellknowbytes);

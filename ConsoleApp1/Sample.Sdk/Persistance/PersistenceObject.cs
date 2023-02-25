@@ -91,7 +91,7 @@ namespace Sample.Sdk.Persistance
                 throw new ApplicationSaveException("Save was invoked with message null value or key was null");
             }
             if (token.IsCancellationRequested) 
-                return false;
+                token.ThrowIfCancellationRequested();
             TS? entity;
             try
             {
@@ -134,13 +134,15 @@ namespace Sample.Sdk.Persistance
                 _entityContext.SaveWithEvent(eventEntity, token);
                 return true;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
                 throw new ApplicationSaveException("Failed to save", e);
             }
         }
 
-        protected async Task<TS> GetEntityById(Guid id, CancellationToken token) => await _entityContext.GetById(id, token);
+        protected async Task<TS> GetEntityById(Guid id, CancellationToken token) => 
+            await _entityContext.GetById(id, token);
 
     }
 }

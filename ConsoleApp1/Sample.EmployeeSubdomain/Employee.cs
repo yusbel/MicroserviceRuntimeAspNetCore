@@ -54,6 +54,7 @@ namespace Sample.EmployeeSubdomain
                     Content = System.Text.Json.JsonSerializer.Serialize(_employee)
                 }, token, sendNotification: true);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
                 _logger.LogCritical(e, "Creating and saving raised an error");

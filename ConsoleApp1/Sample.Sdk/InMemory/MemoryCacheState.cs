@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Sample.Sdk.InMemory
 {
     //Client use IMemoryExtension methods
-    public class MemoryCacheState<TKey, T> : IMemoryCacheState<TKey, T> where TKey : class where T : CacheEntryState
+    public class MemoryCacheState<TKey, T> : IMemoryCacheState<TKey, T> where TKey : class
     {
         private readonly IMemoryCache _memoryCache;
         public MemoryCacheState(IMemoryCache memoryCache) 

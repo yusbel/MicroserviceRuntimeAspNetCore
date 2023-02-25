@@ -35,7 +35,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Fail to retrieve public key");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Fail to retrieve public key");
                 return (false, default(byte[]?), EncryptionDecryptionFail.NoPublicKey);
             }
             if(token.IsCancellationRequested) 
@@ -49,7 +49,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "");
                 return (false, default, EncryptionDecryptionFail.DeserializationFail);
             }
             if (publicKeyWrapper == null) 
@@ -64,7 +64,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Failt to extract public key");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Failt to extract public key");
                 return (false, default(byte[]?), EncryptionDecryptionFail.InValidPublicKey);
             }
         }

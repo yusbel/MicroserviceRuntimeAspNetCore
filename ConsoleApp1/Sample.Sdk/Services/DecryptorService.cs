@@ -21,7 +21,7 @@ using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 
 namespace Sample.Sdk.Services
 {
-    internal class DecryptorService : IDecryptorService
+    public class DecryptorService : IDecryptorService
     {
         private readonly ISecurityEndpointValidator _securityEndpointValidator;
         private readonly IExternalServiceKeyProvider _serviceKeyProvider;
@@ -31,9 +31,8 @@ namespace Sample.Sdk.Services
         private readonly ILogger<DecryptorService> _logger;
         private readonly ISecurePointToPoint _securePointToPoint;
         private readonly ISymetricCryptoProvider _symetricCryptoProvider;
-        private readonly IHttpClientResponseConverter _responseConverter;
 
-        internal DecryptorService(
+        public DecryptorService(
             ISecurityEndpointValidator securityEndpointValidator,
             IExternalServiceKeyProvider serviceKeyProvider,
             HttpClient httpClient,
@@ -41,8 +40,7 @@ namespace Sample.Sdk.Services
             IAsymetricCryptoProvider asymCryptoProvider,
             ILogger<DecryptorService> logger,
             ISecurePointToPoint securePointToPoint,
-            ISymetricCryptoProvider symetricCryptoProvider,
-            IHttpClientResponseConverter responseConverter)
+            ISymetricCryptoProvider symetricCryptoProvider)
         {
             _securityEndpointValidator = securityEndpointValidator;
             _serviceKeyProvider = serviceKeyProvider;
@@ -52,7 +50,6 @@ namespace Sample.Sdk.Services
             _logger = logger;
             _securePointToPoint = securePointToPoint;
             _symetricCryptoProvider = symetricCryptoProvider;
-            _responseConverter = responseConverter;
         }
 
         public async Task<(bool wasDecrypted, ExternalMessage? message, EncryptionDecryptionFail reason)>
@@ -96,7 +93,7 @@ namespace Sample.Sdk.Services
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "An error occurred when converting from base 64 string");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "An error occurred when converting from base 64 string");
                 return (false, default(ExternalMessage), EncryptionDecryptionFail.Base64StringConvertionFail);
             }
             if (!isValidSignature.wasValid)

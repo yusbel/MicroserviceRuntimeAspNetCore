@@ -52,7 +52,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "Unable to create signature");
+                e.LogCriticalException(_logger, "Unable to create signature");
                 return (false, default(byte[]?), EncryptionDecryptionFail.UnableToGetCertificate);
             }
             RSA? rsa;
@@ -149,7 +149,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e) 
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Unable to download certificate");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Unable to download certificate");
                 return (false, default, EncryptionDecryptionFail.UnableToGetCertificate);
             }
             if (certificate == null || certificate.Value == null || certificate.Value.Cer.Length == 0) 
@@ -241,7 +241,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurred");
+                e.LogCriticalException(_logger, "An error occurred");
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
             HashAlgorithmName algName = new HashAlgorithmName("SHA256");
@@ -256,7 +256,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurred");
+                e.LogCriticalException(_logger, "An error occurred");
                 return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             try
@@ -266,7 +266,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurred verifiying signature");
+                e.LogCriticalException(_logger, "An error occurred verifiying signature");
                 return (false, EncryptionDecryptionFail.VerifySignature);
             }
         }
@@ -288,7 +288,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Failt to create the certificate using the public key");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Failt to create the certificate using the public key");
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
             RSA? rsa;

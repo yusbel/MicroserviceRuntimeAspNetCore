@@ -132,7 +132,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogException(e, _logger, "Fail to download certificate from azure key vault");
+                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Fail to download certificate from azure key vault");
                 return (false, default, default);
             }
             if(token.IsCancellationRequested)

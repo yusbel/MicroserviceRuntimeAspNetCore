@@ -34,75 +34,9 @@ namespace Sample.Sdk.Services
             _responseConverter = responseConverter;
         }
 
-        public async Task<bool> SendAcknowledgement(
-            Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed
-            , Func<InComingEventEntity, Task<bool>> updateToProcessed)
-        {
-            try
-            {
-                IEnumerable<InComingEventEntity> events;
-                try
-                {
-                    events = await getIncomingEventProcessed();
-                }
-                catch (Exception e)
-                {
-                    _logger.LogCritical(e, "An error ocurred when retrieving incoming events from database");
-                    return false;
-                }
-                EncryptedMessageMetadata? encryptMsgMetadata;
-                foreach (var inComingEvent in events)
-                {
-                    try
-                    {
-                        encryptMsgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(inComingEvent.Body);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogCritical(e, "An error ocurred when deserializing message from database");
-                        continue;
-                    }
-                    if (encryptMsgMetadata == null)
-                    {
-                        _logger.LogCritical($"A message in the database incomming events can not be deserialized to encrypted message metadata");
-                        continue;
-                    }
-                    (bool wasSent, EncryptionDecryptionFail reason) sentResult;
-                    try
-                    {
-                        sentResult = await SendAcknowledgementToSender(inComingEvent.Body, encryptMsgMetadata, CancellationToken.None);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogCritical(e, "An error ocurred when sending the acknowledge message to sender");
-                        await Task.Delay(1000); //adding delay in case is a glitch
-                        continue;
-                    }
-                    try
-                    {
-                        if (sentResult.wasSent)
-                        {
-                            await updateToProcessed(inComingEvent);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogCritical(e, "An error ocurred when updating the acknoedlegement message sent");
-                    }
-
-                }
-                return true;
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical("An error occurred {}", e);
-                return false;
-            }
-        }
-
 
         public async Task<(bool wasSent, EncryptionDecryptionFail reason)>
-            SendAcknowledgementToSender(string encryptedMessage
+            SendAcknowledgement(string encryptedMessage
                                         , EncryptedMessageMetadata encryptedMessageMetadata
                                         , CancellationToken token)
         {

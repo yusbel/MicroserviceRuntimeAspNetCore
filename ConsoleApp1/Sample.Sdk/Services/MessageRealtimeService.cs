@@ -1,6 +1,9 @@
 ﻿using Microsoft.Azure.Amqp.Framing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client;
+using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
@@ -11,22 +14,25 @@ using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity.Validation;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services
 {
-    public class MessageRealtimeService<T> where T : class, IMessageIdentifier
+    public class MessageRealtimeService<T> : IMessageRealtimeService where T : class, IMessageIdentifier
     {
         private readonly IMessageComputation<T> _computations;
         private readonly IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity> _inComingEvents;
         private readonly IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage> _incompatibleMessages;
         private readonly IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage> _corruptedMessages;
         private readonly IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity> _ackMessages;
-        private readonly IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> _computedMessages;
+        private readonly IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
+        private readonly IServiceProvider _serviceProvider;
         private readonly IMessageBusReceiver<ExternalMessage> _messageBusReceiver;
         private readonly ILogger<MessageRealtimeService<T>> _logger;
         private readonly IDecryptorService _decryptorService;
@@ -38,12 +44,13 @@ namespace Sample.Sdk.Services
             ILogger<MessageRealtimeService<T>> logger,
             IDecryptorService decryptorService,
             IAcknowledgementService acknowledgementService,
-            IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> computedMessages,
+            IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
             IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
             IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage> incompatibleMessages,
             IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage> corruptedMessages,
             IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity> ackMessages,
-            IAsymetricCryptoProvider asymetricCryptoProvider)
+            IAsymetricCryptoProvider asymetricCryptoProvider,
+            IServiceProvider serviceProvider)
         {
             _computations = computations;
             _inComingEvents = inComingEvents;
@@ -51,14 +58,15 @@ namespace Sample.Sdk.Services
             _logger = logger;
             _decryptorService = decryptorService;
             _acknowledgementService = acknowledgementService;
-            _computedMessages = computedMessages;
+            _persistMessages = persistMessages;
             _incompatibleMessages = incompatibleMessages;
             _corruptedMessages = corruptedMessages;
             _ackMessages = ackMessages;
             _asymetricCryptoProvider = asymetricCryptoProvider;
+            _serviceProvider = serviceProvider;
         }
 
-        public async Task Compute(CancellationToken cancellationToken) 
+        public async Task Compute(CancellationToken cancellationToken)
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
@@ -73,27 +81,67 @@ namespace Sample.Sdk.Services
             {
                 await Task.WhenAll(tasks);
             }
+            catch (OperationCanceledException oce) 
+            {
+                oce.LogCriticalException(_logger, "task when all finished with operation cancelled exceotion");
+            }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error ocurred when waiting for all task to complete");
+                e.LogCriticalException(_logger, "An error ocurred when waiting for all task to complete");
+                _cancellationTokenSource?.Cancel();
             }
-            finally 
+            finally
             {
-                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource?.Dispose();
             }
         }
 
-        private async Task SendAckMessages(CancellationToken cancellationToken) 
+        private async Task SendAckMessages(CancellationToken cancellationToken)
         {
             var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;
             try
             {
-                while(!token.IsCancellationRequested) 
+                while (!token.IsCancellationRequested)
                 {
-                    while (_ackMessages.TryTakeAllWithoutDuplicate(out var messages, token)) 
+                    while (_ackMessages.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        //await _acknowledgementService.SendAcknowledgement()
+                        foreach (var message in messages) 
+                        {
+                            EncryptedMessageMetadata encryptMsgMetadata;
+                            try
+                            {
+                                encryptMsgMetadata = JsonSerializer.Deserialize<EncryptedMessageMetadata>(message.Body);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogCritical(e, "An error ocurred when deserializing message from database");
+                                continue;
+                            }
+                            if (encryptMsgMetadata == null)
+                            {
+                                _logger.LogCritical($"A message in the database incomming events can not be deserialized to encrypted message metadata");
+                                continue;
+                            }
+                            (bool wasSent, EncryptionDecryptionFail reason) sentResult;
+                            try
+                            {
+                                sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsgMetadata, token);
+                            }
+                            catch(OperationCanceledException) { throw; }
+                            catch (Exception e)
+                            {
+                                _logger.LogCritical(e, "An error ocurred when sending the acknowledge message to sender");
+                                await Task.Delay(1000); //adding delay in case is a glitch
+                                continue;
+                            }
+                            if (sentResult.wasSent)
+                            {
+                                message.WasAcknowledge = true;
+                                _persistMessages.TryAdd(message);
+                            }
+                        }
+
                         await Task.Delay(1000);
                     }
                     await Task.Delay(1000);
@@ -102,15 +150,15 @@ namespace Sample.Sdk.Services
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error ocurred when sending ack messages");
+                e.LogCriticalException(_logger, "An error ocurred when sending ack messages");
             }
-            finally 
+            finally
             {
-
+                tokenSource.Dispose();
             }
         }
 
-        private async Task RetrieveAcknowledgementMessage(CancellationToken cancellationToken) 
+        private async Task RetrieveAcknowledgementMessage(CancellationToken cancellationToken)
         {
             var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;
@@ -118,7 +166,9 @@ namespace Sample.Sdk.Services
             {
                 while (!token.IsCancellationRequested)
                 {
+                    using var scope = _serviceProvider.CreateScope();
                     var messages = await _computations.GetInComingEventsAsync(
+                                                    scope,
                                                     (incomingEvent) => !incomingEvent.IsDeleted &&
                                                                         !incomingEvent.WasAcknowledge &&
                                                                         incomingEvent.WasProcessed,
@@ -133,9 +183,9 @@ namespace Sample.Sdk.Services
                     await Task.Delay(TimeSpan.FromMinutes(5));
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
-                e.LogException(_logger, "An error ocurred when retriving message from incoming event entity table to send acknowldegement");
+                e.LogCriticalException(_logger, "An error ocurred when retriving message from incoming event entity table to send acknowldegement");
             }
             finally
             {
@@ -143,7 +193,7 @@ namespace Sample.Sdk.Services
             }
         }
 
-        private async Task UpdateInComingEventEntity(CancellationToken cancellationToken) 
+        private async Task UpdateInComingEventEntity(CancellationToken cancellationToken)
         {
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellationTokenSource.Token;
@@ -151,20 +201,35 @@ namespace Sample.Sdk.Services
             {
                 while (!token.IsCancellationRequested)
                 {
-                    while (_computedMessages.TryTakeAllWithoutDuplicate(out var computedMessages, token))
+                    while (_persistMessages.TryTakeAllWithoutDuplicate(out var computedMessages, token))
                     {
                         foreach (var computedMessage in computedMessages)
                         {
-                            await _computations.UpdateInComingEventEntity(computedMessage, token);
+                            try
+                            {
+                                using var scope = _serviceProvider.CreateScope();
+                                await _computations.UpdateInComingEventEntity(scope, computedMessage, token);
+                            }
+                            catch (OperationCanceledException) { throw; }
+                            catch (DbUpdateException) { throw; }
+                            catch (DbEntityValidationException) { throw; }
+                            catch (NotSupportedException) { throw; } 
+                            catch (ObjectDisposedException) { throw; }
+                            catch (InvalidOperationException) { throw; }
+                            catch (Exception e)
+                            {
+                                e.LogCriticalException(_logger, "Updating incoming event entity fail");
+                                await Task.Delay(1000);
+                            }
                         }
                         await Task.Delay(TimeSpan.FromMinutes(1));
                     }
                     await Task.Delay(TimeSpan.FromMinutes(1));
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
-                e.LogException(_logger, "Error ocurred when updating message");
+                e.LogCriticalException(_logger, "Error ocurred when updating message");
             }
             finally
             {
@@ -172,7 +237,7 @@ namespace Sample.Sdk.Services
             }
         }
 
-        private async Task ComputeInRealtime(CancellationToken cancellationToken) 
+        private async Task ComputeInRealtime(CancellationToken cancellationToken)
         {
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellationTokenSource.Token;
@@ -183,7 +248,7 @@ namespace Sample.Sdk.Services
                 {
                     while (_inComingEvents.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        await Parallel.ForEachAsync(messages, async (message, token) =>
+                        await Parallel.ForEachAsync(messages, token, async (message, token) =>
                         {
                             EncryptedMessageMetadata? encryptedMessageWithMetadata = null;
                             try
@@ -192,7 +257,7 @@ namespace Sample.Sdk.Services
                             }
                             catch (Exception e)
                             {
-                                e.LogException(_logger, $"Unable to deserialize the message with message key {message.MessageKey} and message id {message.Id}");
+                                e.LogCriticalException(_logger, $"Unable to deserialize the message with message key {message.MessageKey} and message id {message.Id}");
                                 _incompatibleMessages.TryAdd(new InCompatibleMessage()
                                 {
                                     OriginalMessageKey = message.MessageKey,
@@ -211,28 +276,36 @@ namespace Sample.Sdk.Services
                                                                                     _asymetricCryptoProvider,
                                                                                     cancellationToken);
                             }
+                            catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
-                                e.LogException(_logger, $"An error ocurred when decrypting message with key {message.MessageKey} and identifier {message.Id}");
+                                e.LogCriticalException(_logger, $"An error ocurred when decrypting message with key {message.MessageKey} and identifier {message.Id}");
                                 return;
                             }
                             try
                             {
                                 if (decryptorResult.wasEncrypted)
                                 {
-                                    await _computations.ProcessExternalMessage(decryptorResult.externalMsg!, token);
-                                    _computedMessages.TryAdd(message);
+                                    using var scope = _serviceProvider.CreateScope();
+                                    await _computations.ProcessExternalMessage(scope, decryptorResult.externalMsg!, token);
+                                    message.WasProcessed = true;
+                                    _persistMessages.TryAdd(message);
                                 }
                             }
+                            catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
-                                e.LogException(_logger, $"An error ocurred when processing the message with key {message.MessageKey} and identifier {message.Id}");
+                                e.LogCriticalException(_logger, $"An error ocurred when processing the message with key {message.MessageKey} and identifier {message.Id}");
                             }
                         });
                         await Task.Delay(1000);
                     }
                     await Task.Delay(1000);
                 }
+            }
+            catch (Exception e) 
+            {
+                e.LogCriticalException(_logger, $"An exception of type {e.GetType()} ocurred when computing");
             }
             finally
             {
@@ -247,32 +320,34 @@ namespace Sample.Sdk.Services
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        private Task RetrieveInComingEventEntityFromDatabase(CancellationToken cancellationToken) 
+        private Task RetrieveInComingEventEntityFromDatabase(CancellationToken cancellationToken)
         {
             var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;
-            return Task.Run(async() => 
+            return Task.Run(async () =>
             {
-                try 
+                try
                 {
                     while (!token.IsCancellationRequested)
                     {
+                        using var scope = _serviceProvider.CreateScope();
                         await _computations.GetInComingEventsAsync(
-                                    (eventEntity) =>    !eventEntity.IsDeleted &&
+                                    scope,
+                                    (eventEntity) => !eventEntity.IsDeleted &&
                                                         !eventEntity.WasAcknowledge &&
                                                         !eventEntity.WasProcessed,
-                                    token); 
+                                    token);
                         await Task.Delay(TimeSpan.FromMinutes(5));
                     }
 
                 }
-                catch (Exception e) 
+                catch (Exception e)
                 {
-                    e.LogException(_logger, "An error ocurred");
+                    e.LogCriticalException(_logger, "An error ocurred");
                 }
-                finally 
-                { 
-                    tokenSource.Dispose(); 
+                finally
+                {
+                    tokenSource.Dispose();
                 }
             }, token);
         }
@@ -285,11 +360,11 @@ namespace Sample.Sdk.Services
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        private Task RunRealtimeMessageRetrieval(CancellationToken cancellationToken) 
+        private Task RunRealtimeMessageRetrieval(CancellationToken cancellationToken)
         {
             CancellationTokenSource tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;
-            return Task.Run(async() => 
+            return Task.Run(async () =>
             {
                 try
                 {
@@ -297,26 +372,28 @@ namespace Sample.Sdk.Services
                     {
                         try
                         {
-                            await _messageBusReceiver.Receive(token,
+                            using var scope = _serviceProvider.CreateScope();
+                            await _messageBusReceiver.Receive(
+                                                token,
                                                 async (inComingEvent, token) =>
                                                 {
-                                                    await _computations.SaveInComingEventEntity(inComingEvent, token);
+                                                    await _computations.SaveInComingEventEntity(scope, inComingEvent, token);
                                                     _inComingEvents.TryAdd(inComingEvent);//realtime message
                                                     return true;
                                                 });
                         }
                         catch (Exception e)
                         {
-                            e.LogException(_logger, "");
+                            e.LogCriticalException(_logger, "");
                             //TODO:Inspect exception from database to slow the loop count and raise cancel operation.
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    e.LogException(_logger, "An error ocurred");
+                    e.LogCriticalException(_logger, "An error ocurred");
                 }
-                finally 
+                finally
                 {
                     tokenSource.Dispose();
                 }

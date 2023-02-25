@@ -51,15 +51,19 @@ namespace Sample.Sdk.Core
             var plainData = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(toEncrypt));
             if (_cryptoProvider.TryEncrypt(plainData, out var result))
             {
+                if(token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) keyEncrypted = 
                     await _asymetricCryptoProvider.Encrypt(result!.Key, token);
-                if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted || token.IsCancellationRequested) 
+                if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted) 
                 {
                     return (false, default);
                 }
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) ivEncrypted = 
                     await _asymetricCryptoProvider.Encrypt(result.Iv, token);
-                if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null || token.IsCancellationRequested) 
+                if (token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
+                if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null) 
                 {
                     return (false, default);
                 }
@@ -69,10 +73,12 @@ namespace Sample.Sdk.Core
                 var encryptedContent = Convert.ToBase64String(result.EncryptedData);
                 (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
                     await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"), token);
-                if (!signature.wasCreated || signature.data == null || token.IsCancellationRequested) 
+                if (!signature.wasCreated || signature.data == null) 
                 {
                     return (false, default);
                 }
+                if (token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
                 var encryptedMsg = new EncryptedMessageMetadata()
                 {
                     CorrelationId = toEncrypt.CorrelationId,

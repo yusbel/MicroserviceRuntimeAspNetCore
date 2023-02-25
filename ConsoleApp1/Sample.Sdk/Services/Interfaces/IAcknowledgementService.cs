@@ -11,12 +11,9 @@ namespace Sample.Sdk.Services.Interfaces
 {
     public interface IAcknowledgementService
     {
-        Task<bool> SendAcknowledgement(
-            Func<Task<IEnumerable<InComingEventEntity>>> getIncomingEventProcessed
-            , Func<InComingEventEntity, Task<bool>> updateToProcessed);
 
         Task<(bool wasSent, EncryptionDecryptionFail reason)>
-            SendAcknowledgementToSender(string encryptedMessage
+            SendAcknowledgement(string encryptedMessage
                                         , EncryptedMessageMetadata encryptedMessageMetadata
                                         , CancellationToken token);
     }

@@ -22,16 +22,13 @@ namespace Sample.PayRoll.Messages.InComming.Services
     /// </summary>
     public class EmployeeAddedMessageComputation : IMessageComputation<EmployeeAdded>
     {
-        private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<EmployeeAddedMessageComputation> _logger;
         private readonly IPayRoll _payRoll;
 
         public EmployeeAddedMessageComputation(
-            IServiceProvider serviceProvider,
             ILogger<EmployeeAddedMessageComputation> logger,
             IPayRoll payRoll)
         {
-            _serviceProvider = serviceProvider;
             _logger = logger;
             _payRoll = payRoll;
         }
@@ -47,73 +44,83 @@ namespace Sample.PayRoll.Messages.InComming.Services
         }
 
         public async Task<IEnumerable<InComingEventEntity>> GetInComingEventsAsync(
+                        IServiceScope serviceScope,
                         Func<InComingEventEntity, bool> condition, 
                         CancellationToken cancellationToken)
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                var dbContext = serviceScope.ServiceProvider.GetRequiredService<PayRollContext>();
                 return await dbContext.InComingEvents
                                         .Where(e => condition(e))
                                         .ToListAsync(cancellationToken);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurred when reading incomming events");
+                e.LogCriticalException(_logger, "An error occurred when reading incomming events");
                 return Enumerable.Empty<InComingEventEntity>();
             }
         }
 
-        public async Task<bool> ProcessExternalMessage(ExternalMessage externalMessage, CancellationToken cancellationToken)
+        public async Task<bool> ProcessExternalMessage(
+            IServiceScope serviceScope,
+            ExternalMessage externalMessage, 
+            CancellationToken cancellationToken)
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var payRoll = scope.ServiceProvider.GetRequiredService<IPayRoll>();
+                var payRoll = serviceScope.ServiceProvider.GetRequiredService<IPayRoll>();
                 var employeeAdded = await Convert(externalMessage);
                 var rnd = new Random();
                 var salary = rnd.Next(100, 1000);
                 await _payRoll.CreatePayRoll(employeeAdded.Key, salary, false, cancellationToken);
                 return true;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurrend processing incoming event");
+                e.LogCriticalException(_logger, "An error occurrend processing incoming event");
                 return false;
             }
         }
 
-        public async Task<bool> SaveInComingEventEntity(InComingEventEntity eventEntity, CancellationToken cancellationToken)
+        public async Task<bool> SaveInComingEventEntity(
+            IServiceScope serviceScope, 
+            InComingEventEntity eventEntity, 
+            CancellationToken cancellationToken)
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                var dbContext = serviceScope.ServiceProvider.GetRequiredService<PayRollContext>();
                 dbContext.Add(eventEntity);
                 await dbContext.SaveChangesAsync(cancellationToken);
                 return true;
             }
+            catch(OperationCanceledException) { throw; }
             catch (Exception e)
             {
-                e.LogException(_logger, "Exception occurred when saving entity");
+                e.LogCriticalException(_logger, "Exception occurred when saving entity");
                 return false;
             }
         }
 
-        public async Task<bool> UpdateInComingEventEntity(InComingEventEntity eventEntity, CancellationToken cancellationToken)
+        public async Task<bool> UpdateInComingEventEntity(
+            IServiceScope serviceScope,
+            InComingEventEntity eventEntity, 
+            CancellationToken cancellationToken)
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<PayRollContext>();
+                var dbContext = serviceScope.ServiceProvider.GetRequiredService<PayRollContext>();
                 dbContext.Entry(eventEntity).State = EntityState.Modified;
                 await dbContext.SaveChangesAsync(cancellationToken);
                 return true;
             }
+            catch(OperationCanceledException) { throw; }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error occurred");
+                e.LogCriticalException(_logger, "An error occurred");
                 return false;
             }
         }

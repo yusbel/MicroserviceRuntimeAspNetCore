@@ -13,42 +13,30 @@ namespace Sample.Sdk.Services
     /// <summary>
     /// It will required specific task 
     /// </summary>
-    public class MessageRealtimeHostedService<T> : IHostedService, IDisposable where T : class, IMessageIdentifier
+    public class MessageRealtimeHostedService<T> : IHostedService where T : class, IMessageIdentifier
     {
         private CancellationTokenSource? _cancellationTokenSource;
         private readonly ILogger<MessageRealtimeHostedService<T>> _logger;
         private readonly IHostApplicationLifetime _hostAppLifetime;
+        private readonly IMessageRealtimeService _messageRealtimeService;
         private Task? _innerTask;
         private Task? _outerTask;
 
         public MessageRealtimeHostedService(
             ILogger<MessageRealtimeHostedService<T>> logger,
-            IHostApplicationLifetime hostAppLifetime)
+            IHostApplicationLifetime hostAppLifetime,
+            IMessageRealtimeService messageRealtimeService)
         {
             _logger = logger;
             _hostAppLifetime = hostAppLifetime;
+            _messageRealtimeService = messageRealtimeService;
         }
 
         private void InitializeHostApplicationLifetimeCancellation()
         {
             _hostAppLifetime.ApplicationStopping.Register(() =>
             {
-                try
-                {
-                    var token = _cancellationTokenSource?.Token;
-                    if (token.HasValue && !token.Value.IsCancellationRequested)
-                    {
-                        _cancellationTokenSource?.Cancel();
-                    }
-                }
-                catch (OperationCanceledException oe)
-                {
-                    oe.LogException(_logger, "An operation canceled exception was raised when stopping the service");
-                }
-                catch (Exception e)
-                {
-                    e.LogException(_logger, "An error ocurred when cancelling the task");
-                }
+                //TODO: do .net runtime invoke stopasync when application invoke cancel.
             });
         }
 
@@ -62,29 +50,28 @@ namespace Sample.Sdk.Services
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
-            InitializeHostApplicationLifetimeCancellation();
 
             _outerTask = Task.Run(() =>
             {
                 try
                 {
-                    _innerTask = Task.Run(() => 
+                    _innerTask = Task.Run(async () => 
                     {
-
+                        await _messageRealtimeService.Compute(token);
                     });
                     _innerTask.Wait(token);
                 }
                 catch (TaskCanceledException tce) 
                 {
-                    tce.LogException(_logger, "Task was cancelled");
+                    tce.LogCriticalException(_logger, "Task was cancelled");
                 }
                 catch (OperationCanceledException oe)
                 {
-                    oe.LogException(_logger, "An error ocurred");
+                    oe.LogCriticalException(_logger, "An error ocurred");
                 }
                 catch (Exception e)
                 {
-                    e.LogException(_logger, "An error ocurred");
+                    e.LogCriticalException(_logger, "An error ocurred");
                     _cancellationTokenSource.Cancel();
                 }
                 finally 
@@ -103,18 +90,14 @@ namespace Sample.Sdk.Services
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "Errors ocurred when stopping the service", nameof(MessageRealtimeHostedService<T>));
+                e.LogCriticalException(_logger, "Errors ocurred when stopping the service", nameof(MessageRealtimeHostedService<T>));
+            }
+            finally 
+            {
+                _cancellationTokenSource?.Dispose();//TODO would i throw exceptions
             }
             return Task.CompletedTask;
         }
 
-        public void Dispose()
-        {
-            if (_cancellationTokenSource != null
-                            && _cancellationTokenSource.IsCancellationRequested)
-            {
-                _cancellationTokenSource.Dispose();
-            }
-        }
     }
 }

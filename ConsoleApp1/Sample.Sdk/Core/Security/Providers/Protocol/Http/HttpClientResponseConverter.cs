@@ -31,7 +31,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
             }
             catch (Exception e)
             {
-                e.LogException(_logger, "An error ocurred when calling the acknowledgement endpoint");
+                e.LogCriticalException(_logger, "An error ocurred when calling the acknowledgement endpoint");
                 return (false, default(T?), default(TInvalid?));
             } 
             if (responseMessage.IsSuccessStatusCode)
@@ -44,7 +44,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
                 }
                 catch(Exception e) 
                 {
-                    e.LogException(_logger, $"An error occurred when deserializing to {nameof(T)}");
+                    e.LogCriticalException(_logger, $"An error occurred when deserializing to {nameof(T)}");
                     return (false, default(T?), default(TInvalid?));
                 }
             }
@@ -55,7 +55,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.Http
             }
             catch (Exception e)
             {
-                e.LogException(_logger, $"An error ocurred when deserializing the response of type {nameof(TInvalid)}");
+                e.LogCriticalException(_logger, $"An error ocurred when deserializing the response of type {nameof(TInvalid)}");
                 return (false, default, default);
             }
         }

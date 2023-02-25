@@ -46,7 +46,6 @@ namespace Sample.EmployeeSubdomain.DatabaseContext
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ExternalEventEntity>().HasKey(e => e.Id);
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<EmployeeEntity> Employees { get; set; }
