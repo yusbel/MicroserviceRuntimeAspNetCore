@@ -34,7 +34,7 @@ namespace Sample.Sdk.Core.Exceptions
                 }
                 return (true, aggException);
             }
-            logger.LogCritical(e, message: e.Message, objects);
+            logger.LogCritical(e, message: "Exception has occurred", objects);
             return (true, e);
         }
     }

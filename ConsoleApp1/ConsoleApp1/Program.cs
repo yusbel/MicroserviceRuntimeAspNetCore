@@ -4,8 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Sample.Sdk;
-using Sample.Sdk.Persistance.Context;
+
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using ConsoleApp1;

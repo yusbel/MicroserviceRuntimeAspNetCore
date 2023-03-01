@@ -16,13 +16,7 @@ namespace Sample.PayRoll.Services.HostedServices
 {
     public class EmployeeAddedHostedService : MessageRealtimeHostedService<EmployeeAdded>
     {
-        public EmployeeAddedHostedService(
-            ILogger<MessageRealtimeHostedService<EmployeeAdded>> logger, 
-            IHostApplicationLifetime hostAppLifetime,
-            IMessageRealtimeService messageRealtimeService) : base(
-                logger, 
-                hostAppLifetime,
-                messageRealtimeService)
+        public EmployeeAddedHostedService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
     }

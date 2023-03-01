@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Msg.Interfaces;
@@ -17,27 +18,14 @@ namespace Sample.Sdk.Services
     {
         private CancellationTokenSource? _cancellationTokenSource;
         private readonly ILogger<MessageRealtimeHostedService<T>> _logger;
-        private readonly IHostApplicationLifetime _hostAppLifetime;
         private readonly IMessageRealtimeService _messageRealtimeService;
         private Task? _innerTask;
         private Task? _outerTask;
 
-        public MessageRealtimeHostedService(
-            ILogger<MessageRealtimeHostedService<T>> logger,
-            IHostApplicationLifetime hostAppLifetime,
-            IMessageRealtimeService messageRealtimeService)
+        public MessageRealtimeHostedService(IServiceProvider serviceProvider)
         {
-            _logger = logger;
-            _hostAppLifetime = hostAppLifetime;
-            _messageRealtimeService = messageRealtimeService;
-        }
-
-        private void InitializeHostApplicationLifetimeCancellation()
-        {
-            _hostAppLifetime.ApplicationStopping.Register(() =>
-            {
-                //TODO: do .net runtime invoke stopasync when application invoke cancel.
-            });
+            _logger = serviceProvider.GetRequiredService<ILogger<MessageRealtimeHostedService<T>>>();
+            _messageRealtimeService = serviceProvider.GetRequiredService<IMessageRealtimeService>();
         }
 
         /// <summary>
