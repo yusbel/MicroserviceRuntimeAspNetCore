@@ -1,6 +1,6 @@
 ﻿using Microsoft.Graph;
 
-namespace SampleSdkRuntime.Azure.ServiceAccount
+namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
 {
     public interface IServicePrincipalProvider
     {

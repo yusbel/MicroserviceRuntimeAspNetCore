@@ -14,8 +14,9 @@ using Microsoft.Graph;
 using Sample.Sdk.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using SampleSdkRuntime.Azure.Factory.Interfaces;
+using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 
-namespace SampleSdkRuntime.Azure.Policies
+namespace SampleSdkRuntime.Azure.KeyVaultLibs
 {
     public class KeyVaultPolicyProvider : IKeyVaultPolicyProvider
     {
@@ -57,25 +58,25 @@ namespace SampleSdkRuntime.Azure.Policies
 
         public async Task<bool> DeleteAccessPolicy(
             string tenantId,
-            Guid appId, 
-            Guid servicePrincipalId, 
+            Guid appId,
+            Guid servicePrincipalId,
             string resourceIdentifier,
-            CancellationToken cancellationToken) 
+            CancellationToken cancellationToken)
         {
             var keyVaultResource = _armClient.GetKeyVaultResource(new ResourceIdentifier(resourceIdentifier));
-            if (keyVaultResource == null) 
+            if (keyVaultResource == null)
             {
                 return false;
             }
             var permissions = GetAccessPolicyPermissionsForServicePrincipal();
-            if (permissions == null) 
+            if (permissions == null)
             {
                 return false;
             }
             var accessPolicyParameters = GetKeyVaultAccessPolicyParametersForServicePrincipal(
-                                                                                tenantId, 
-                                                                                appId, 
-                                                                                servicePrincipalId, 
+                                                                                tenantId,
+                                                                                appId,
+                                                                                servicePrincipalId,
                                                                                 permissions);
             try
             {
@@ -91,11 +92,11 @@ namespace SampleSdkRuntime.Azure.Policies
             return true;
         }
 
-        public async Task<(bool wasCreated, KeyVaultAccessPolicyParameters? keyVaultAccessPolicyParameters)> 
+        public async Task<(bool wasCreated, KeyVaultAccessPolicyParameters? keyVaultAccessPolicyParameters)>
             CreatePolicy(string tenantId,
                         string resourceId,
                         Application application,
-                        Microsoft.Graph.ServicePrincipal servicePrincipal,
+                        ServicePrincipal servicePrincipal,
                         CancellationToken cancellationToken)
         {
             IdentityAccessPermissions permissions = GetAccessPolicyPermissionsForServicePrincipal();
@@ -104,9 +105,9 @@ namespace SampleSdkRuntime.Azure.Policies
             {
                 await Task.Delay(1000);
                 keyVaultResource = _armClient.GetKeyVaultResource(new ResourceIdentifier(resourceId));
-                KeyVaultAccessPolicyParameters keyVaultAccessPolicyParameters = GetKeyVaultAccessPolicyParametersForServicePrincipal(tenantId, 
-                    new Guid(application.AppId), 
-                    new Guid(servicePrincipal.Id), 
+                KeyVaultAccessPolicyParameters keyVaultAccessPolicyParameters = GetKeyVaultAccessPolicyParametersForServicePrincipal(tenantId,
+                    new Guid(application.AppId),
+                    new Guid(servicePrincipal.Id),
                     permissions);
 
                 //Update access policy

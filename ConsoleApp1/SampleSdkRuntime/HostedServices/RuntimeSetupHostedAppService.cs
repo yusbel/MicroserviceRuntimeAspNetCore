@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Graph;
-using SampleSdkRuntime.Azure.AppRegistration;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.HostedServices.Interfaces;
 using SampleSdkRuntime.Providers.Data;
@@ -54,11 +54,14 @@ namespace SampleSdkRuntime.HostedServices
                                                     .ConfigureAwait(false);
             if (!appSetupInfo.wasSuccess) 
             {
-                await _applicationRegistration.DeleteAndCreate(setupInfo.ServiceInstanceIdentifier, token)
+                appSetupInfo = await _applicationRegistration.DeleteAndCreate(setupInfo.ServiceInstanceIdentifier, token)
                                                     .ConfigureAwait(false);
             }
-
-            CreateSetupInfo(setupInfo, appSetupInfo.wasSuccess, appSetupInfo.app, appSetupInfo.clientSecret);
+            if(appSetupInfo.wasSuccess) 
+            {
+                CreateSetupInfo(setupInfo, appSetupInfo.wasSuccess, appSetupInfo.app, appSetupInfo.clientSecret);
+            }
+            throw new InvalidOperationException("Runtime was unable to setup the service instance");
         }
 
         private async Task VerifySetup(CancellationToken cancellationToken) 

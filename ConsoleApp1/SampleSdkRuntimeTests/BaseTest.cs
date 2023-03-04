@@ -3,7 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SampleSdkRuntime.Azure.Factory;
 using SampleSdkRuntime.Azure.Factory.Interfaces;
-using SampleSdkRuntime.Azure.Policies;
+using SampleSdkRuntime.Azure.KeyVaultLibs;
+using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 
 namespace SampleSdkRuntimeTests
 {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Graph;
 
-namespace SampleSdkRuntime.Azure.AppRegistration
+namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
 {
     public interface IApplicationRegistration
     {
@@ -15,7 +15,7 @@ namespace SampleSdkRuntime.Azure.AppRegistration
 
         Task<(bool wasFound, Application? app, ServicePrincipal? principal, string? clientSecret)>
             GetApplicationDetails(string appId, CancellationToken token, string prefix = "Service");
-            
+
         Task<(bool wasSuccess, Application? app, ServicePrincipal? principal, string? clientSecret)>
             DeleteAndCreate(string appIdentifier, CancellationToken token, string prefix = "Service");
     }

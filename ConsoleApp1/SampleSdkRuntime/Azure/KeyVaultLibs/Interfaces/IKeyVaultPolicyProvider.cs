@@ -1,7 +1,7 @@
 ﻿using Azure.ResourceManager.KeyVault.Models;
 using Microsoft.Graph;
 
-namespace SampleSdkRuntime.Azure.Policies
+namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
 {
     public interface IKeyVaultPolicyProvider
     {
@@ -9,7 +9,7 @@ namespace SampleSdkRuntime.Azure.Policies
             CreatePolicy(string tenantId,
             string resourceId,
             Application application,
-            Microsoft.Graph.ServicePrincipal servicePrincipal,
+            ServicePrincipal servicePrincipal,
             CancellationToken cancellationToken);
         Task<bool> DeleteAccessPolicy(
             string tenantId,

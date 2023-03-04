@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Moq;
 using NuGet.Frameworks;
-using SampleSdkRuntime.Azure.AppRegistration;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Azure.DataOptions;
 using System;
 using System.Collections.Generic;

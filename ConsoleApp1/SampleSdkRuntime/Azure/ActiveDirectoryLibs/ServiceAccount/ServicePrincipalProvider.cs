@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.ServiceAccount
+namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
 {
     public class ServicePrincipalProvider : IServicePrincipalProvider
     {
@@ -33,27 +33,32 @@ namespace SampleSdkRuntime.Azure.ServiceAccount
         {
             if (string.IsNullOrEmpty(identifier))
             {
-                return (default);
+                return default;
             }
 
-            var principal = await GetServicePrincipal(identifier, cancellationToken);
+            var principal = await GetServicePrincipal(identifier, cancellationToken).ConfigureAwait(false);
+
             if (principal != null)
             {
                 return principal;
             }
             var graph = _graphServiceClientFactory.Create();
-            if (graph == null) { return (default); }
+            if (graph == null) { return default; }
             try
             {
                 principal = await graph.ServicePrincipals.Request()
-                                            .AddAsync(new ServicePrincipal() { AppId = identifier }, cancellationToken);
+                                            .AddAsync(new ServicePrincipal()
+                                            {
+                                                AppId = identifier,
+                                                AppRoleAssignmentRequired = true
+                                            }, cancellationToken);
             }
             catch (Exception e)
             {
                 throw;
             }
 
-            return (principal);
+            return principal;
         }
 
         /// <summary>
@@ -70,7 +75,7 @@ namespace SampleSdkRuntime.Azure.ServiceAccount
             try
             {
                 servicePrincipals = await graph!.ServicePrincipals.Request()
-                    .Filter($"AppId eq '{identifier}'")
+                    .Filter($"appid eq '{identifier}'")
                     .GetAsync(cancellationToken);
                 if (servicePrincipals == null || servicePrincipals.Count == 0)
                 {

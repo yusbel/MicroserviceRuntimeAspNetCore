@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Sample.Sdk.Core.Exceptions;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount;
 using SampleSdkRuntime.Azure.DataOptions;
 using SampleSdkRuntime.Azure.Factory.Interfaces;
-using SampleSdkRuntime.Azure.Policies;
-using SampleSdkRuntime.Azure.ServiceAccount;
+using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.AppRegistration
+namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
 {
     /// <summary>
     /// Service runtime use credentials with permission to create an service identity with permission to create applications 
@@ -27,29 +27,29 @@ namespace SampleSdkRuntime.Azure.AppRegistration
     {
         private readonly IClientOAuthTokenProviderFactory _clientSecretCredFactory;
         private readonly IGraphServiceClientFactory _graphServiceClientFactory;
-        private readonly IKeyVaultPolicyProvider _keyVaultPolicyProvider;
         private readonly SecretClient _secretClient;
         private readonly ILogger<ApplicationRegistration> _logger;
         private readonly IServicePrincipalProvider _servicePrincipalProvider;
+        private readonly IKeyVaultProvider _keyVaultProvider;
         private readonly RuntimeAzureOptions _azureOptions;
 
         public ApplicationRegistration(
                     IClientOAuthTokenProviderFactory clientSecretCredFactory,
                     IGraphServiceClientFactory graphServiceClientFactory,
-                    IKeyVaultPolicyProvider keyVaultPolicyProvider,
                     SecretClient secretClient,
                     IOptions<RuntimeAzureOptions> azureOptions,
                     ILogger<ApplicationRegistration> logger,
-                    IServicePrincipalProvider servicePrincipalProvider)
+                    IServicePrincipalProvider servicePrincipalProvider,
+                    IKeyVaultProvider keyVaultProvider)
         {
             _clientSecretCredFactory = clientSecretCredFactory;
             _graphServiceClientFactory = graphServiceClientFactory;
-            _keyVaultPolicyProvider = keyVaultPolicyProvider;
             _secretClient = secretClient;
             _logger = logger;
             _servicePrincipalProvider = servicePrincipalProvider;
-            _azureOptions = azureOptions == null || azureOptions.Value == null || azureOptions.Value.RuntimeKeyVaultOptions == null 
-                                                ? RuntimeAzureOptions.CreateDefault() 
+            _keyVaultProvider = keyVaultProvider;
+            _azureOptions = azureOptions == null || azureOptions.Value == null || azureOptions.Value.RuntimeKeyVaultOptions == null
+                                                ? RuntimeAzureOptions.CreateDefault()
                                                 : azureOptions.Value;
         }
         /// <summary>
@@ -67,23 +67,23 @@ namespace SampleSdkRuntime.Azure.AppRegistration
             var tenantId = _clientSecretCredFactory.GetDefaultTenantId();
             var graphClient = _graphServiceClientFactory.Create();
             IGraphServiceApplicationsCollectionPage? applications = null;
-            try 
+            try
             {
                 applications = await graphClient.Applications
                                     .Request()
                                     .Filter($"DisplayName eq '{appIdentifier}'")
                                     .GetAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
                 e.LogCriticalException(_logger, "Fail to retrieve applications from azure");
                 return false;
             }
-            if (applications == null) 
+            if (applications == null)
             {
                 return true;
             }
-            foreach(var application in applications)
+            foreach (var application in applications)
             {
                 ServicePrincipal? servicePricipal = null;
                 try
@@ -110,7 +110,7 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                 }
                 catch (Exception e)
                 {
-                    if (e is not RequestFailedException failedException || failedException.ErrorCode != "SecretNotFound") 
+                    if (e is not RequestFailedException failedException || failedException.ErrorCode != "SecretNotFound")
                     {
                         e.LogCriticalException(_logger, "An error ocurred");
                     }
@@ -120,17 +120,17 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                 {
                     if (application != null && servicePricipal != null)
                     {
-                        await _keyVaultPolicyProvider.DeleteAccessPolicy(tenantId,
+                        await _keyVaultProvider.DeleteAccessPolicy(tenantId,
                                                             new Guid(application.Id),
                                                             new Guid(servicePricipal!.Id),
                                                             _azureOptions.RuntimeKeyVaultOptions.KeyVaultResourceId,
                                                             cancellationToken).ConfigureAwait(false);
                     }
-                    else 
+                    else
                     {
                         _logger.LogInformation("Deleting application without service principal");
                     }
-                    
+
                 }
                 catch (Exception e)
                 {
@@ -159,8 +159,8 @@ namespace SampleSdkRuntime.Azure.AppRegistration
         /// <returns></returns>
         public async Task<(bool isValid, ServiceDependecyStatus.Setup reason)>
             VerifyApplicationSettings(
-            string appIdentifier, 
-            CancellationToken cancellationToken, 
+            string appIdentifier,
+            CancellationToken cancellationToken,
             string prefix = "Service")
         {
             var graphClient = _graphServiceClientFactory.Create();
@@ -186,12 +186,12 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                     return (false, ServiceDependecyStatus.Setup.ApplicationOrServicePrincipleNotFound);
                 }
                 var keyVaultSecret = await _secretClient.GetSecretAsync($"{prefix}-{appIdentifier}");
-                if (keyVaultSecret == null || keyVaultSecret.Value == null) 
+                if (keyVaultSecret == null || keyVaultSecret.Value == null)
                 {
                     return (false, ServiceDependecyStatus.Setup.ApplicationIdSecretNotFoundOnKeyVault);
                 }
                 var tenantId = _clientSecretCredFactory.GetDefaultTenantId();
-                var keyPolicyResult = await _keyVaultPolicyProvider.CreatePolicy(
+                var keyPolicyResult = await _keyVaultProvider.CreatePolicy(
                                                     tenantId,
                                                     _azureOptions.RuntimeKeyVaultOptions.KeyVaultResourceId,
                                                     applications.First(),
@@ -200,7 +200,7 @@ namespace SampleSdkRuntime.Azure.AppRegistration
 
                 return (true, ServiceDependecyStatus.Setup.None);
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 e.LogCriticalException(_logger, "Failt to read applications from azure active directory using microsoft grpah client");
                 return (false, default);
@@ -228,18 +228,18 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                     .Request()
                     .AddAsync(new Application()
                     {
-                        DisplayName = appIdentifier, 
+                        DisplayName = appIdentifier,
                         SignInAudience = "AzureADMyOrg"
                     }, token);
 
-                principal = await graphClient.ServicePrincipals.Request().AddAsync(new ServicePrincipal() { AppId = app.AppId }, token).ConfigureAwait(false);
+                principal = await _servicePrincipalProvider.Create(app.AppId, token);
             }
             catch (Exception e)
             {
                 e.LogCriticalException(_logger, "Application add fail");
                 return (false, default, default, default);
             }
-            if (app == null || principal == null) 
+            if (app == null || principal == null)
             {
                 _logger.LogCritical($"Service was unable to create service principel andor account, service principal is null {principal == null}, application is null {app == null}");
                 return (false, default, default, default);
@@ -255,33 +255,27 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                                                             })
                                                             .Request()
                                                             .PostAsync(token);
-                    
+
             }
             catch (Exception e)
             {
                 e.LogCriticalException(_logger, "adding password fail");
                 return (false, default, default, default);
             }
-            KeyVaultSecret? keyVaultSecret;
-            try 
-            { 
-                keyVaultSecret = _secretClient.SetSecret(new KeyVaultSecret($"{prefix}-{appIdentifier}", appPass.SecretText), token);
-            }
-            catch (Exception e)
+            if (!await _keyVaultProvider.SaveSecretInKeyVault($"{prefix}-{appIdentifier}", appPass.SecretText, 0, token).ConfigureAwait(false))
             {
-                e.LogCriticalException(_logger, "Setting the secret fail");
                 return (false, default, default, default);
             }
             try
             {
                 (string tenantId, string clientId, string clientSecret) = _clientSecretCredFactory.GetAzureTokenCredentials();
-                var keyVaultPolicyResult = await _keyVaultPolicyProvider.CreatePolicy(
-                    tenantId, 
-                    _azureOptions.RuntimeKeyVaultOptions.KeyVaultResourceId, 
+                var keyVaultPolicyResult = await _keyVaultProvider.CreatePolicy(
+                    tenantId,
+                    _azureOptions.RuntimeKeyVaultOptions.KeyVaultResourceId,
                     app,
                     principal,
                     token);
-                return (true, app, principal, keyVaultSecret.Value);
+                return (true, app, principal, appPass.SecretText);
             }
             catch (Exception e)
             {
@@ -289,6 +283,8 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                 return (false, default, default, default);
             }
         }
+
+
 
         public async Task<(bool wasFound, Application? app, ServicePrincipal? principal, string? clientSecret)>
             GetApplicationDetails(string appId, CancellationToken token, string prefix = "Service")
@@ -321,7 +317,7 @@ namespace SampleSdkRuntime.Azure.AppRegistration
                     return (false, app, default, default);
                 }
             }
-            if (app != null && servicePrincipal != null) 
+            if (app != null && servicePrincipal != null)
             {
                 try
                 {

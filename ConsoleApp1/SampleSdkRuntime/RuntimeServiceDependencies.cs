@@ -5,12 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Sample.Sdk;
-using SampleSdkRuntime.Azure.AppRegistration;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount;
 using SampleSdkRuntime.Azure.DataOptions;
 using SampleSdkRuntime.Azure.Factory;
 using SampleSdkRuntime.Azure.Factory.Interfaces;
-using SampleSdkRuntime.Azure.Policies;
-using SampleSdkRuntime.Azure.ServiceAccount;
+using SampleSdkRuntime.Azure.KeyVaultLibs;
+using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.HostedServices;
 using SampleSdkRuntime.HostedServices.Interfaces;
 using SampleSdkRuntime.Providers;
@@ -36,7 +37,6 @@ namespace SampleSdkRuntime
             services.Configure<RuntimeAzureOptions>(config.GetSection("RuntimeAzureOptions"));
             return services;
         }
-
         private static IServiceCollection AddRuntimeServiceSettings(this IServiceCollection services, IConfiguration configuration) 
         {
             services.AddTransient<IApplicationRegistration, ApplicationRegistration>();
@@ -51,12 +51,11 @@ namespace SampleSdkRuntime
             services.AddTransient<IAsyncObserver<RuntimeVerificationEvent, VerificationResult>, AppRegVerifictionObserver>(); 
             services.AddTransient<IAsyncObserver<VerificationResult, VerificationRepairResult>, ServicePrincipalRepairObserver>();
             services.AddTransient<IAsyncObserver<VerificationResult, VerificationRepairResult>, AppRegRepairObserver>();
+            services.AddTransient<IKeyVaultProvider, KeyVaultProvider>();
             services.AddTransient<IRuntimeVerificationService, RuntimeVerificationService>();
             services.Configure<RuntimeAzureOptions>(configuration.GetSection("Empty"));
-
             return services;
         }
-
         private static IServiceCollection AddRuntimeServiceBusClientAdmin(this IServiceCollection services, IConfiguration config)
         {
             services.AddAzureClients(azureClientFactoryBuilder =>
