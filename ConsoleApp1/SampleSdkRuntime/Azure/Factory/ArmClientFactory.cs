@@ -1,5 +1,6 @@
 ﻿using Azure.Identity;
 using Azure.ResourceManager;
+using SampleSdkRuntime.Azure.Factory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,16 +11,17 @@ namespace SampleSdkRuntime.Azure.Factory
 {
     public class ArmClientFactory : IArmClientFactory
     {
-        private readonly ClientSecretCredential _clientSecretCredential;
+        private readonly IClientOAuthTokenProviderFactory _oauthTokenProvider;
 
-        public ArmClientFactory(ClientSecretCredential clientSecretCredential)
+        public ArmClientFactory(IClientOAuthTokenProviderFactory oauthTokenProvider)
         {
-            _clientSecretCredential = clientSecretCredential;
+            _oauthTokenProvider = oauthTokenProvider;
         }
 
         public ArmClient Create()
         {
-            return new ArmClient(_clientSecretCredential);
+            _oauthTokenProvider.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientCredentialFlow);
+            return new ArmClient(clientCredentialFlow);
         }
     }
 }

@@ -116,7 +116,7 @@ namespace Sample.Sdk.Persistance
                 Type = typeof(TE).FullName!,
                 Version = "1.0.0"
             };
-            (bool wasEncrypted, EncryptedMessageMetadata? msg) = await EncryptExternalMessage(message, token);
+            (bool wasEncrypted, EncryptedMessageMetadata? msg) = await EncryptExternalMessage(message, token).ConfigureAwait(false);
             if(!wasEncrypted || msg == null) 
             {
                 throw new ApplicationSaveException("Encrypted the message fail, verify exceptions logged");
@@ -131,7 +131,7 @@ namespace Sample.Sdk.Persistance
             }
             try
             {
-                _entityContext.SaveWithEvent(eventEntity, token);
+                await _entityContext.SaveWithEvent(eventEntity, token).ConfigureAwait(false);
                 return true;
             }
             catch (OperationCanceledException) { throw; }

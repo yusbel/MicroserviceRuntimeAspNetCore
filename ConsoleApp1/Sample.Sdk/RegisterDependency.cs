@@ -112,14 +112,15 @@ namespace Sample.Sdk
         public static IServiceCollection AddSampleSdkAzureKeyVaultCertificateClient(this IServiceCollection services, IConfiguration config) 
         {
             services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.Identifier));
-            services.AddAzureClients(azureClientBuilder =>
-            {
-                var keyVaultUri = new Uri(config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri"));
-                
-                //Use principle accoutn from environment variables following convention
-                azureClientBuilder.AddCertificateClient(keyVaultUri).WithCredential(new DefaultAzureCredential());
+            //services.AddAzureClients(azureClientBuilder =>
+            //{
+            //    var keyVaultUri = new Uri(config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri"));
 
-            });
+            //    //Use principle accoutn from environment variables following convention
+
+            //    //azureClientBuilder.AddCertificateClient(keyVaultUri);//.WithCredential(new DefaultAzureCredential());
+
+            //});
             return services;
         }
 

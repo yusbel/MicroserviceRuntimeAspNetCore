@@ -25,7 +25,6 @@ namespace Sample.Sdk.Msg
         private readonly BlockingCollection<T> _state = new BlockingCollection<T>();
         private readonly IMemoryCacheState<string, string> _identifiersCache;
         private readonly ILogger<InMemoryProducerConsumerCollection<TList, T>> _logger;
-        private readonly object _lock = new object();
 
         public int Count => _state.Count;
 
@@ -87,10 +86,7 @@ namespace Sample.Sdk.Msg
                 return false;
             try
             {
-                lock (_lock)
-                {
-                    _identifiersCache.Cache.Remove(item.Id);
-                }
+                _identifiersCache.Cache.Remove(item.Id);
                 _state.Add(item);
                 return true;
             }
@@ -110,17 +106,14 @@ namespace Sample.Sdk.Msg
         {
             try
             {
-                while (_state.TryTake(out item) && !token.IsCancellationRequested)
+                while (!token.IsCancellationRequested && _state.TryTake(out item))
                 {
                     if (!_identifiersCache.Cache.TryGetValue(item.Id, out string foundItem))
                     {
-                        lock (_lock)
-                        {
-                            _identifiersCache.Cache.Set(
-                                item.Id,
-                                string.Empty,
-                                absoluteExpiration: DateTimeOffset.UtcNow.AddMinutes(10));
-                        }
+                        _identifiersCache.Cache.Set(
+                            item.Id,
+                            string.Empty,
+                            absoluteExpiration: DateTimeOffset.UtcNow.AddDays(1));
                         return true;
                     }
                 }
@@ -141,7 +134,6 @@ namespace Sample.Sdk.Msg
         /// <returns></returns>
         public bool TryTakeAllWithoutDuplicate(out IList<T> items, CancellationToken token, int pageSize = 0)
         {
-            _state.GetConsumingEnumerable();
             int counter = 0;
             items = new List<T>();
             while ((counter < pageSize || pageSize <= 0) //page condition

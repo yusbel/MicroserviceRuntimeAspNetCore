@@ -54,13 +54,13 @@ namespace Sample.Sdk.Core
                 if(token.IsCancellationRequested)
                     token.ThrowIfCancellationRequested();
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) keyEncrypted = 
-                    await _asymetricCryptoProvider.Encrypt(result!.Key, token);
+                    await _asymetricCryptoProvider.Encrypt(result!.Key, token).ConfigureAwait(false);
                 if(keyEncrypted.data == null || !keyEncrypted.wasEncrypted) 
                 {
                     return (false, default);
                 }
                 (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) ivEncrypted = 
-                    await _asymetricCryptoProvider.Encrypt(result.Iv, token);
+                    await _asymetricCryptoProvider.Encrypt(result.Iv, token).ConfigureAwait(false);
                 if (token.IsCancellationRequested)
                     token.ThrowIfCancellationRequested();
                 if (!ivEncrypted.wasEncrypted || ivEncrypted.data == null) 
@@ -72,7 +72,7 @@ namespace Sample.Sdk.Core
                 var createdOn = DateTime.Now.Ticks;
                 var encryptedContent = Convert.ToBase64String(result.EncryptedData);
                 (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
-                    await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"), token);
+                    await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes($"{key}:{iv}:{createdOn}:{encryptedContent}"), token).ConfigureAwait(false);
                 if (!signature.wasCreated || signature.data == null) 
                 {
                     return (false, default);

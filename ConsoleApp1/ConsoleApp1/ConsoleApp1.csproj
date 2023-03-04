@@ -28,6 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sample.EmployeeSubdomain\Sample.EmployeeSubdomain.csproj" />
+    <ProjectReference Include="..\SampleSdkRuntime\SampleSdkRuntime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

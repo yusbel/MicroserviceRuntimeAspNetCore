@@ -48,7 +48,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             {
                 certificate = await _certificateClient.DownloadCertificateAsync(_options.Value.KeyVaultCertificateIdentifier
                     , null
-                    , token);
+                    , token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -97,7 +97,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
                 certificate = await _certificateClient.DownloadCertificateAsync(
                     _options.Value.KeyVaultCertificateIdentifier,
                     null,
-                    token);
+                    token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -145,7 +145,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             Response<KeyVaultCertificateWithPolicy> certificate;
             try
             {
-                certificate = await _certificateClient.GetCertificateAsync(_options.Value.KeyVaultCertificateIdentifier, token);
+                certificate = await _certificateClient.GetCertificateAsync(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
             }
             catch (Exception e) 
             {
@@ -237,7 +237,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             {
                 certificate = await _certificateClient.DownloadCertificateAsync(_options.Value.KeyVaultCertificateIdentifier
                                                                     , null
-                                                                    , token);
+                                                                    , token).ConfigureAwait(false);
             }
             catch (Exception e)
             {

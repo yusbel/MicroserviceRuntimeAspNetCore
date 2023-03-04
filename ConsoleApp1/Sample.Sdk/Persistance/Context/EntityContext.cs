@@ -58,51 +58,53 @@ namespace Sample.Sdk.Persistance.Context
             _dbContext.Add(transaction);
             if(token.IsCancellationRequested) 
                 return false;
-            strategy.ExecuteInTransaction(
-                _dbContext,
-                operation: (context) => 
+            
+            await strategy.ExecuteInTransactionAsync(
+                operation: async () => 
                 {
-                    context.SaveChanges(acceptAllChangesOnSuccess: false);
+                    await _dbContext.SaveChangesAsync(acceptAllChangesOnSuccess: false, token).ConfigureAwait(false);
                 },
-                verifySucceeded: (context) =>
+                verifySucceeded: async() =>
                 {
-                    return context.Set<TransactionEntity>().AsNoTracking().Any(transaction => transaction.Id == transaction.Id);
-                });
+                    return await _dbContext.Set<TransactionEntity>().AsNoTracking().AnyAsync(transaction => transaction.Id == transaction.Id).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+
             _dbContext.ChangeTracker.AcceptAllChanges();
 
             _ = Task.Run(async () =>
-            {
-                try
                 {
-                    //no concern if this operation fail, a mechanism to clean this table should be in place
-                    _dbContext.Set<TransactionEntity>().Remove(transaction);
-                    await _dbContext.SaveChangesAsync();
-                }
-                catch (Exception e) 
-                {
-                    AggregateExceptionExtensions.LogCriticalException(e, _logger, "Removing transaction from the table transaction log fail.");
-                }
-            });
+                    try
+                    {
+                        //no concern if this operation fail, a mechanism to clean this table should be in place
+                        _dbContext.Set<TransactionEntity>().Remove(transaction);
+                        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception e) 
+                    {
+                        AggregateExceptionExtensions.LogCriticalException(e, _logger, "Removing transaction from the table transaction log fail.");
+                    }
+                });
             return true;
         }
 
-        //TODO: improve or change the code to use stored procedured
-        public bool SaveWithEvent(ExternalEventEntity eventEntity, CancellationToken token)
+        public async Task<bool> SaveWithEvent(ExternalEventEntity eventEntity, CancellationToken token)
         {
             _dbContext.Add(eventEntity);
             var strategy = _dbContext.Database.CreateExecutionStrategy();
+            
             if (token.IsCancellationRequested)
                 return false;
-            strategy.ExecuteInTransaction(
-                _dbContext, 
-                operation: (context) => 
+           
+            await strategy.ExecuteInTransactionAsync(
+                operation: async () =>
                     {
-                       context.SaveChanges(acceptAllChangesOnSuccess: false);
-                    }, 
-                verifySucceeded: (context) => 
+                        await _dbContext.SaveChangesAsync(acceptAllChangesOnSuccess: false).ConfigureAwait(false);
+                    },
+                verifySucceeded: async () =>
                     {
-                        return context.Set<ExternalEventEntity>().AsNoTracking().Any(ee=> ee.Id == eventEntity.Id);
-                    });
+                        return await _dbContext.Set<ExternalEventEntity>().AsNoTracking().AnyAsync(ee => ee.Id == eventEntity.Id).ConfigureAwait(false);
+                    }).ConfigureAwait(false);
+
             _dbContext.ChangeTracker.AcceptAllChanges();
             return true;
         }

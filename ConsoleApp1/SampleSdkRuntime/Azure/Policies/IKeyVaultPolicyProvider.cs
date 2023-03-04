@@ -9,7 +9,7 @@ namespace SampleSdkRuntime.Azure.Policies
             CreatePolicy(string tenantId,
             string resourceId,
             Application application,
-            ServicePrincipal servicePrincipal,
+            Microsoft.Graph.ServicePrincipal servicePrincipal,
             CancellationToken cancellationToken);
         Task<bool> DeleteAccessPolicy(
             string tenantId,

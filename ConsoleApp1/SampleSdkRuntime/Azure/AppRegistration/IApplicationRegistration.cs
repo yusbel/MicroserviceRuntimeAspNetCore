@@ -4,16 +4,19 @@ namespace SampleSdkRuntime.Azure.AppRegistration
 {
     public interface IApplicationRegistration
     {
-        Task<(bool isValid, Application? app)>
+        Task<(bool isValid, ServiceDependecyStatus.Setup reason)>
             VerifyApplicationSettings(
             string appIdentifier,
             CancellationToken cancellationToken,
             string prefix = "Service");
-        
-        Task<(bool wasSuccess, Application? app)> GetOrCreate(string appIdentifier, CancellationToken token, string prefix = "Service");
-
         Task<bool> DeleteAll(string appIdentifier,
                                             CancellationToken cancellationToken,
                                             string prefix = "Service");
+
+        Task<(bool wasFound, Application? app, ServicePrincipal? principal, string? clientSecret)>
+            GetApplicationDetails(string appId, CancellationToken token, string prefix = "Service");
+            
+        Task<(bool wasSuccess, Application? app, ServicePrincipal? principal, string? clientSecret)>
+            DeleteAndCreate(string appIdentifier, CancellationToken token, string prefix = "Service");
     }
 }

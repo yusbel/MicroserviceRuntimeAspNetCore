@@ -22,5 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
   </ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="SampleSdkRuntimeTests" />
+	</ItemGroup>
 
 </Project>

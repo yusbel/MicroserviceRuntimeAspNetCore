@@ -10,21 +10,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sample.Sdk.Core;
-using SampleSdkRuntime.Azure.Factory;
 using Microsoft.Graph;
 using Sample.Sdk.Core.Exceptions;
 using Microsoft.Extensions.Logging;
+using SampleSdkRuntime.Azure.Factory.Interfaces;
 
 namespace SampleSdkRuntime.Azure.Policies
 {
     public class KeyVaultPolicyProvider : IKeyVaultPolicyProvider
     {
-        private readonly IClientTokenCredentialFactory _clientTokenFactory;
+        private readonly IClientOAuthTokenProviderFactory _clientTokenFactory;
         private readonly ILogger<KeyVaultPolicyProvider> _logger;
         private readonly ArmClient _armClient;
 
         public KeyVaultPolicyProvider(IArmClientFactory armClientFactory,
-                                    IClientTokenCredentialFactory clientTokenFactory,
+                                    IClientOAuthTokenProviderFactory clientTokenFactory,
                                     ILogger<KeyVaultPolicyProvider> logger)
         {
             _armClient = armClientFactory.Create();
@@ -44,6 +44,7 @@ namespace SampleSdkRuntime.Azure.Policies
             yield return IdentityAccessCertificatePermission.Get;
             yield return IdentityAccessCertificatePermission.List;
             yield return IdentityAccessCertificatePermission.Create;
+            yield return IdentityAccessCertificatePermission.Delete;
         }
 
         private IEnumerable<IdentityAccessSecretPermission> GetKeyVaultPermissionsSecretForServiceAccount()
@@ -51,6 +52,7 @@ namespace SampleSdkRuntime.Azure.Policies
             yield return IdentityAccessSecretPermission.Get;
             yield return IdentityAccessSecretPermission.List;
             yield return IdentityAccessSecretPermission.Set;
+            yield return IdentityAccessSecretPermission.Delete;
         }
 
         public async Task<bool> DeleteAccessPolicy(
@@ -91,10 +93,10 @@ namespace SampleSdkRuntime.Azure.Policies
 
         public async Task<(bool wasCreated, KeyVaultAccessPolicyParameters? keyVaultAccessPolicyParameters)> 
             CreatePolicy(string tenantId,
-            string resourceId,
-            Application application,
-            ServicePrincipal servicePrincipal,
-            CancellationToken cancellationToken)
+                        string resourceId,
+                        Application application,
+                        Microsoft.Graph.ServicePrincipal servicePrincipal,
+                        CancellationToken cancellationToken)
         {
             IdentityAccessPermissions permissions = GetAccessPolicyPermissionsForServicePrincipal();
             KeyVaultResource keyVaultResource;
@@ -142,7 +144,8 @@ namespace SampleSdkRuntime.Azure.Policies
                                         {
                                             new KeyVaultAccessPolicy(new Guid(tenantId), servicePrincipalId.ToString(), permissions)
                                             {
-                                                ApplicationId = appId
+                                                //ApplicationId = appId, 
+                                                ObjectId = servicePrincipalId.ToString()
                                             }
                                         }
                                     };

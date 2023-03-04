@@ -52,7 +52,7 @@ namespace Sample.EmployeeSubdomain
                     Key = _employee.Id.ToString(),
                     CorrelationId = _employee.Id.ToString(),
                     Content = System.Text.Json.JsonSerializer.Serialize(_employee)
-                }, token, sendNotification: true);
+                }, token, sendNotification: true).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception e)

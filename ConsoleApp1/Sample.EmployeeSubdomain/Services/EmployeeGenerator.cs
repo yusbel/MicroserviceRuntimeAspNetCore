@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.EmployeeSubdomain.Interfaces;
@@ -22,7 +23,8 @@ namespace Sample.EmployeeSubdomain.Services
         public EmployeeGenerator(
             ILogger<EmployeeGenerator> logger,
             IServiceProvider serviceProvider,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
@@ -52,8 +54,7 @@ namespace Sample.EmployeeSubdomain.Services
                             using (var scope = _serviceProvider.CreateScope())
                             {
                                 var employeeService = scope.ServiceProvider.GetRequiredService<IEmployee>();
-                                // await employeeService.CreateAndSave(employee.Item1, employee.Item2, token);
-                                await Task.Delay(500);
+                                await employeeService.CreateAndSave(employee.Item1, employee.Item2, token).ConfigureAwait(false);
                             }
                         }
                         catch (OperationCanceledException)
@@ -64,7 +65,7 @@ namespace Sample.EmployeeSubdomain.Services
                         {
                             e.LogCriticalException(_logger, $"Error, managed thread: {Thread.CurrentThread.ManagedThreadId}");
                         }
-                    });
+                    }).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException oce) 
                 {

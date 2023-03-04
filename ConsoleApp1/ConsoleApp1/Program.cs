@@ -8,10 +8,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using ConsoleApp1;
+using SampleSdkRuntime;
+using Sample.EmployeeSubdomain.Host;
 
 Console.WriteLine($"Processor count ${Environment.ProcessorCount}");
 
-Console.WriteLine("Hello World");
+string[] serviceArgs = new string[] { "EmployeeService-0123456789" };
+
+var employeeHost = HostService.Create(serviceArgs);
+await ServiceRuntime.RunAsync(serviceArgs, employeeHost.GetHostBuilder()).ConfigureAwait(false);
+
+Console.ReadKey();
 //var logger = LoggerFactory.Create((builder) => { builder.AddConsole(); }).CreateLogger("");
 
 //var hosts = new List<Task>();

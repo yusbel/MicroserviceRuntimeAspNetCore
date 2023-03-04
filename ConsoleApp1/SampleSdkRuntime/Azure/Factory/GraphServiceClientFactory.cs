@@ -1,4 +1,5 @@
 ﻿using Microsoft.Graph;
+using SampleSdkRuntime.Azure.Factory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,9 @@ namespace SampleSdkRuntime.Azure.Factory
     /// </summary>
     public class GraphServiceClientFactory : IGraphServiceClientFactory
     {
-        private readonly IClientTokenCredentialFactory _clientTokenDredentialFactory;
+        private readonly IClientOAuthTokenProviderFactory _clientTokenDredentialFactory;
 
-        public GraphServiceClientFactory(IClientTokenCredentialFactory clientTokenDredentialFactory)
+        public GraphServiceClientFactory(IClientOAuthTokenProviderFactory clientTokenDredentialFactory)
         {
             _clientTokenDredentialFactory = clientTokenDredentialFactory;
         }
@@ -23,7 +24,9 @@ namespace SampleSdkRuntime.Azure.Factory
             if(_clientTokenDredentialFactory
                 .TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential)) 
             {
-                return new GraphServiceClient(clientSecretCredential);
+                var graph = new GraphServiceClient(clientSecretCredential);
+
+                return graph;
             }
             return default;
         }
