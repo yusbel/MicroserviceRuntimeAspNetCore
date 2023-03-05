@@ -30,13 +30,13 @@ namespace Sample.PayRoll
             services.AddTransient<IMessageConverter<EmployeeDto>, EmployeeAddedConverter>();
             services.AddTransient<IPayRoll, PayRoll>();
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();
-            services.AddTransient<IMessageBusSender, ServiceBusMessageSender>();
-            services.AddSingleton<IMessageBusSender, ServiceBusMessageSender>();
+            services.AddTransient<IMessageSender, ServiceBusMessageSender>();
+            services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageBusReceiver<EmployeeAdded>, ServiceBusMessageReceiver<EmployeeAdded>>();
             services.AddHostedService<EmployeeAddedHostedService>();
             
             //Configuration Options
-            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.Identifier));
+            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID));
 
             services.AddHttpClient();//TODO:setup polly
 

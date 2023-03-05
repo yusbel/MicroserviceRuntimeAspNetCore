@@ -13,7 +13,7 @@ namespace Sample.Sdk.Services.Interfaces
     {
         Task<(bool wasDecrypted, ExternalMessage? message, EncryptionDecryptionFail reason)>
         GetDecryptedExternalMessage(
-           EncryptedMessageMetadata encryptedMessage
+           EncryptedMessage encryptedMessage
            , IAsymetricCryptoProvider cryptoProvider
            , CancellationToken token);
     }

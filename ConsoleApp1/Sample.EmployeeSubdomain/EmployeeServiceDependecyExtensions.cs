@@ -19,7 +19,6 @@ using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Settings;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.WebHook.Data;
-using Google.Protobuf.Reflection;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.InMemory;
@@ -37,9 +36,7 @@ namespace Sample.EmployeeSubdomain
     {
         public static IServiceCollection AddEmployeeServiceDependencies(this IServiceCollection services, IConfiguration configuration) 
         {
-            //Configuration options
-            services.Configure<ServiceOptions>(configuration.GetSection("Employee:ConfigurationOptions"));
-            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.Identifier));
+            services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID));
 
             //Security
             services.AddTransient<IProcessAcknowledgement, MessageProcessAcknowledgement>();
@@ -52,29 +49,14 @@ namespace Sample.EmployeeSubdomain
             {
                 options.EnableDetailedErrors(true);
             });
-            services.AddSingleton<IMessageBusSender, ServiceBusMessageSender>();
+            services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
             //services.AddHostedService<MessageSenderHostedService>();
             services.AddHostedService<EmployeeGenerator>();
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
-            services.Configure<WebHookConfigurationOptions>((option) => 
-            {
-                //the property name does not match then appsettings
-                var subscribeToMessageIdentifiers = configuration.GetValue<string>("Employee:WebHookConfiguration:SubscribeToMessageIdentifiers");
-                option.SubscribeToMessageIdentifiers = string.IsNullOrEmpty(subscribeToMessageIdentifiers) 
-                                                                ? (new List<string>()).AsEnumerable()
-                                                                : subscribeToMessageIdentifiers.Split(',').AsEnumerable();
-                option.WebHookReceiveMessageUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookReceiveMessageUrl");
-                option.WebHookSendMessageUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookSendMessageUrl");
-                option.WebHookSubscriptionUrl = configuration.GetValue<string>("Employee:WebHookConfiguration:WebHookSubscriptionUrl");
-            });
-            services.Configure<WebHookRetryOptions>(option => 
-            {
-                option.TimeOut = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:TimeOutInSeconds"));
-                option.MaxRetries = configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:MaxRetries");
-                option.Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:WebHookConfiguration:RetryOptions:DelayInSeconds"));
-            });
+            services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));
+            services.Configure<WebHookRetryOptions>(configuration.GetSection(WebHookRetryOptions.SERVICE_WEBHOOK_RETRY_OPTIONS_SECTION_ID));
             services.AddAzureClients(azureClientFactoryBuilder =>
             {
                 var serviceBusConnStr = configuration.GetValue<string>("Employee:AzureServiceBusInfo:DefaultConnStr");

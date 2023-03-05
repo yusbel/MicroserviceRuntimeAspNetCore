@@ -11,9 +11,9 @@ namespace Sample.Sdk.Services
 {
     public abstract class ServiceRoot : IServiceMessageReceiver
     {
-        private readonly IOptions<List<ServiceBusInfoOptions>> _options;
+        private readonly IOptions<List<AzureMessageSettingsOptions>> _options;
 
-        public ServiceRoot(IOptions<List<ServiceBusInfoOptions>> options)
+        public ServiceRoot(IOptions<List<AzureMessageSettingsOptions>> options)
         {
             
             _options = options;

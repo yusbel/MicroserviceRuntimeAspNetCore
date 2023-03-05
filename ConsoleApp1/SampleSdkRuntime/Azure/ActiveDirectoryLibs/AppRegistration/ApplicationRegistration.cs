@@ -262,7 +262,8 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
                 e.LogCriticalException(_logger, "adding password fail");
                 return (false, default, default, default);
             }
-            if (!await _keyVaultProvider.SaveSecretInKeyVault($"{prefix}-{appIdentifier}", appPass.SecretText, 0, token).ConfigureAwait(false))
+            var wasSaved = await _keyVaultProvider.SaveSecretInKeyVault($"{prefix}-{appIdentifier}", appPass.SecretText, 0, token).ConfigureAwait(false);
+            if (!wasSaved)
             {
                 return (false, default, default, default);
             }

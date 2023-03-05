@@ -26,6 +26,6 @@ namespace Sample.Sdk.Core.EntityDatabaseContext
         /// <summary>
         /// Table to keep copy of event send via message
         /// </summary>
-        public DbSet<ExternalEventEntity> ExternalEvents { get; set; }
+        public DbSet<OutgoingEventEntity> OutgoingEvents { get; set; }
     }
 }

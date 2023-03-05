@@ -54,7 +54,7 @@ namespace Sample.Sdk.Services
 
         public async Task<(bool wasDecrypted, ExternalMessage? message, EncryptionDecryptionFail reason)>
         GetDecryptedExternalMessage(
-           EncryptedMessageMetadata encryptedMessage
+           EncryptedMessage encryptedMessage
            , IAsymetricCryptoProvider cryptoProvider
            , CancellationToken token)
         {

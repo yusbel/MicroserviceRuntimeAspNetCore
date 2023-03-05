@@ -8,9 +8,9 @@ namespace Sample.Sdk.Msg.Data
 {
     public class MessageProcessedAcknowledgement
     {
-        public string PointToPointSessionIdentifier { get; set; }
+        public string PointToPointSessionIdentifier { get; set; } = string.Empty;
         public long CreatedOn { get; set; }
-        public string Signature { get; set; }
-        public string EncryptedExternalMessage { get; set; }
+        public string Signature { get; set; } = string.Empty;
+        public string EncryptedExternalMessage { get; set; } = string.Empty;
     }
 }

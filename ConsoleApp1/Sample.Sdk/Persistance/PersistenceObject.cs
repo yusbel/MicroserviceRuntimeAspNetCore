@@ -22,10 +22,10 @@ namespace Sample.Sdk.Persistance
 {
     public abstract class PersistenceObject<T, TC, TS> : BaseObject<T> where T : BaseObject<T> where TC : DbContext where TS : Entity
     {
-        protected abstract TS? GetInMemoryEntity();
-        protected abstract void AttachEntity(TS entity);
         private readonly IEntityContext<TC, TS> _entityContext;
         private readonly ILogger? _logger;
+        public abstract TS? GetEntity(); 
+        protected abstract void AttachEntity(TS entity);
 
         public PersistenceObject(
             ILogger logger
@@ -33,9 +33,8 @@ namespace Sample.Sdk.Persistance
             , IAsymetricCryptoProvider asymetricCryptoProvider
             , IEntityContext<TC, TS> entityContext
             , IOptions<CustomProtocolOptions> options
-            , IMessageBusSender sender) : 
-            base(sender
-                , options
+            , IMessageSender sender) : 
+            base(options
                 , cryptoProvider
                 , asymetricCryptoProvider
                 , logger)
@@ -44,7 +43,6 @@ namespace Sample.Sdk.Persistance
             _entityContext = entityContext;
             _logger = logger;
         }
-        protected override void LogMessage() => _logger?.LogInformation("Hello World");
 
         /// <summary>
         /// Save entity
@@ -56,10 +54,11 @@ namespace Sample.Sdk.Persistance
             TS? entity;
             try
             {
-                entity = GetInMemoryEntity();
+                entity = GetEntity();
             }
             catch (Exception e)
             {
+                e.LogCriticalException(_logger!);
                 throw new ApplicationSaveException("Retrieving entity fail with exception", e);
             }
             if (entity == null || string.IsNullOrEmpty(entity.Id))
@@ -69,10 +68,11 @@ namespace Sample.Sdk.Persistance
             _entityContext.Add(entity);
             try
             {
-                await _entityContext.Save(token);
+                await _entityContext.Save(token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
+                e.LogCriticalException(_logger!);
                 throw new ApplicationSaveException("Saving entity fail", e);
             }
         }
@@ -95,7 +95,7 @@ namespace Sample.Sdk.Persistance
             TS? entity;
             try
             {
-                entity = GetInMemoryEntity();
+                entity = GetEntity();
             }
             catch (Exception e)
             {
@@ -107,16 +107,18 @@ namespace Sample.Sdk.Persistance
             }
             _entityContext.Add(entity);
             message.CorrelationId = entity.Id.ToString();
-            var eventEntity = new ExternalEventEntity()
+            var eventEntity = new OutgoingEventEntity()
             {
                 Id = Guid.NewGuid().ToString(),
                 MessageKey = message.Key,
                 CreationTime = DateTime.UtcNow.ToLong(),
                 IsDeleted = false,
                 Type = typeof(TE).FullName!,
-                Version = "1.0.0"
+                Version = "1.0.0", 
+                MsgQueueName = message.MsgQueueName,
+                MsgDecryptScope = message.MsgDecryptScope
             };
-            (bool wasEncrypted, EncryptedMessageMetadata? msg) = await EncryptExternalMessage(message, token).ConfigureAwait(false);
+            (bool wasEncrypted, EncryptedMessage? msg) = await EncryptExternalMessage(message, token).ConfigureAwait(false);
             if(!wasEncrypted || msg == null) 
             {
                 throw new ApplicationSaveException("Encrypted the message fail, verify exceptions logged");
@@ -141,8 +143,18 @@ namespace Sample.Sdk.Persistance
             }
         }
 
-        protected async Task<TS> GetEntityById(Guid id, CancellationToken token) => 
-            await _entityContext.GetById(id, token);
+        public async Task Load(Guid employeeId, CancellationToken cancellationToken) 
+        {
+            try 
+            {
+                var entity = await _entityContext.GetById(employeeId, cancellationToken).ConfigureAwait(false);
+                AttachEntity(entity!);
+            }
+            catch(Exception e) 
+            {
+                e.LogCriticalException(_logger!);
+            }
+        }
 
     }
 }

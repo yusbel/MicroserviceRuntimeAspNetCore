@@ -32,7 +32,7 @@ namespace Sample.EmployeeSubdomain
             IAsymetricCryptoProvider asymetricCryptoProvider,
             ISymetricCryptoProvider cryptoProvider,
             IOptions<CustomProtocolOptions> options,
-            IMessageBusSender messageSender) : base(loggerFactory.CreateLogger<Employee>()
+            IMessageSender messageSender) : base(loggerFactory.CreateLogger<Employee>()
                 , cryptoProvider
                 , asymetricCryptoProvider
                 , entityContext
@@ -51,7 +51,10 @@ namespace Sample.EmployeeSubdomain
                 {
                     Key = _employee.Id.ToString(),
                     CorrelationId = _employee.Id.ToString(),
-                    Content = System.Text.Json.JsonSerializer.Serialize(_employee)
+                    Content = System.Text.Json.JsonSerializer.Serialize(_employee), 
+                    MsgQueueName = "employeeadded",  //move to configuration  
+                    MsgDecryptScope = "EmployeeAdded.Decrypt", 
+                    MsgQueueEndpoint = "sb://leraningyusbel.servicebus.windows.net"
                 }, token, sendNotification: true).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
@@ -61,11 +64,7 @@ namespace Sample.EmployeeSubdomain
             }
             return _employee;
         }
-        public async Task<EmployeeEntity> GetEmployee(Guid id, CancellationToken token)
-        {
-            return await GetEntityById(id, token);
-        }
-        protected override EmployeeEntity? GetInMemoryEntity() => _employee;
+        public override EmployeeEntity? GetEntity() => _employee;
         protected override void AttachEntity(EmployeeEntity entity) => _employee = entity;
         private EmployeeEntity? _employee;
 

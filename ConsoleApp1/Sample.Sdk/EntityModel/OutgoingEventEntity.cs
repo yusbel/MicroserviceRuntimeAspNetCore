@@ -3,8 +3,11 @@
 namespace Sample.Sdk.EntityModel
 {
     [Table("ExternalEvents")]
-    public class ExternalEventEntity : Entity
+    public class OutgoingEventEntity : Entity
     {
+        public string MsgQueueEndpoint { get; set; }
+        public string MsgQueueName { get; set; }
+        public string MsgDecryptScope { get; set; }
         public string? Scheme { get; set; }
         public string Type { get; set; }
         public string Version { get; set; }

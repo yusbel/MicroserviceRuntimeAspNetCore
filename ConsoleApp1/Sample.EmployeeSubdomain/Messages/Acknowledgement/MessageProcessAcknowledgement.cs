@@ -48,10 +48,10 @@ namespace Sample.EmployeeSubdomain.Messages.Acknowledgement
                 _logger.LogCritical(e, "An error ocurred when deserializing to external message");
                 return (false, AcknowledgementResponseType.DeserializationFail);
             }
-            EncryptedMessageMetadata? encryptedMsgWithMetadata;
+            EncryptedMessage? encryptedMsgWithMetadata;
             try
             {
-                encryptedMsgWithMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(externalMessage.Content);
+                encryptedMsgWithMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessage>(externalMessage.Content);
             }
             catch (Exception e)
             {
@@ -62,7 +62,7 @@ namespace Sample.EmployeeSubdomain.Messages.Acknowledgement
             {
                 return (false, AcknowledgementResponseType.DeserializationFail);
             }
-            var message = dbContext.ExternalEvents.FirstOrDefault(msg => msg.MessageKey == encryptedMsgWithMetadata.Key);
+            var message = dbContext.OutgoingEvents.FirstOrDefault(msg => msg.MessageKey == encryptedMsgWithMetadata.Key);
             if(message != null) 
             {
                 try

@@ -37,7 +37,7 @@ namespace Sample.Sdk.Services
 
         public async Task<(bool wasSent, EncryptionDecryptionFail reason)>
             SendAcknowledgement(string encryptedMessage
-                                        , EncryptedMessageMetadata encryptedMessageMetadata
+                                        , EncryptedMessage encryptedMessageMetadata
                                         , CancellationToken token)
         {
             (bool wasCreated, PointToPointChannel? channel) =

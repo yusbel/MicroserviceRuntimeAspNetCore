@@ -108,10 +108,10 @@ namespace Sample.Sdk.Services
                     {
                         foreach (var message in messages) 
                         {
-                            EncryptedMessageMetadata encryptMsgMetadata;
+                            EncryptedMessage encryptMsgMetadata;
                             try
                             {
-                                encryptMsgMetadata = JsonSerializer.Deserialize<EncryptedMessageMetadata>(message.Body);
+                                encryptMsgMetadata = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
                             }
                             catch (Exception e)
                             {
@@ -250,10 +250,10 @@ namespace Sample.Sdk.Services
                     {
                         await Parallel.ForEachAsync(messages, token, async (message, token) =>
                         {
-                            EncryptedMessageMetadata? encryptedMessageWithMetadata = null;
+                            EncryptedMessage? encryptedMessageWithMetadata = null;
                             try
                             {
-                                encryptedMessageWithMetadata = JsonSerializer.Deserialize<EncryptedMessageMetadata>(message.Body);
+                                encryptedMessageWithMetadata = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
                             }
                             catch (Exception e)
                             {
@@ -264,7 +264,7 @@ namespace Sample.Sdk.Services
                                     Id = message.Id,
                                     EncryptedContent = message.Body,
                                     OriginalType = message.Type,
-                                    InCompatibleType = nameof(EncryptedMessageMetadata)
+                                    InCompatibleType = nameof(EncryptedMessage)
                                 });
                                 return;
                             }

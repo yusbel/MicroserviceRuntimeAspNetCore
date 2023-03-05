@@ -21,86 +21,70 @@ using System.Transactions;
 namespace Sample.Sdk.Msg
 {
     /// <summary>
-    /// 
+    /// Message sender implementation using azure service bus
     /// </summary>
-    public partial class ServiceBusMessageSender : ServiceRoot, IMessageBusSender
+    public partial class ServiceBusMessageSender : ServiceBusSenderRoot, IMessageSender
     {
         private ILogger<ServiceBusMessageSender> _logger;
         public ServiceBusMessageSender(ILoggerFactory loggerFactory
-            , IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
-            , ServiceBusClient serviceBusClient
-            , IAsymetricCryptoProvider asymCryptoProvider
-            , ISymetricCryptoProvider cryptoProvider
-            , IExternalServiceKeyProvider externalServiceKeyProvider
-            , HttpClient httpClient
-            , IHttpClientResponseConverter httpResponseConverter
-            , IOptions<AzureKeyVaultOptions> keyVaultOptions
-            , ISecurePointToPoint securePointToPoint
-            , ISecurityEndpointValidator validator) : 
+            , IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
+            , ServiceBusClient serviceBusClient) : 
             base(serviceBusInfoOptions
                 , serviceBusClient
-                , asymCryptoProvider
-                , cryptoProvider
-                , externalServiceKeyProvider
-                , httpClient
-                , httpResponseConverter
-                , keyVaultOptions
-                , securePointToPoint
-                , validator
-                , loggerFactory.CreateLogger<ServiceRoot>())
+                , loggerFactory.CreateLogger<ServiceBusSenderRoot>())
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }
 
         
         /// <summary>
-        /// Send message given a queue name and messages
+        /// Send messages
         /// </summary>
-        /// <param name="queueName"></param>
-        /// <param name="token"></param>
-        /// <param name="messages"></param>
-        /// <param name="onSent"></param>
-        /// <returns></returns>
-        /// <exception cref="SenderQueueNotRegisteredException"></exception>
-        public async Task<bool> Send(string queueName, CancellationToken token, IEnumerable<ExternalMessage> messages, Action<ExternalMessage> onSent)
+        /// <param name="token">Cancellation token</param>
+        /// <param name="messages">List of messages to send</param>
+        /// <param name="onSent">Invoked per message successful sent</param>
+        /// <returns cref="int">Amount of successful sent messages</returns>
+        public async Task<int> Send(CancellationToken token, 
+                                        IEnumerable<ExternalMessage> messages, 
+                                        Action<ExternalMessage> onSent)
         {
-            if (!serviceBusSender.Any(s=>s.Key.ToLower() == queueName.ToLower())) 
+            var exceptions = new List<Exception>();
+            var tasks = new List<Task>();
+            foreach (var msg in messages)
             {
-                throw new SenderQueueNotRegisteredException();
-            }
-            var sender = serviceBusSender.First(s=>s.Key.ToLower() == queueName.ToLower()).Value;
-            //create service bus then iterate over messages, use cancellation token in case the service is stopped while processing
-            foreach(var msg in messages) 
-            {
-                var serviceBusMsg = new ServiceBusMessage()
+                var sender = GetSender(msg);
+                if (sender == null)
                 {
-                    ContentType = MsgContentType,
-                    MessageId = msg.Key,
-                    CorrelationId = msg.CorrelationId,
-                    Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
-                };
-                try
-                {
-                    await sender.SendMessageAsync(serviceBusMsg);
+                    exceptions.Add(new SenderQueueNotRegisteredException($"Sender not found for queue name {msg.MsgQueueName} and endpoint {msg.MsgQueueEndpoint}"));
+                    continue;
                 }
-                catch (ServiceBusException e)
+                var task = Task.Run(async () =>
                 {
-                    throw;
-                }
-
-                if (onSent != null)
-                {
-                    onSent(new ExternalMessage() 
-                    { 
-                        Content = msg.Content, 
-                        Key = msg.Key, 
-                        CorrelationId = msg.CorrelationId 
+                    var serviceBusMsg = new ServiceBusMessage()
+                    {
+                        ContentType = MsgContentType,
+                        MessageId = msg.Key,
+                        CorrelationId = msg.CorrelationId,
+                        Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
+                    };
+                    await sender.SendMessageAsync(serviceBusMsg, token).ConfigureAwait(false);
+                    onSent?.Invoke(new ExternalMessage()
+                    {
+                        Content = msg.Content,
+                        Key = msg.Key,
+                        CorrelationId = msg.CorrelationId
                     });
-                }
+                }, token);
+                _ = task.ConfigureAwait(false);
+                tasks.Add(task); 
             }
-            return true;
+            try 
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch(Exception e) { exceptions.Add(e); }
+            exceptions.ForEach(exception => exception.LogException(_logger.LogCritical));
+            return tasks.Count(task=> task.IsCompletedSuccessfully);
         }
-
-        
     }
 }

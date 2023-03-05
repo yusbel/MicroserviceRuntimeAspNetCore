@@ -87,7 +87,7 @@ namespace Sample.Sdk.Persistance.Context
             return true;
         }
 
-        public async Task<bool> SaveWithEvent(ExternalEventEntity eventEntity, CancellationToken token)
+        public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
         {
             _dbContext.Add(eventEntity);
             var strategy = _dbContext.Database.CreateExecutionStrategy();
@@ -102,7 +102,7 @@ namespace Sample.Sdk.Persistance.Context
                     },
                 verifySucceeded: async () =>
                     {
-                        return await _dbContext.Set<ExternalEventEntity>().AsNoTracking().AnyAsync(ee => ee.Id == eventEntity.Id).ConfigureAwait(false);
+                        return await _dbContext.Set<OutgoingEventEntity>().AsNoTracking().AnyAsync(ee => ee.Id == eventEntity.Id).ConfigureAwait(false);
                     }).ConfigureAwait(false);
 
             _dbContext.ChangeTracker.AcceptAllChanges();

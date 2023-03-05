@@ -22,6 +22,7 @@ using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.InMemoryListMessage;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Msg.Providers;
 using Sample.Sdk.Services;
 using Sample.Sdk.Services.Interfaces;
 using System;
@@ -29,6 +30,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data.Entity;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,6 +50,7 @@ namespace Sample.Sdk
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
             services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
             services.AddTransient<IPointToPointChannel, PointToPointChannel>();
+            services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
 
             services.AddTransient<ISymetricCryptoProvider, AesSymetricCryptoProvider>();
             services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
@@ -55,9 +58,9 @@ namespace Sample.Sdk
 
             services.Configure<CustomProtocolOptions>(configuration.GetSection(CustomProtocolOptions.Identifier));
             services.AddSampleSdkInMemoryQueues(configuration);
-            services.AddSampleSdkPrincipleAccounts(configuration);
-            services.AddSampleSdkAzureKeyVaultCertificateClient(configuration);
-            services.AddSampleSdkServiceBusClient(configuration, serviceBusInfoSection);
+            services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(configuration);
+            services.AddSampleSdkServiceBusReceiver(configuration);
+            services.AddSampleSdkServiceBusSender(configuration);
             
             return services;
         }
@@ -90,78 +93,49 @@ namespace Sample.Sdk
 
             return services;
         }
-        public static IServiceCollection AddSampleSdkPrincipleAccounts(this IServiceCollection services, IConfiguration config) 
+
+        public static IServiceCollection AddSampleSdkAzureKeyVaultCertificateAndSecretClient(this IServiceCollection services, IConfiguration config) 
         {
-            services.Configure<List<AzurePrincipleAccount>>(config.GetSection("ServiceSdk:AzurePrincipleAccount"));
-            services.AddAzureClients(azureClientBuilder =>
+            services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
+            services.AddAzureClients((azureClientBuilder) =>
             {
-                var azurePrincipleOption = new AzurePrincipleAccount()
-                {
-                    AZURE_CLIENT_ID = config.GetValue<string>($"{AzurePrincipleAccount.SectionIdentifier}:AZURE_CLIENT_ID"),
-                    AZURE_CLIENT_SECRET = config.GetValue<string>($"{AzurePrincipleAccount.SectionIdentifier}:AZURE_CLIENT_SECRET"),
-                    AZURE_TENANT_ID = config.GetValue<string>($"{AzurePrincipleAccount.SectionIdentifier}:AZURE_TENANT_ID")
-                };
-                var keyVaultUri = new Uri(config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri"));
-                config.AsEnumerable().ToList().Add(new KeyValuePair<string, string>("AZURE_CLIENT_ID", azurePrincipleOption.AZURE_CLIENT_ID));
-                config.AsEnumerable().ToList().Add(new KeyValuePair<string, string>("AZURE_CLIENT_SECRET", azurePrincipleOption.AZURE_CLIENT_SECRET));
-                config.AsEnumerable().ToList().Add(new KeyValuePair<string, string>("AZURE_TENANT_ID", azurePrincipleOption.AZURE_TENANT_ID));
+                var keyVaultOptions = config.GetValue<AzureKeyVaultOptions>(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION);
+                azureClientBuilder.AddCertificateClient(new Uri(keyVaultOptions.VaultUri));
+                azureClientBuilder.AddSecretClient(new Uri(keyVaultOptions.VaultUri));
             });
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkAzureKeyVaultCertificateClient(this IServiceCollection services, IConfiguration config) 
+        public static IServiceCollection AddSampleSdkServiceBusSender(this IServiceCollection services, IConfiguration config) 
         {
-            services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.Identifier));
-            //services.AddAzureClients(azureClientBuilder =>
-            //{
-            //    var keyVaultUri = new Uri(config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri"));
+            services.Configure<List<AzureMessageSettingsOptions>>(config.GetSection(AzureMessageSettingsOptions.SENDER_SECTION_ID));
 
-            //    //Use principle accoutn from environment variables following convention
-
-            //    //azureClientBuilder.AddCertificateClient(keyVaultUri);//.WithCredential(new DefaultAzureCredential());
-
-            //});
-            return services;
-        }
-
-        public static IServiceCollection AddSampleSdkServiceBusClient(this IServiceCollection services, IConfiguration config, string serviceBusInfoSectionId = "") 
-        {
-            services.Configure<List<ServiceBusInfoOptions>>(options =>
+            services.AddAzureClients(azureClientFactory =>
             {
-                if (string.IsNullOrEmpty(serviceBusInfoSectionId))
+                var settingsOptions = config.GetValue<List<AzureMessageSettingsOptions>>(AzureMessageSettingsOptions.SENDER_SECTION_ID);
+                var uniqueServiceClients  = settingsOptions.Distinct(new AzureMessageSettingsOptionsComparer());
+                uniqueServiceClients.ToList().ForEach(service => 
                 {
-                    return;
-                }
-                var sectionElements = config.AsEnumerable()
-                                                    .Where(item => item.Key.StartsWith(serviceBusInfoSectionId) && item.Key.Length > serviceBusInfoSectionId.Length + 1)
-                                                    .Select(item => KeyValuePair.Create(item.Key.Substring(serviceBusInfoSectionId.Length + 1), item.Value))
-                                                    .Where(item => item.Value != null)
-                                                    .ToList();
-                var sectionGroup = sectionElements
-                                                .GroupBy(item => item.Key[0])
-                                                .Select(g => KeyValuePair.Create(g.Key, g.Select(groupElem => KeyValuePair.Create(groupElem.Key.Substring(groupElem.Key.IndexOf(':') + 1), groupElem.Value))))
-                                                .Where(itemg => itemg.Value != null)
-                                                .ToList();
-                sectionGroup.ForEach(item =>
-                {
-                    var serviceBusInfoOption = new ServiceBusInfoOptions();
-                    item.Value.ToList().ForEach(kv =>
-                    {
-                        var propName = kv.Key;
-                        var propValue = kv.Value;
-                        var property = serviceBusInfoOption.GetType()
-                                                    .GetProperties()
-                                                    .ToList()
-                                                    .Where(item => item.Name.ToLower() == propName.ToLower())
-                                                    .Select(item => item).FirstOrDefault();
-                        property?.SetValue(serviceBusInfoOption, propValue);
-                    });
-                    if (!string.IsNullOrEmpty(serviceBusInfoOption.Identifier))
-                    {
-                        options.Add(serviceBusInfoOption);
-                    }
+                    azureClientFactory.AddServiceBusClient(service.ConnStr);
                 });
             });
+            return services;
+        }
+
+        public static IServiceCollection AddSampleSdkServiceBusReceiver(this IServiceCollection services, IConfiguration config) 
+        {
+            services.Configure<List<AzureMessageSettingsOptions>>(config.GetSection(AzureMessageSettingsOptions.RECEIVER_SECTION_ID));
+
+            services.AddAzureClients(azureFactory => 
+            {
+                var receiverOptions = config.GetValue<List<AzureMessageSettingsOptions>>(AzureMessageSettingsOptions.RECEIVER_SECTION_ID);
+                var uniqueReceivers = receiverOptions.Distinct(new AzureMessageSettingsOptionsComparer());
+                uniqueReceivers.ToList().ForEach(service =>
+                {
+                    azureFactory.AddServiceBusClient(service.ConnStr);
+                });
+            });
+            
             return services;
         }
     }

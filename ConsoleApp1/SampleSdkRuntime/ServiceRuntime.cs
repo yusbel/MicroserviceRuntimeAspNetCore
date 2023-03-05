@@ -31,8 +31,6 @@ namespace SampleSdkRuntime
         public const string SERVICE_INSTANCE_ID = "SERVICE_INSTANCE_ID";
         public const string RUNTIME_SETUP_INFO = "SetupInfo";
 
-
-        
         /// <summary>
         /// ServiceRuntime-ServiceBusClient: 8d69558c-fc01-407c-becc-e561358afafb
         /// TenantId: c8656f45-daf5-42c1-9b29-ac27d3e63bf3
@@ -156,6 +154,7 @@ namespace SampleSdkRuntime
                 })
                 .ConfigureServices((host, services) =>
                 {
+
                     services.AddRuntimeServices(host.Configuration);
                     services.AddHostedService<RuntimeSetupHostedAppService>();
                 }).Build();

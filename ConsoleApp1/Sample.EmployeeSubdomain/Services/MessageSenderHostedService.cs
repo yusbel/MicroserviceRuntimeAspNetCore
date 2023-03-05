@@ -33,7 +33,7 @@ namespace Sample.EmployeeSubdomain.Services
         {
             try
             {
-                var excecutingTask = _messageSenderService.Send(stoppingToken, true);
+                var excecutingTask = _messageSenderService.Send(stoppingToken);
                 if(excecutingTask.IsCompleted) 
                 {
                     return excecutingTask;

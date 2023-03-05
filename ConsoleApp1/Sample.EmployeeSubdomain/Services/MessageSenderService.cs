@@ -7,6 +7,7 @@ using Sample.EmployeeSubdomain.Services.Interfaces;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Msg.Providers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,15 +21,18 @@ namespace Sample.EmployeeSubdomain.Services
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<MessageSenderService> _logger;
-        private readonly IMessageBusSender _sender;
+        private readonly IMessageSender _sender;
+        private readonly IOutgoingMessageProvider _outgoingMessageProvider;
 
         public MessageSenderService(
             IServiceScopeFactory serviceScopeFactory,
             ILogger<MessageSenderService> logger,
-            IMessageBusSender sender)
+            IMessageSender sender,
+            IOutgoingMessageProvider outgoingMessageProvider)
         {
             _logger = logger;
             _sender = sender;
+            _outgoingMessageProvider = outgoingMessageProvider;
             _serviceScopeFactory = serviceScopeFactory;
         }
 
@@ -44,70 +48,35 @@ namespace Sample.EmployeeSubdomain.Services
         /// <param name="token"></param>
         /// <param name="delete"></param>
         /// <returns></returns>
-        public async Task<bool> Send(CancellationToken token, bool delete = false)
+        public async Task<bool> Send(CancellationToken token)
         {
-            Task.Run(()=> GenerateEmployee());
-            using(var scope = _serviceScopeFactory.CreateScope())
+            _ = Task.Run(()=> GenerateEmployee(token), token).ConfigureAwait(false);
+            while (!token.IsCancellationRequested)
             {
-                using (var dbContext = scope.ServiceProvider.GetRequiredService<EmployeeContext>())
+                var externalMsgs = await _outgoingMessageProvider.GetMessages(token).ConfigureAwait(false);
+                var sentMsgs = new List<ExternalMessage>();
+                await _sender.Send(token, externalMsgs!, msgSent=>
                 {
-                    //Create dbcontext for every batch of message
-                    while (!token.IsCancellationRequested)
+                    if (!sentMsgs.Any(msg=> msg.Key == msgSent.Key)) 
                     {
-                        var messages = await dbContext.ExternalEvents.Where(msg => msg.IsDeleted == false).AsNoTracking().ToListAsync();
-                        var sentMsgs = new List<ExternalMessage>();
-                        if (messages.Any())
-                        {
-                            messages.RemoveAll(msg => msg == null);
-                            var externalMsgs = messages.Select(msg =>
-                            {
-                                var msgMetadata = System.Text.Json.JsonSerializer.Deserialize<EncryptedMessageMetadata>(msg.Body);
-                                return new ExternalMessage()
-                                {
-                                    Key = msg.Id.ToString(),
-                                    CorrelationId = msgMetadata?.CorrelationId ?? String.Empty,
-                                    Content = msg.Body
-                                };
-                            }).ToList();
-                            if (externalMsgs.Any())
-                            {
-                                await _sender.Send("employeeadded", token, externalMsgs, msgSend =>
-                                {
-                                    if (!sentMsgs.Any(msg=> msg.Key == msgSend.Key)) 
-                                    {
-                                        sentMsgs.Add(msgSend);
-                                    }
-                                });
-                            }
-                            if (sentMsgs.Any() && delete)
-                            {
-                                foreach (var msg in sentMsgs)
-                                {
-                                    var entity = await dbContext.ExternalEvents
-                                                                .Where(msg => msg.IsDeleted == false)
-                                                                .FirstOrDefaultAsync(item => item.Id == msg.Key);
-                                    if (entity != null)
-                                    {
-                                        entity.IsDeleted = true;
-                                        await dbContext.SaveChangesAsync();
-                                    }
-                                    
-                                }
-                            }
-                        }
-                        await Task.Delay(1000);
+                        sentMsgs.Add(msgSent);
                     }
+                }).ConfigureAwait(false);
+                var sentMsgResult = await _outgoingMessageProvider.UpdateSentMessages(sentMsgs, token).ConfigureAwait(false);
+                if (sentMsgs.Count != sentMsgResult) 
+                {
+                    _logger.LogDebug("Request to update sent message count {sentMsgs.Count} does not match result {sentMsgResult}", sentMsgs.Count, sentMsgResult);
                 }
-                
+                await Task.Delay(1000, token).ConfigureAwait(false);
             }
             return true;
         }
 
-        private async Task GenerateEmployee() 
+        private async Task GenerateEmployee(CancellationToken token) 
         {
             var employee = _serviceScopeFactory.CreateAsyncScope().ServiceProvider.GetRequiredService<IEmployee>();
             int counter = 0;
-            await employee.CreateAndSave("Yusbel", "Garcia Diaz", CancellationToken.None);
+            await employee.CreateAndSave("Yusbel", "Garcia Diaz", token);
             return;
             //while (employee != null)
             //{

@@ -58,12 +58,16 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
                 keyVaultSecret = _secretClient.SetSecret(new KeyVaultSecret(secretKey, secretText), cancellationToken);
                 return true;
             }
-            catch (RequestFailedException failedException) when (failedException.ErrorCode == "ObjectIsDeletedButRecoverable")
+            catch (RequestFailedException failedException) when (failedException.ErrorCode == "Conflict")
             {
                 await _secretClient.PurgeDeletedSecretAsync(secretKey).ConfigureAwait(false);
             }
             catch (Exception e)
             {
+                if (e is RequestFailedException failedException) 
+                {
+                    _logger.LogInformation($"Request failed exception was raised with error code {failedException.ErrorCode}");
+                }
                 e.LogCriticalException(_logger, "Setting the secret fail");
                 return false;
             }
@@ -77,3 +81,4 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
         }
     }
 }
+

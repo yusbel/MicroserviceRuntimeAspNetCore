@@ -18,19 +18,16 @@ namespace Sample.Sdk.Core
 {
     public abstract class BaseObject<T> where T : BaseObject<T>
     {
-        private IMessageBusSender _msgSender;
         private readonly IOptions<CustomProtocolOptions> _protocolOptions;
         private readonly ISymetricCryptoProvider _cryptoProvider;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly ILogger _logger;
 
-        public BaseObject(IMessageBusSender senderMessageDurable
-            , IOptions<CustomProtocolOptions> protocolOptions
+        public BaseObject(IOptions<CustomProtocolOptions> protocolOptions
             , ISymetricCryptoProvider cryptoProvider
             , IAsymetricCryptoProvider asymetricCryptoProvider
             , ILogger logger)
         {
-            (_msgSender) = (senderMessageDurable);
             _protocolOptions = protocolOptions;
             _cryptoProvider = cryptoProvider;
             _asymetricCryptoProvider = asymetricCryptoProvider;
@@ -38,7 +35,6 @@ namespace Sample.Sdk.Core
         }
         protected abstract Task<bool> Save<TE>(TE message, CancellationToken token, bool sendNotification) where TE : ExternalMessage;
         protected abstract Task Save(CancellationToken token);
-        protected abstract void LogMessage();
 
         /// <summary>
         /// Encrypt external message. Do not raise exception.
@@ -46,7 +42,7 @@ namespace Sample.Sdk.Core
         /// <typeparam name="TC"></typeparam>
         /// <param name="toEncrypt"></param>
         /// <returns></returns>
-        protected async Task<(bool wasEncrypted, EncryptedMessageMetadata? msg)> EncryptExternalMessage<TC>(TC toEncrypt, CancellationToken token) where TC : ExternalMessage
+        protected async Task<(bool wasEncrypted, EncryptedMessage? msg)> EncryptExternalMessage<TC>(TC toEncrypt, CancellationToken token) where TC : ExternalMessage
         {
             var plainData = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(toEncrypt));
             if (_cryptoProvider.TryEncrypt(plainData, out var result))
@@ -79,7 +75,7 @@ namespace Sample.Sdk.Core
                 }
                 if (token.IsCancellationRequested)
                     token.ThrowIfCancellationRequested();
-                var encryptedMsg = new EncryptedMessageMetadata()
+                var encryptedMsg = new EncryptedMessage()
                 {
                     CorrelationId = toEncrypt.CorrelationId,
                     Key = toEncrypt.Key,

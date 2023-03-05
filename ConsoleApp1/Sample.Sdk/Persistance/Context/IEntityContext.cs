@@ -13,7 +13,7 @@ namespace Sample.Sdk.Persistance.Context
     /// <typeparam name="T"></typeparam>
     public interface IEntityContext<TC, T> where TC : DbContext where T : Entity
     {
-        Task<bool> SaveWithEvent(ExternalEventEntity eventEntity, CancellationToken token);
+        Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token);
         Task<IQueryable<T>> GetAll();
         Task<T?> GetById(Guid id, CancellationToken token);
         Task<bool> Save(CancellationToken token);

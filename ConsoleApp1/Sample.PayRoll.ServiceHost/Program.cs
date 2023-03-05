@@ -41,7 +41,7 @@ appBuilder.WebHost.ConfigureKestrel(option =>
 
 var payRollApp = appBuilder.Build();
 
-var serviceBusInfoOptions = payRollApp.Services.GetRequiredService<IOptions<List<ServiceBusInfoOptions>>>().Value;
+var serviceBusInfoOptions = payRollApp.Services.GetRequiredService<IOptions<List<AzureMessageSettingsOptions>>>().Value;
 
 payRollApp.MapGrpcService<PayRollService>();
 payRollApp.MapGet("/WebHook", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");

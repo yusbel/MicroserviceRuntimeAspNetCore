@@ -60,27 +60,12 @@ namespace SampleSdkRuntime
         {
             services.AddAzureClients(azureClientFactoryBuilder =>
             {
-                var serviceBusNamespace = config.GetValue<string>("");
-                azureClientFactoryBuilder.AddServiceBusAdministrationClientWithNamespace(serviceBusNamespace);
-                //Read azure key vault uri
-                var keyVaultStringUri = string.IsNullOrEmpty(config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri")) ? "https://learningkeyvaultyusbel.vault.azure.net/"
-                                                                    : config.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions:VaultUri");
-                var keyVaultUri = new Uri(keyVaultStringUri);
-                azureClientFactoryBuilder.AddCertificateClient(keyVaultUri);
-                azureClientFactoryBuilder.AddSecretClient(keyVaultUri);//.WithCredential(new DefaultAzureCredential());
-                //azureClientFactoryBuilder.UseCredential(new DefaultAzureCredential());
+                azureClientFactoryBuilder.AddServiceBusAdministrationClientWithNamespace("");
                 azureClientFactoryBuilder.UseCredential((services) =>
                 {
                     var clientCredentialFactory = services.GetRequiredService<IClientOAuthTokenProviderFactory>();
                     clientCredentialFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
-                    //var creds = clientCredentialFactory.GetDefaultCredential();
-                    //var credentialOptions = new DefaultAzureCredentialOptions()
-                    //{
-                    //    ManagedIdentityClientId = creds.clientId,
-                    //    TenantId = creds.tenantId, 
-                    //    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
-                    //};
-                    return clientSecretCredential;// new DefaultAzureCredential(credentialOptions);
+                    return clientSecretCredential;
                 });
 
             });

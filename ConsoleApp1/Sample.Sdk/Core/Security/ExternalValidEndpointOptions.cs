@@ -8,9 +8,9 @@ namespace Sample.Sdk.Core.Security
 {
     public class ExternalValidEndpointOptions
     {
-        public const string Identifier = "ServiceSdk:Security:ExternalValidEndpoints";
-        public string WellknownSecurityEndpoint { get; set; }
-        public string DecryptEndpoint { get; set; }
-        public string AcknowledgementEndpoint { get; set; }
+        public const string SERVICE_SECURITY_VALD_ENDPOINTS_ID = "ServiceSdk:Security:ExternalValidEndpoints";
+        public string WellknownSecurityEndpoint { get; set; } = string.Empty;
+        public string DecryptEndpoint { get; set; } = string.Empty;
+        public string AcknowledgementEndpoint { get; set; } = string.Empty;
     }
 }

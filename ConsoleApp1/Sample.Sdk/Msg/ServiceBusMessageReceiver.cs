@@ -25,32 +25,15 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg
 {
-    public class ServiceBusMessageReceiver<T> : ServiceRoot, IMessageBusReceiver<T> where T : ExternalMessage
+    public class ServiceBusMessageReceiver<T> : ServiceBusReceiverRoot, IMessageBusReceiver<T> where T : ExternalMessage
     {
         private readonly ILogger<ServiceBusMessageReceiver<T>> _logger;
         public ServiceBusMessageReceiver(
-            IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
+            IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient service
-            , IAsymetricCryptoProvider asymCryptoProvider
-            , ISymetricCryptoProvider cryptoProvider
-            , IExternalServiceKeyProvider externalServiceKeyProvider
-            , HttpClient httpClient
-            , IHttpClientResponseConverter httpResponseConverter
-            , ISecurePointToPoint securePointToPoint
-            , IOptions<AzureKeyVaultOptions> options
-            , ISecurityEndpointValidator securityEndpointValidator
             , ILoggerFactory loggerFactory) : 
             base(serviceBusInfoOptions
-                , service
-                , asymCryptoProvider
-                , cryptoProvider
-                , externalServiceKeyProvider
-                , httpClient
-                , httpResponseConverter
-                , options
-                , securePointToPoint
-                , securityEndpointValidator
-                , loggerFactory.CreateLogger<ServiceRoot>())
+                , service)
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageReceiver<T>>();
         }

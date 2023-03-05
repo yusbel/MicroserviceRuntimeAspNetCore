@@ -9,9 +9,10 @@ namespace Sample.Sdk.Core.Azure
     /// <summary>
     /// Encapsulate options to create azure client.
     /// </summary>
-    public class AzurePrincipleAccount
+    public class AzurePrincipleAccountOptions
     {
-        public const string SectionIdentifier = "ServiceSdk:AzurePrincipleAccount";
+        public const string SERVICE_INSTANCE_SECTION = "ServiceSdk:ServicePrinciple";
+        public const string RUNTIME_SECTION = "ServiceRuntime:RuntimePrincipal";
         public string AZURE_TENANT_ID { get; set; }
         public string AZURE_CLIENT_ID { get; set; }
         public string AZURE_CLIENT_SECRET { get; set; }

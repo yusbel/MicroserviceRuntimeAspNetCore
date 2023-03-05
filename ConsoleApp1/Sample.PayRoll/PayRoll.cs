@@ -24,7 +24,7 @@ namespace Sample.PayRoll
     {
         public PayRoll(ILoggerFactory logger
             , IEntityContext<PayRollContext, PayRollEntity> entityContext
-            , IMessageBusSender messageDurable
+            , IMessageSender messageDurable
             , IAsymetricCryptoProvider asymetricCryptoProvider
             , ISymetricCryptoProvider cryptoProvider
             , IOptions<CustomProtocolOptions> options) : base(logger.CreateLogger<PayRoll>()
@@ -37,7 +37,7 @@ namespace Sample.PayRoll
         }
         protected override void AttachEntity(PayRollEntity entity) => _payRollEntity = entity;
         private PayRollEntity? _payRollEntity;
-        protected override PayRollEntity? GetInMemoryEntity() => _payRollEntity ?? new PayRollEntity();
+        protected override PayRollEntity? GetEntity() => _payRollEntity ?? new PayRollEntity();
 
         public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail, CancellationToken token)
         {

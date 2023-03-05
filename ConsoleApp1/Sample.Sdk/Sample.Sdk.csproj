@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Core\Http\Response\" />
     <Folder Include="Core\Security\Providers\Signature\" />
   </ItemGroup>
 

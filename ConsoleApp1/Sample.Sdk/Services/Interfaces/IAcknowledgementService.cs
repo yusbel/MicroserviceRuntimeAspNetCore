@@ -14,7 +14,7 @@ namespace Sample.Sdk.Services.Interfaces
 
         Task<(bool wasSent, EncryptionDecryptionFail reason)>
             SendAcknowledgement(string encryptedMessage
-                                        , EncryptedMessageMetadata encryptedMessageMetadata
+                                        , EncryptedMessage encryptedMessageMetadata
                                         , CancellationToken token);
     }
 }

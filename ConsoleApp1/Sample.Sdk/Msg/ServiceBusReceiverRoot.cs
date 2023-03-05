@@ -22,7 +22,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg
 {
-    public class ServiceRoot : IAsyncDisposable
+    public class ServiceBusReceiverRoot : IAsyncDisposable
     {
         protected readonly string MsgContentType = "application/json;charset=utf8";
         protected readonly ConcurrentDictionary<string, ServiceBusSender> serviceBusSender = new ConcurrentDictionary<string, ServiceBusSender>();
@@ -30,42 +30,15 @@ namespace Sample.Sdk.Msg
         /// PeekLock is the default, AddReceiveAndDelete
         /// </summary>
         protected readonly ConcurrentDictionary<string, ServiceBusReceiver> serviceBusReceiver = new ConcurrentDictionary<string, ServiceBusReceiver>();
-        protected readonly IAsymetricCryptoProvider _asymCryptoProvider;
-        private readonly ISymetricCryptoProvider _cryptoProvider;
-        private readonly IExternalServiceKeyProvider _serviceKeyProvider;
-        private readonly HttpClient _httpClient;
-        private readonly IHttpClientResponseConverter _httpResponseConverter;
-        private readonly IOptions<AzureKeyVaultOptions> _keyVaultOptions;
-        private readonly ISecurePointToPoint _securePointToPoint;
-        private readonly ISecurityEndpointValidator _securityEndpointValidator;
-        private readonly ILogger<ServiceRoot> _logger;
-
-        public ServiceRoot(
-            IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions
-            , ServiceBusClient service
-            , IAsymetricCryptoProvider asymCryptoProvider
-            , ISymetricCryptoProvider cryptoProvider
-            , IExternalServiceKeyProvider serviceKeyProvider
-            , HttpClient httpClient
-            , IHttpClientResponseConverter httpResponseConverter
-            , IOptions<AzureKeyVaultOptions> keyVaultOptions
-            , ISecurePointToPoint securePointToPoint
-            , ISecurityEndpointValidator securityEndpointValidator
-            , ILogger<ServiceRoot> logger)
+        
+        public ServiceBusReceiverRoot(
+            IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
+            , ServiceBusClient service)
         {
-            _asymCryptoProvider = asymCryptoProvider;
-            _cryptoProvider = cryptoProvider;
-            _serviceKeyProvider = serviceKeyProvider;
-            _httpClient = httpClient;
-            _httpResponseConverter = httpResponseConverter;
-            _keyVaultOptions = keyVaultOptions;
-            _securePointToPoint = securePointToPoint;
-            _securityEndpointValidator = securityEndpointValidator;
-            _logger = logger;
             Initialize(serviceBusInfoOptions, service);
         }
 
-        private void Initialize(IOptions<List<ServiceBusInfoOptions>> serviceBusInfoOptions, ServiceBusClient service)
+        private void Initialize(IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions, ServiceBusClient service)
         {
             if (serviceBusInfoOptions == null || serviceBusInfoOptions.Value == null || serviceBusInfoOptions.Value.Count == 0)
             {
@@ -96,6 +69,7 @@ namespace Sample.Sdk.Msg
             });
         }
 
+        
         public async ValueTask DisposeAsync()
         {
             foreach(var sender in serviceBusSender) 
