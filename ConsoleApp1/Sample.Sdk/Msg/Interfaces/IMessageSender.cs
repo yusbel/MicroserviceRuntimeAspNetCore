@@ -4,13 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Sample.Sdk.EntityModel.MessageHandlingReason;
 
 namespace Sample.Sdk.Msg.Interfaces
 {
     public interface IMessageSender
     {
-        Task<int> Send(CancellationToken token
-                        , IEnumerable<ExternalMessage> messages
-                        , Action<ExternalMessage> onSent);
+        Task<(bool WasSent, SendFailedReason Reason)> 
+            Send(CancellationToken token,
+                    ExternalMessage msg,
+                    Action<ExternalMessage> onSent,
+                    Action<ExternalMessage, SendFailedReason?, Exception?> onError);
     }
 }

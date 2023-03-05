@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sample.PayRoll.Messages.InComming;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Msg.Interfaces;
-using Sample.Sdk.Services;
+using Sample.Sdk.Services.Realtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;

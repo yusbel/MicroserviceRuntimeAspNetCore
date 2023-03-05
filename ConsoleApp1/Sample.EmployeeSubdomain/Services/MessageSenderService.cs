@@ -53,16 +53,16 @@ namespace Sample.EmployeeSubdomain.Services
             _ = Task.Run(()=> GenerateEmployee(token), token).ConfigureAwait(false);
             while (!token.IsCancellationRequested)
             {
-                var externalMsgs = await _outgoingMessageProvider.GetMessages(token).ConfigureAwait(false);
+                var externalMsgs = await _outgoingMessageProvider.GetMessages(token, null).ConfigureAwait(false);
                 var sentMsgs = new List<ExternalMessage>();
-                await _sender.Send(token, externalMsgs!, msgSent=>
+                await _sender.Send(token, null, msgSent=>
                 {
                     if (!sentMsgs.Any(msg=> msg.Key == msgSent.Key)) 
                     {
                         sentMsgs.Add(msgSent);
                     }
-                }).ConfigureAwait(false);
-                var sentMsgResult = await _outgoingMessageProvider.UpdateSentMessages(sentMsgs, token).ConfigureAwait(false);
+                }, null).ConfigureAwait(false);
+                var sentMsgResult = await _outgoingMessageProvider.UpdateSentMessages(sentMsgs, token, null).ConfigureAwait(false);
                 if (sentMsgs.Count != sentMsgResult) 
                 {
                     _logger.LogDebug("Request to update sent message count {sentMsgs.Count} does not match result {sentMsgResult}", sentMsgs.Count, sentMsgResult);

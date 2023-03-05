@@ -8,10 +8,11 @@ using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Msg.InMemoryListMessage;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
+using Sample.Sdk.Services.Realtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity.Validation;
@@ -21,34 +22,34 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Services
+namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageRealtimeService<T> : IMessageRealtimeService where T : class, IMessageIdentifier
+    public class MessageReceiverRealtimeService<T> : IMessageRealtimeService where T : class, IMessageIdentifier
     {
         private readonly IMessageComputation<T> _computations;
-        private readonly IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity> _inComingEvents;
-        private readonly IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage> _incompatibleMessages;
-        private readonly IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage> _corruptedMessages;
-        private readonly IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity> _ackMessages;
-        private readonly IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
+        private readonly IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> _inComingEvents;
+        private readonly IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> _incompatibleMessages;
+        private readonly IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> _corruptedMessages;
+        private readonly IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity> _ackMessages;
+        private readonly IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly IServiceProvider _serviceProvider;
         private readonly IMessageBusReceiver<ExternalMessage> _messageBusReceiver;
-        private readonly ILogger<MessageRealtimeService<T>> _logger;
+        private readonly ILogger<MessageReceiverRealtimeService<T>> _logger;
         private readonly IDecryptorService _decryptorService;
         private readonly IAcknowledgementService _acknowledgementService;
         private CancellationTokenSource? _cancellationTokenSource;
-        public MessageRealtimeService(
+        public MessageReceiverRealtimeService(
             IMessageComputation<T> computations,
             IMessageBusReceiver<ExternalMessage> messageBusReceiver,
-            ILogger<MessageRealtimeService<T>> logger,
+            ILogger<MessageReceiverRealtimeService<T>> logger,
             IDecryptorService decryptorService,
             IAcknowledgementService acknowledgementService,
-            IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
-            IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
-            IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage> incompatibleMessages,
-            IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage> corruptedMessages,
-            IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity> ackMessages,
+            IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
+            IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
+            IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> incompatibleMessages,
+            IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> corruptedMessages,
+            IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity> ackMessages,
             IAsymetricCryptoProvider asymetricCryptoProvider,
             IServiceProvider serviceProvider)
         {
@@ -71,23 +72,35 @@ namespace Sample.Sdk.Services
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
             var tasks = new List<Task>();
-            tasks.Add(RunRealtimeMessageRetrieval(token));
-            tasks.Add(RetrieveInComingEventEntityFromDatabase(token));
-            tasks.Add(ComputeInRealtime(token));
-            tasks.Add(UpdateInComingEventEntity(token));
-            tasks.Add(RetrieveAcknowledgementMessage(token));
-            tasks.Add(SendAckMessages(token));
+            var retrievalTask = RunRealtimeMessageRetrieval(token);
+            _ = retrievalTask.ConfigureAwait(false);
+            tasks.Add(retrievalTask);
+            var taskFromDb = RetrieveInComingEventEntityFromDatabase(token);
+            _ = taskFromDb.ConfigureAwait(false);
+            tasks.Add(taskFromDb);
+            var taskCompute = ComputeInRealtime(token);
+            _ = taskCompute.ConfigureAwait(false);
+            tasks.Add(taskCompute);
+            var taskUpdate = UpdateInComingEventEntity(token);
+            _ = taskUpdate.ConfigureAwait(false);
+            tasks.Add(taskUpdate);
+            var taskRetrieveAck = RetrieveAcknowledgementMessage(token);
+            _ = taskRetrieveAck.ConfigureAwait(false);
+            tasks.Add(taskRetrieveAck);
+            var taskSentAck = SendAckMessages(token);
+            _ = taskSentAck.ConfigureAwait(false);
+            tasks.Add(taskSentAck);
             try
             {
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
-            catch (OperationCanceledException oce) 
+            catch (OperationCanceledException oce)
             {
-                oce.LogCriticalException(_logger, "task when all finished with operation cancelled exceotion");
+                oce.LogException(_logger.LogCritical);
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error ocurred when waiting for all task to complete");
+                e.LogException(_logger.LogCritical);
                 _cancellationTokenSource?.Cancel();
             }
             finally
@@ -106,7 +119,7 @@ namespace Sample.Sdk.Services
                 {
                     while (_ackMessages.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        foreach (var message in messages) 
+                        foreach (var message in messages)
                         {
                             EncryptedMessage encryptMsgMetadata;
                             try
@@ -128,7 +141,7 @@ namespace Sample.Sdk.Services
                             {
                                 sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsgMetadata, token);
                             }
-                            catch(OperationCanceledException) { throw; }
+                            catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
                                 _logger.LogCritical(e, "An error ocurred when sending the acknowledge message to sender");
@@ -213,7 +226,7 @@ namespace Sample.Sdk.Services
                             catch (OperationCanceledException) { throw; }
                             catch (DbUpdateException) { throw; }
                             catch (DbEntityValidationException) { throw; }
-                            catch (NotSupportedException) { throw; } 
+                            catch (NotSupportedException) { throw; }
                             catch (ObjectDisposedException) { throw; }
                             catch (InvalidOperationException) { throw; }
                             catch (Exception e)
@@ -303,7 +316,7 @@ namespace Sample.Sdk.Services
                     await Task.Delay(1000);
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 e.LogCriticalException(_logger, $"An exception of type {e.GetType()} ocurred when computing");
             }

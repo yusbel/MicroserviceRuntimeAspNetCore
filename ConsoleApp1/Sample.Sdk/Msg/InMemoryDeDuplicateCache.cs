@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Sample.Sdk.InMemory;
@@ -20,17 +21,17 @@ namespace Sample.Sdk.Msg
     /// Use memory cache to keep track of item taked to avoid duplicate for 10 minutes
     /// </summary>
     /// <typeparam name="T">Is a class</typeparam>
-    public class InMemoryProducerConsumerCollection<TList, T> : IInMemoryProducerConsumerCollection<TList, T> where T : class, IMessageIdentifier where TList : class
+    public class InMemoryDeDuplicateCache<TList, T> : IInMemoryDeDuplicateCache<TList, T> where T : class, IMessageIdentifier where TList : class
     {
         private readonly BlockingCollection<T> _state = new BlockingCollection<T>();
         private readonly IMemoryCacheState<string, string> _identifiersCache;
-        private readonly ILogger<InMemoryProducerConsumerCollection<TList, T>> _logger;
+        private readonly ILogger<InMemoryDeDuplicateCache<TList, T>> _logger;
 
         public int Count => _state.Count;
 
-        public InMemoryProducerConsumerCollection(
+        public InMemoryDeDuplicateCache(
             IMemoryCacheState<string, string> identifiersCache,
-            ILogger<InMemoryProducerConsumerCollection<TList, T>> logger)
+            ILogger<InMemoryDeDuplicateCache<TList, T>> logger)
         {
             _identifiersCache = identifiersCache;
             _logger = logger;
@@ -73,6 +74,17 @@ namespace Sample.Sdk.Msg
             }
             item = default;
             return false;
+        }
+
+        public bool TryTakeAll(out List<T?> items) 
+        {
+            items = new List<T?>();
+            while (TryTake(out T? item)) 
+            {
+                if(item != null)
+                    items.Add(item);
+            }
+            return items.Any();
         }
 
         /// <summary>

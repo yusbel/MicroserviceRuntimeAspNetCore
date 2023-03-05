@@ -33,23 +33,23 @@ namespace Sample.Sdk.Msg.Providers
         /// </summary>
         /// <param name="cancellationToken">Token to cancel operation</param>
         /// <returns>IEnumerable<ExternalMessage></returns>
-        public async Task<IEnumerable<ExternalMessage>> GetMessages(CancellationToken cancellationToken)
+        public async Task<IEnumerable<ExternalMessage>> GetMessages(CancellationToken cancellationToken,
+            Func<OutgoingEventEntity, bool> condition)
         {
             using var scope = _serviceProvider.CreateScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
-            List<OutgoingEventEntity> outgoingEvents = new List<OutgoingEventEntity>();
+            var outgoingEvents = new List<OutgoingEventEntity>();
             try
             {
                 outgoingEvents = await dbContext.OutgoingEvents
-                                                    .Where(e => !e.IsDeleted)
+                                                    .Where(e=> condition(e))
                                                     .AsNoTracking()
                                                     .ToListAsync(cancellationToken)
                                                     .ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error ocurred when retrieving outgoing events");
-                throw;
+                e.LogException(_logger.LogCritical);
             }
             return ConvertToExternalMessage(outgoingEvents);
         }
@@ -60,21 +60,32 @@ namespace Sample.Sdk.Msg.Providers
         /// <param name="sentMsgs">Messages sent</param>
         /// <param name="cancellationToken">Cancellation token to stop this operation</param>
         /// <returns></returns>
-        public async Task<int> UpdateSentMessages(IEnumerable<ExternalMessage> sentMsgs, CancellationToken cancellationToken) 
+        public async Task<int> UpdateSentMessages(IEnumerable<ExternalMessage> sentMsgs, 
+            CancellationToken cancellationToken, 
+            Action<ExternalMessage, Exception> failSend) 
         {
             if(sentMsgs == null || !sentMsgs.Any()) { return 0; }
             var tasks= new List<Task>();
             foreach (var sentMsg in sentMsgs) 
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var task = Task.Run(async() => 
                 {
-                    using var scope = _serviceProvider.CreateScope();
-                    using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
-                    var entity = await dbContext.OutgoingEvents.FirstOrDefaultAsync(e => !e.IsDeleted, cancellationToken).ConfigureAwait(false);
-                    if (entity != null) 
+                    try
                     {
-                        entity.IsDeleted = true;
-                        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        using var scope = _serviceProvider.CreateScope();
+                        using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
+                        var entity = await dbContext.OutgoingEvents.FirstOrDefaultAsync(e => !e.IsDeleted && e.Id == sentMsg.Id, cancellationToken).ConfigureAwait(false);
+                        if (entity != null)
+                        {
+                            entity.IsDeleted = true;
+                            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        failSend?.Invoke(sentMsg, e);
+                        throw;
                     }
                 }, cancellationToken);
                 _ = task.ConfigureAwait(false);
@@ -86,11 +97,62 @@ namespace Sample.Sdk.Msg.Providers
             }
             catch (Exception e) 
             {
-                e.LogCriticalException(_logger);
+                e.LogException(_logger.LogCritical);
             }
             return tasks.Count(task => task.IsCompletedSuccessfully);
         }
 
+        /// <summary>
+        /// Update messages sent
+        /// </summary>
+        /// <param name="sentMsgs">A enumerable of messages sent identifiers</param>
+        /// <param name="cancellationToken">To cancell the current operation</param>
+        /// <param name="failSent">To invoke with messages identifier that fail to be send</param>
+        /// <returns></returns>
+        public async Task<int> UpdateSentMessages(IEnumerable<string> sentMsgs,
+            CancellationToken cancellationToken,
+            Func<OutgoingEventEntity, OutgoingEventEntity> updateEntity,
+            Action<string, Exception> failSent)
+        {
+            if(sentMsgs == null || !sentMsgs.Any()) { return 0; }
+            var tasks = new List<Task>();
+            var exceptions = new List<Exception>();
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (var sentMsg in sentMsgs) 
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var task = Task.Run(async () => 
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
+                    try 
+                    {
+                        var entityToUpdate = await dbContext.OutgoingEvents
+                                                    .FirstOrDefaultAsync(e => !e.IsDeleted && e.Id == sentMsg, cancellationToken)
+                                                    .ConfigureAwait(false);
+                        if(entityToUpdate != null) 
+                        {
+                            updateEntity?.Invoke(entityToUpdate);
+                            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    catch(Exception e) 
+                    {
+                        failSent?.Invoke(sentMsg, e);
+                        exceptions.Add(e);
+                    }
+                }, cancellationToken);
+                _ = task.ConfigureAwait(false);
+                tasks.Add(task);
+            }
+            try 
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch(Exception e) { exceptions.Add(e); }
+            exceptions.ForEach(e => e.LogException(_logger.LogCritical));
+            return tasks.Count(t => t.IsCompletedSuccessfully);
+        }
         
     }
 }

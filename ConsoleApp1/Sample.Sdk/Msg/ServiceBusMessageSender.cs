@@ -7,6 +7,7 @@ using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
+using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
@@ -17,6 +18,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
+using static Sample.Sdk.EntityModel.MessageHandlingReason;
 
 namespace Sample.Sdk.Msg
 {
@@ -44,47 +46,37 @@ namespace Sample.Sdk.Msg
         /// <param name="messages">List of messages to send</param>
         /// <param name="onSent">Invoked per message successful sent</param>
         /// <returns cref="int">Amount of successful sent messages</returns>
-        public async Task<int> Send(CancellationToken token, 
-                                        IEnumerable<ExternalMessage> messages, 
-                                        Action<ExternalMessage> onSent)
+        public async Task<(bool WasSent, SendFailedReason Reason)> 
+            Send(CancellationToken token, 
+                    ExternalMessage msg, 
+                    Action<ExternalMessage> onSent,
+                    Action<ExternalMessage, SendFailedReason?, Exception?> onError)
         {
-            var exceptions = new List<Exception>();
-            var tasks = new List<Task>();
-            foreach (var msg in messages)
+            var sender = GetSender(msg);
+            if (sender == null)
             {
-                var sender = GetSender(msg);
-                if (sender == null)
-                {
-                    exceptions.Add(new SenderQueueNotRegisteredException($"Sender not found for queue name {msg.MsgQueueName} and endpoint {msg.MsgQueueEndpoint}"));
-                    continue;
-                }
-                var task = Task.Run(async () =>
-                {
-                    var serviceBusMsg = new ServiceBusMessage()
-                    {
-                        ContentType = MsgContentType,
-                        MessageId = msg.Key,
-                        CorrelationId = msg.CorrelationId,
-                        Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
-                    };
-                    await sender.SendMessageAsync(serviceBusMsg, token).ConfigureAwait(false);
-                    onSent?.Invoke(new ExternalMessage()
-                    {
-                        Content = msg.Content,
-                        Key = msg.Key,
-                        CorrelationId = msg.CorrelationId
-                    });
-                }, token);
-                _ = task.ConfigureAwait(false);
-                tasks.Add(task); 
+                onError?.Invoke(msg, SendFailedReason.InValidSenderEndpoint | SendFailedReason.InValidQueueName, null);
+                return (false, SendFailedReason.InValidQueueName | SendFailedReason.InValidSenderEndpoint);
             }
-            try 
+            try
             {
-                await Task.WhenAll(tasks).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                var serviceBusMsg = new ServiceBusMessage()
+                {
+                    ContentType = MsgContentType,
+                    MessageId = msg.Key,
+                    CorrelationId = msg.CorrelationId,
+                    Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
+                };
+                await sender.SendMessageAsync(serviceBusMsg, token).ConfigureAwait(false);
+                onSent?.Invoke(msg);
             }
-            catch(Exception e) { exceptions.Add(e); }
-            exceptions.ForEach(exception => exception.LogException(_logger.LogCritical));
-            return tasks.Count(task=> task.IsCompletedSuccessfully);
+            catch (Exception e)
+            {
+                onError?.Invoke(msg, default, e);
+                e.LogException(_logger.LogCritical);
+            }
+            return (true, default);
         }
     }
 }

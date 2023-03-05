@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Msg.InMemoryListMessage
+namespace Sample.Sdk.InMemory.InMemoryListMessage
 {
-    public class CompletedMessageInMemoryList
+    public class ExternalMessageSentIdInMemoryList
     {
     }
 }

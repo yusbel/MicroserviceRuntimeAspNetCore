@@ -29,6 +29,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security;
 using Sample.Sdk.AspNetCore.Middleware;
 using Sample.EmployeeSubdomain.Messages.Acknowledgement;
+using Sample.Sdk;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -57,25 +58,10 @@ namespace Sample.EmployeeSubdomain
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
             services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));
             services.Configure<WebHookRetryOptions>(configuration.GetSection(WebHookRetryOptions.SERVICE_WEBHOOK_RETRY_OPTIONS_SECTION_ID));
-            services.AddAzureClients(azureClientFactoryBuilder =>
-            {
-                var serviceBusConnStr = configuration.GetValue<string>("Employee:AzureServiceBusInfo:DefaultConnStr");
-                //For employee message service to send and retrieve employee messages
-                azureClientFactoryBuilder.AddServiceBusClient(serviceBusConnStr)
-                //.WithName("ServiceBusClientEmployeeMessages")
-                .ConfigureOptions((options, host) =>
-                {
-                    options.Identifier = "ServiceBusClientEmployeeMessages";
-                    options.RetryOptions = new ServiceBusRetryOptions()
-                    {
-                        Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:Service:Default:RetryOptions:DelayInSeconds")),
-                        MaxDelay = TimeSpan.FromSeconds(configuration.GetValue<int>("Employee:Service:Default:RetryOptions:MaxDelayInSeconds")),
-                        MaxRetries = configuration.GetValue<int>("Employee:Service:Default:RetryOptions:MaxRetries"),
-                        Mode = configuration.GetValue<string>("Employee:Service:Default:RetryOptions:Mode") == "Fixed" ? ServiceBusRetryMode.Fixed 
-                                                                                                                       : ServiceBusRetryMode.Exponential
-                    };
-                });
-            });
+            
+            //Adding sdk dependecies
+            services.AddSampleSdk(configuration);
+
             return services;
         }
     }

@@ -3,13 +3,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Services.Realtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Services
+namespace Sample.Sdk.Services.Realtime
 {
     /// <summary>
     /// It will required specific task 
@@ -43,13 +44,13 @@ namespace Sample.Sdk.Services
             {
                 try
                 {
-                    _innerTask = Task.Run(async () => 
+                    _innerTask = Task.Run(async () =>
                     {
                         await _messageRealtimeService.Compute(token);
                     });
                     _innerTask.Wait(token);
                 }
-                catch (TaskCanceledException tce) 
+                catch (TaskCanceledException tce)
                 {
                     tce.LogCriticalException(_logger, "Task was cancelled");
                 }
@@ -62,7 +63,7 @@ namespace Sample.Sdk.Services
                     e.LogCriticalException(_logger, "An error ocurred");
                     _cancellationTokenSource.Cancel();
                 }
-                finally 
+                finally
                 {
                     _cancellationTokenSource.Dispose();
                 }
@@ -80,7 +81,7 @@ namespace Sample.Sdk.Services
             {
                 e.LogCriticalException(_logger, "Errors ocurred when stopping the service", nameof(MessageRealtimeHostedService<T>));
             }
-            finally 
+            finally
             {
                 _cancellationTokenSource?.Dispose();//TODO would i throw exceptions
             }

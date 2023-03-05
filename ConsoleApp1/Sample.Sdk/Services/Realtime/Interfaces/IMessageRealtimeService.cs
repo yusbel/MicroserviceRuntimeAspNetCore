@@ -1,4 +1,4 @@
-﻿namespace Sample.Sdk.Services
+﻿namespace Sample.Sdk.Services.Realtime.Interfaces
 {
     public interface IMessageRealtimeService
     {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Services.Interfaces;
 using Sample.Sdk;
+using Sample.Sdk.Core.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,39 +14,47 @@ using System.Threading.Tasks;
 
 namespace Sample.EmployeeSubdomain.Services
 {
-    public class MessageSenderHostedService : BackgroundService
+    /// <summary>
+    /// Hosted service to send external messages to azure messaging
+    /// </summary>
+    public class MessageSenderHostedService : IHostedService
     {
         private readonly IMessageSenderService _messageSenderService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<MessageSenderHostedService> _logger;
-
+        private CancellationTokenSource? _cancellationTokenSource;
         public MessageSenderHostedService(IMessageSenderService messageSenderService
-                                        , IServiceScopeFactory serviceScopeFactory
-                                        , ILoggerFactory loggerFactory)
+                                        , ILogger<MessageSenderHostedService> logger)
         {
-            Guard.ThrowWhenNull(messageSenderService, serviceScopeFactory);
+            Guard.ThrowWhenNull(messageSenderService, logger);
             _messageSenderService = messageSenderService;
-            _serviceScopeFactory = serviceScopeFactory;
-            _logger = loggerFactory.CreateLogger<MessageSenderHostedService>();
+            _logger = logger;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            try
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var token = _cancellationTokenSource.Token;
+            var task = Task.Run(async () => 
             {
-                var excecutingTask = _messageSenderService.Send(stoppingToken);
-                if(excecutingTask.IsCompleted) 
+                try
                 {
-                    return excecutingTask;
+                    await _messageSenderService.Send(token).ConfigureAwait(false);
                 }
-                return Task.CompletedTask;
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical("Message:{} StackTrace: {}", e.Message, e.StackTrace);
-            }
+                catch (Exception e) 
+                {
+                    e.LogException(_logger.LogCritical, "Message sender service hosted is stopping.");
+                    _cancellationTokenSource.Cancel();
+                }
+            }, token);
+            task.ConfigureAwait(false);
+            return task;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
             return Task.CompletedTask;
         }
-
     }
 }

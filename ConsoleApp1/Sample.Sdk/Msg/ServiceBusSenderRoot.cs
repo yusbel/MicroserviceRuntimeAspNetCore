@@ -72,7 +72,10 @@ namespace Sample.Sdk.Msg
 
         protected ServiceBusSender? GetSender(ExternalMessage externalMsg)
         {
-            if(!serviceBusSender.Any(sender=> sender.Key.ToLower() == externalMsg.MsgQueueName.ToLower())) { return default; }
+            if(!serviceBusSender.Any(sender=> sender.Key.ToLower() == externalMsg.MsgQueueName.ToLower())) 
+            { 
+                return default; 
+            }
             var sender = serviceBusSender.FirstOrDefault(s => s.Key.ToLower() == externalMsg.MsgQueueName.ToLower()).Value;
             return sender != null && sender.FullyQualifiedNamespace.Contains(externalMsg.MsgQueueEndpoint) 
                                     ? sender 

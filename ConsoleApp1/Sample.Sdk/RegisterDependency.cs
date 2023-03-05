@@ -18,9 +18,9 @@ using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Msg.InMemoryListMessage;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg.Providers;
 using Sample.Sdk.Services;
@@ -73,23 +73,34 @@ namespace Sample.Sdk
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<CompletedMessageInMemoryList, InComingEventEntity>
-                , InMemoryProducerConsumerCollection<CompletedMessageInMemoryList, InComingEventEntity>>();
+            services.AddTransient<IMessageSender, ServiceBusMessageSender>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>
-                , InMemoryProducerConsumerCollection<InComingEventEntityInMemoryList, InComingEventEntity>>();
+            services.AddSingleton<IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>
+                , InMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>
-                , InMemoryProducerConsumerCollection<ComputedMessageInMemoryList, InComingEventEntity>>();
+            services.AddSingleton<IInMemoryCollection<ExternalMessageSentIdInMemoryList, string>
+                , InMemoryCollection<ExternalMessageSentIdInMemoryList, string>>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>
-                , InMemoryProducerConsumerCollection<InCompatibleMessageInMemoryList, InCompatibleMessage>>();
+            services.AddSingleton<IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage>
+                , InMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage>>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>
-                , InMemoryProducerConsumerCollection<CorruptedMessageInMemoryList, CorruptedMessage>>();
+            services.AddSingleton<IInMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>
+                , InMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>>();
 
-            services.AddSingleton<IInMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>
-                , InMemoryProducerConsumerCollection<AcknowledgementMessageInMemoryList, InComingEventEntity>>();
+            services.AddSingleton<IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity>
+                , InMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity>>();
+
+            services.AddSingleton<IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity>
+                , InMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity>>();
+
+            services.AddSingleton<IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage>
+                , InMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage>>();
+
+            services.AddSingleton<IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage>
+                , InMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage>>();
+
+            services.AddSingleton<IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity>
+                , InMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity>>();
 
             return services;
         }
