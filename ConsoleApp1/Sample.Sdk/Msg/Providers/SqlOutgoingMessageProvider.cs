@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -34,7 +35,7 @@ namespace Sample.Sdk.Msg.Providers
         /// <param name="cancellationToken">Token to cancel operation</param>
         /// <returns>IEnumerable<ExternalMessage></returns>
         public async Task<IEnumerable<ExternalMessage>> GetMessages(CancellationToken cancellationToken,
-            Func<OutgoingEventEntity, bool> condition)
+            Expression<Func<OutgoingEventEntity, bool>> condition)
         {
             using var scope = _serviceProvider.CreateScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
@@ -42,7 +43,7 @@ namespace Sample.Sdk.Msg.Providers
             try
             {
                 outgoingEvents = await dbContext.OutgoingEvents
-                                                    .Where(e=> condition(e))
+                                                    .Where(condition)
                                                     .AsNoTracking()
                                                     .ToListAsync(cancellationToken)
                                                     .ConfigureAwait(false);

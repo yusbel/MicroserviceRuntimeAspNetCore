@@ -8,7 +8,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.EmployeeSubdomain.Entities;
-using Sample.EmployeeSubdomain.Settings;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.EntityModel;
 
@@ -19,16 +18,17 @@ namespace Sample.EmployeeSubdomain.DatabaseContext
         private readonly ILogger<EmployeeContext> _logger;
         private readonly string _connStr = string.Empty;
 
-        //For design time
-        public EmployeeContext(DbContextOptions options, string connStr) : base(options)
-        {
-            _connStr = connStr;
-        }
+        ////For design time
+        //public EmployeeContext(DbContextOptions options, string connStr) : base(options)
+        //{
+        //    _connStr = connStr;
+        //}
         public EmployeeContext(IOptions<DatabaseSettingOptions> dbOptions,
             ILoggerFactory loggerFactory,
-            DbContextOptions option) : base(option)
+            DbContextOptions option) : base(option, dbOptions, loggerFactory.CreateLogger<ServiceDbContext>())
         {
-            (_connStr, _logger) = (dbOptions.Value.ConnectionString, loggerFactory.CreateLogger<EmployeeContext>());
+            _connStr = dbOptions.Value.ConnectionString;
+            _logger = loggerFactory.CreateLogger<EmployeeContext>();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -30,6 +30,7 @@ using Sample.Sdk.Core.Security;
 using Sample.Sdk.AspNetCore.Middleware;
 using Sample.EmployeeSubdomain.Messages.Acknowledgement;
 using Sample.Sdk;
+using Sample.Sdk.Core.EntityDatabaseContext;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -54,7 +55,6 @@ namespace Sample.EmployeeSubdomain
             //services.AddHostedService<MessageSenderHostedService>();
             services.AddHostedService<EmployeeGenerator>();
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
-            services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
             services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));
             services.Configure<WebHookRetryOptions>(configuration.GetSection(WebHookRetryOptions.SERVICE_WEBHOOK_RETRY_OPTIONS_SECTION_ID));

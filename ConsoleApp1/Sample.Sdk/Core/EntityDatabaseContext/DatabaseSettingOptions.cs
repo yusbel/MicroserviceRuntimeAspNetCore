@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.EmployeeSubdomain.Settings
+namespace Sample.Sdk.Core.EntityDatabaseContext
 {
     public class DatabaseSettingOptions
     {
-        public const string DatabaseSetting = "Employee:Database";
+        public const string DatabaseSetting = "Service:Database";
         public string ConnectionString { get; set; }
     }
 }

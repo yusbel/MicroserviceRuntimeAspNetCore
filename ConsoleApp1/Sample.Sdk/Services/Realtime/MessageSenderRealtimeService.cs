@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg.Data;
@@ -21,25 +22,22 @@ using static Sample.Sdk.EntityModel.MessageHandlingReason;
 
 namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageSenderRealtimeService<T> : IMessageRealtimeService
+    public class MessageSenderRealtimeService : IMessageRealtimeService
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<MessageSenderRealtimeService<T>> _logger;
+        private readonly ILogger<MessageSenderRealtimeService> _logger;
         private readonly IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage> _eventListToSend;
         private readonly IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> _eventListSent;
         private readonly IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> _failedEventList;
         private readonly IMessageSender _messageSender;
         private readonly IOutgoingMessageProvider _outgoingMessageProvider;
 
-        public MessageSenderRealtimeService(IServiceProvider serviceProvider,
-            ILogger<MessageSenderRealtimeService<T>> logger,
+        public MessageSenderRealtimeService(ILogger<MessageSenderRealtimeService> logger,
             IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage> eventListToSend,
             IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> eventListSent,
             IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> failedEventList,
             IMessageSender messageSender,
             IOutgoingMessageProvider outgoingMessageProvider)
         {
-            _serviceProvider = serviceProvider;
             _logger = logger;
             _eventListToSend = eventListToSend;
             _eventListSent = eventListSent;
@@ -47,10 +45,42 @@ namespace Sample.Sdk.Services.Realtime
             _messageSender = messageSender;
             _outgoingMessageProvider = outgoingMessageProvider;
         }
-        public Task Compute(CancellationToken cancellationToken)
+
+        /// <summary>
+        /// Compute the tasks out of order
+        /// </summary>
+        /// <param name="cancellationToken">Cancel operation</param>
+        /// <returns></returns>
+        public async Task Compute(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var token = tokenSource.Token;
+            var tasks = new List<Task>();
+            tasks.AddTaskWithConfigureAwaitFalse(
+                        SendMessage(token),
+                        ReadEventFromDurableStorage(token),
+                        SaveFailedMessage(token),
+                        UpdateOutgoingEventEntity(token));
+            try
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                e.LogException(_logger.LogCritical);
+            }
+            try 
+            {
+                tokenSource.Cancel();
+                tokenSource.Dispose();
+            }
+            catch(Exception e) 
+            {
+                e.LogException(_logger.LogCritical);
+            }
+            
         }
+
         /// <summary>
         /// Send message from event list to send using message sender service.
         /// </summary>
@@ -63,7 +93,7 @@ namespace Sample.Sdk.Services.Realtime
                 eventListToSend.RemoveAll(e => e == null);
                 await Parallel.ForEachAsync(eventListToSend, async (eventEntity, token) =>
                 {
-                   await _messageSender.Send(token, eventEntity!, 
+                    await _messageSender.Send(token, eventEntity!, 
                                     msg =>
                                     {
                                         //success send
@@ -78,8 +108,8 @@ namespace Sample.Sdk.Services.Realtime
                                         {
                                             _failedEventList.Add(new MessageFailed()
                                             {
-                                                MessageId = msg.Id, 
-                                                SendFailedReason = reason.ToString()
+                                                MessageId = msg.Id,
+                                                SendFailedReason = reason?.ToString() ?? string.Empty
                                             });
                                         }
                                         if (msg != null && (exception is ServiceBusException)) 

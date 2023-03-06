@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
@@ -25,6 +26,8 @@ using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg.Providers;
 using Sample.Sdk.Services;
 using Sample.Sdk.Services.Interfaces;
+using Sample.Sdk.Services.Realtime;
+using Sample.Sdk.Services.Realtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -43,6 +46,9 @@ namespace Sample.Sdk
     {
         public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration, string serviceBusInfoSection = "")
         {
+            services.AddDbContext<ServiceDbContext>();
+            services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
+
             services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
 
             services.AddTransient<IDecryptorService, DecryptorService>();
@@ -73,6 +79,9 @@ namespace Sample.Sdk
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
 
+            services.AddHostedService<MessageSenderRealtimeHostedService>();
+
+            services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();
             services.AddTransient<IMessageSender, ServiceBusMessageSender>();
 
             services.AddSingleton<IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>
@@ -110,7 +119,8 @@ namespace Sample.Sdk
             services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
             services.AddAzureClients((azureClientBuilder) =>
             {
-                var keyVaultOptions = config.GetValue<AzureKeyVaultOptions>(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION);
+                var keyVaultOptions = AzureKeyVaultOptions.Create();
+                config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION).Bind(keyVaultOptions);
                 azureClientBuilder.AddCertificateClient(new Uri(keyVaultOptions.VaultUri));
                 azureClientBuilder.AddSecretClient(new Uri(keyVaultOptions.VaultUri));
             });
@@ -123,12 +133,9 @@ namespace Sample.Sdk
 
             services.AddAzureClients(azureClientFactory =>
             {
-                var settingsOptions = config.GetValue<List<AzureMessageSettingsOptions>>(AzureMessageSettingsOptions.SENDER_SECTION_ID);
-                var uniqueServiceClients  = settingsOptions.Distinct(new AzureMessageSettingsOptionsComparer());
-                uniqueServiceClients.ToList().ForEach(service => 
-                {
-                    azureClientFactory.AddServiceBusClient(service.ConnStr);
-                });
+                var senderOptions = new List<AzureMessageSettingsOptions>();
+                config.GetSection(AzureMessageSettingsOptions.SENDER_SECTION_ID).Bind(senderOptions);
+                azureClientFactory.AddServiceBusClient(senderOptions.First().ConnStr);
             });
             return services;
         }
@@ -136,15 +143,12 @@ namespace Sample.Sdk
         public static IServiceCollection AddSampleSdkServiceBusReceiver(this IServiceCollection services, IConfiguration config) 
         {
             services.Configure<List<AzureMessageSettingsOptions>>(config.GetSection(AzureMessageSettingsOptions.RECEIVER_SECTION_ID));
-
+            
             services.AddAzureClients(azureFactory => 
             {
-                var receiverOptions = config.GetValue<List<AzureMessageSettingsOptions>>(AzureMessageSettingsOptions.RECEIVER_SECTION_ID);
-                var uniqueReceivers = receiverOptions.Distinct(new AzureMessageSettingsOptionsComparer());
-                uniqueReceivers.ToList().ForEach(service =>
-                {
-                    azureFactory.AddServiceBusClient(service.ConnStr);
-                });
+                var receiverOptions = new List<AzureMessageSettingsOptions>();
+                config.GetSection(AzureMessageSettingsOptions.RECEIVER_SECTION_ID).Bind(receiverOptions);
+                azureFactory.AddServiceBusClient(receiverOptions.First().ConnStr);
             });
             
             return services;

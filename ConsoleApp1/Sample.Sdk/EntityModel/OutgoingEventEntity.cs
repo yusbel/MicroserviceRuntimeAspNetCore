@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Sample.Sdk.EntityModel
 {
-    [Table("ExternalEvents")]
+    [Table(name: "ExternalEvents")]
     public class OutgoingEventEntity : Entity, IMessageIdentifier
     {
         public string MsgQueueEndpoint { get; set; } = string.Empty;

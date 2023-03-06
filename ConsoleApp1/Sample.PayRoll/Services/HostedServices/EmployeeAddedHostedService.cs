@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Sample.PayRoll.Services.HostedServices
 {
-    public class EmployeeAddedHostedService : MessageRealtimeHostedService<EmployeeAdded>
+    public class EmployeeAddedHostedService : MessageReceiverRealtimeHostedService<EmployeeAdded>
     {
         public EmployeeAddedHostedService(IServiceProvider serviceProvider) : base(serviceProvider)
         {

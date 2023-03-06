@@ -41,7 +41,7 @@ namespace Sample.EmployeeSubdomain.Services
                 {
                     var rnd = new Random();
                     var employees = new List<Tuple<string, string>>();
-                    for (var i = 0; i < 1000; i++)
+                    for (var i = 0; i < 1; i++)
                     {
                         employees.Add(new Tuple<string, string>($"yusbel{rnd.Next(0, 100)}", $"yusbel@gmail.com {rnd.Next(0, 100)}"));
                     }
@@ -75,6 +75,7 @@ namespace Sample.EmployeeSubdomain.Services
                 {
                     e.LogCriticalException(_logger, "Error, managed thread");
                 }
+                _logger.LogInformation("Employee generator finished");
             }, token);
 
         }

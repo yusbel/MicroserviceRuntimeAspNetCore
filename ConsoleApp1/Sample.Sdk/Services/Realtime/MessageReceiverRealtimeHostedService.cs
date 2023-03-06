@@ -15,17 +15,17 @@ namespace Sample.Sdk.Services.Realtime
     /// <summary>
     /// It will required specific task 
     /// </summary>
-    public class MessageRealtimeHostedService<T> : IHostedService where T : class, IMessageIdentifier
+    public class MessageReceiverRealtimeHostedService<T> : IHostedService where T : class, IMessageIdentifier
     {
         private CancellationTokenSource? _cancellationTokenSource;
-        private readonly ILogger<MessageRealtimeHostedService<T>> _logger;
+        private readonly ILogger<MessageReceiverRealtimeHostedService<T>> _logger;
         private readonly IMessageRealtimeService _messageRealtimeService;
         private Task? _innerTask;
         private Task? _outerTask;
 
-        public MessageRealtimeHostedService(IServiceProvider serviceProvider)
+        public MessageReceiverRealtimeHostedService(IServiceProvider serviceProvider)
         {
-            _logger = serviceProvider.GetRequiredService<ILogger<MessageRealtimeHostedService<T>>>();
+            _logger = serviceProvider.GetRequiredService<ILogger<MessageReceiverRealtimeHostedService<T>>>();
             _messageRealtimeService = serviceProvider.GetRequiredService<IMessageRealtimeService>();
         }
 
@@ -79,7 +79,7 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "Errors ocurred when stopping the service", nameof(MessageRealtimeHostedService<T>));
+                e.LogCriticalException(_logger, "Errors ocurred when stopping the service", nameof(MessageReceiverRealtimeHostedService<T>));
             }
             finally
             {
