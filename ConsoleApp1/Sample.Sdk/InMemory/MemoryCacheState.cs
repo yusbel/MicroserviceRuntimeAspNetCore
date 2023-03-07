@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.InMemory.Data;
+using Sample.Sdk.InMemory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

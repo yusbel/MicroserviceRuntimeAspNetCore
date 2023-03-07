@@ -6,6 +6,8 @@ namespace Sample.Sdk.EntityModel
     [Table(name: "ExternalEvents")]
     public class OutgoingEventEntity : Entity, IMessageIdentifier
     {
+        public string CertificateLocation { get; set; } = string.Empty; //add to the signature
+        public string CertificateKey { get; set; } = string.Empty; //add signature
         public string MsgQueueEndpoint { get; set; } = string.Empty;
         public string MsgQueueName { get; set; } = string.Empty;
         public string MsgDecryptScope { get; set; } = string.Empty;

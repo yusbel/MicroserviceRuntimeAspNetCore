@@ -47,6 +47,7 @@ namespace Sample.Sdk.Services.Realtime
                     e.LogException(_logger.LogCritical);
                 }
             }, token);
+            task.ConfigureAwait(false);
             return task;
         }
 

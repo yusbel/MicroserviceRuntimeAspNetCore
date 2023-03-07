@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Security.Providers.Protocol.Dtos;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -11,11 +12,11 @@ using System.Text;
 
 namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
-    public class PointToPointChannelRoot
+    public class PointToPointSessionRoot
     {
-        private readonly ILogger<PointToPointChannelRoot> _logger;
+        private readonly ILogger<PointToPointSessionRoot> _logger;
 
-        public PointToPointChannelRoot(ILogger<PointToPointChannelRoot> logger) 
+        public PointToPointSessionRoot(ILogger<PointToPointSessionRoot> logger) 
         {
             _logger = logger;
         }
@@ -32,7 +33,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             catch (Exception e) 
             {
-                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Downlaoding certificate fail");
+                e.LogException(_logger.LogCritical);
                 return (false, default, default);
             }
             RSA? rsa;
@@ -129,7 +130,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
         }
         protected async Task<(bool wasValid, string? sessionId)> CreateSessionAndGetSessionIdEncrypted(
-            PointToPointSession session
+            PointToPointSessionDto session
             , HttpClient httpClient
             , CancellationToken token
             , string externalWellknownEndpoint)

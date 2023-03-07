@@ -9,7 +9,7 @@ using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
-using Sample.Sdk.Msg.Providers;
+using Sample.Sdk.Msg.Providers.Interfaces;
 using Sample.Sdk.Services.Realtime.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -130,7 +130,7 @@ namespace Sample.Sdk.Services.Realtime
         /// <returns></returns>
         private async Task ReadEventFromDurableStorage(CancellationToken token) 
         {
-            while (!token.IsCancellationRequested) 
+            while (!token.IsCancellationRequested)
             {
                 try
                 {

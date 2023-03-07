@@ -1,4 +1,5 @@
 ﻿using Sample.Sdk;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg;
 using System.Collections.Concurrent;
 

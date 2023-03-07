@@ -31,7 +31,6 @@ namespace SampleSdkRuntime
     {
         public static IServiceCollection AddRuntimeServices(this IServiceCollection services, IConfiguration config)
         {
-            services.AddSampleSdk(config, "Employee:AzureServiceBusInfo:Configuration");
             services.AddRuntimeServiceBusClientAdmin(config);
             services.AddRuntimeServiceSettings(config);
             services.Configure<RuntimeAzureOptions>(config.GetSection("RuntimeAzureOptions"));

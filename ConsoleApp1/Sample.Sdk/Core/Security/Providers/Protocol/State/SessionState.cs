@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core.Security.Providers.Protocol.State
 {
-    public class ChannelState
+    public class SessionState
     {
         public TimeSpan Expiry { get; init; }
         public string MyCertWithPrivateKey { get; init; }

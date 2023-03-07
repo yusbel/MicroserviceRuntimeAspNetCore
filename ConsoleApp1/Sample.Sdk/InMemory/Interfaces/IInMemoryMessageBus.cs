@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace Sample.Sdk.InMemory
+namespace Sample.Sdk.InMemory.Interfaces
 {
     public interface IInMemoryMessageBus<T> where T : class
     {

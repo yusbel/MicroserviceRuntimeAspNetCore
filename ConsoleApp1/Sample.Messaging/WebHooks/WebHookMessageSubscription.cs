@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 
 namespace Sample.Messaging.WebHooks
 {

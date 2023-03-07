@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;

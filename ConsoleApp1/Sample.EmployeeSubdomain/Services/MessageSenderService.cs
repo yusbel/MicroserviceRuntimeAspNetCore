@@ -7,7 +7,7 @@ using Sample.EmployeeSubdomain.Services.Interfaces;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
-using Sample.Sdk.Msg.Providers;
+using Sample.Sdk.Msg.Providers.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +57,7 @@ namespace Sample.EmployeeSubdomain.Services
                 var sentMsgs = new List<ExternalMessage>();
                 await _sender.Send(token, null, msgSent=>
                 {
-                    if (!sentMsgs.Any(msg=> msg.Key == msgSent.Key)) 
+                    if (!sentMsgs.Any(msg=> msg.EntityId == msgSent.EntityId)) 
                     {
                         sentMsgs.Add(msgSent);
                     }

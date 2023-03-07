@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.InMemory;
+﻿using Sample.Sdk.InMemory.Interfaces;
 
 namespace Sample.Messaging.WebHooks
 {

@@ -16,6 +16,7 @@ using Moq;
 using Sample.Sdk.Core.Azure;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
+using Sample.Sdk.InMemory.Interfaces;
 
 namespace Sample.Sdk.Tests.Security
 {
@@ -23,7 +24,7 @@ namespace Sample.Sdk.Tests.Security
     public class SecurePointToPointTests
     {
         private IFixture _senderFixture;
-        private IInMemoryMessageBus<PointToPointChannel> _messages = new InMemoryMessageBus<PointToPointChannel>();
+        private IInMemoryMessageBus<PointToPointSession> _messages = new InMemoryMessageBus<PointToPointSession>();
         private IOptions<CustomProtocolOptions> _customProtocolOptions;
         private IOptions<AzureKeyVaultOptions> _azureKeyVaultOptions;
         private CertificateClient _certificateClient;

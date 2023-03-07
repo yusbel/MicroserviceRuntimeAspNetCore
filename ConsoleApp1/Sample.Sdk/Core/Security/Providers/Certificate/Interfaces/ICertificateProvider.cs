@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Azure.Security.KeyVault.Certificates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -10,8 +11,13 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate.Interfaces
     /// <summary>
     /// Internal use only
     /// </summary>
-    internal interface ICertificateProvider
+    public interface ICertificateProvider
     {
-        public X509Certificate2 GetHttpMessageCryptoCertificate(string certificateName);
+        Task<(bool? WasDownloaded, X509Certificate2? Certificate)>
+            DownloadCertificate(string certificateName, CancellationToken token, string? version = null);
+
+
+        Task<(bool? WasDownloaded, KeyVaultCertificateWithPolicy? CertificateWithPolicy)> 
+            GetCertificate(string certificateName, CancellationToken token);
     }
 }

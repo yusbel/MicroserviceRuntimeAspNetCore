@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Generic;

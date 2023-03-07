@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
-using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections;

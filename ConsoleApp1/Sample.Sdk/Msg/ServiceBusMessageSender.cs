@@ -9,6 +9,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
 using System;
@@ -64,7 +65,7 @@ namespace Sample.Sdk.Msg
                 var serviceBusMsg = new ServiceBusMessage()
                 {
                     ContentType = MsgContentType,
-                    MessageId = msg.Key,
+                    MessageId = msg.EntityId,
                     CorrelationId = msg.CorrelationId,
                     Body = new BinaryData(System.Text.Json.JsonSerializer.Serialize(msg))
                 };

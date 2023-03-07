@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Msg.Data
+namespace Sample.Sdk.Msg.Data.Options
 {
     public class MessageInTransitOptions
     {

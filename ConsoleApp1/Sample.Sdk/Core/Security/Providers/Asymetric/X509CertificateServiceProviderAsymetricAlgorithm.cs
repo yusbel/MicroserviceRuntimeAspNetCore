@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Certificate.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;
@@ -24,18 +25,18 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
     public class X509CertificateServiceProviderAsymetricAlgorithm : IAsymetricCryptoProvider
     {
         private readonly IOptions<AzureKeyVaultOptions> _options;
-        private readonly CertificateClient _certificateClient;
         private readonly ILogger<X509CertificateServiceProviderAsymetricAlgorithm> _logger;
+        private readonly ICertificateProvider _certificateProvider;
 
         public X509CertificateServiceProviderAsymetricAlgorithm(
             IOptions<AzureKeyVaultOptions> options
-            , CertificateClient certificateClient
-            , ILogger<X509CertificateServiceProviderAsymetricAlgorithm> logger)
+            , ILogger<X509CertificateServiceProviderAsymetricAlgorithm> logger
+            , ICertificateProvider certificateProvider)
         {
-            Guard.ThrowWhenNull(options, certificateClient);
+            Guard.ThrowWhenNull(options, certificateProvider);
             _options = options;
-            _certificateClient = certificateClient;
             _logger = logger;
+            _certificateProvider = certificateProvider;
         }
 
         public async Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> 
@@ -43,22 +44,28 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             byte[] baseString, 
             CancellationToken token)
         {
-            Response<X509Certificate2> certificate;
+            X509Certificate2 certificate = null;
             try
             {
-                certificate = await _certificateClient.DownloadCertificateAsync(_options.Value.KeyVaultCertificateIdentifier
-                    , null
-                    , token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                if (result.WasDownloaded.HasValue && result.WasDownloaded.Value)
+                {
+                    certificate = result.Certificate!;
+                }
+                else 
+                {
+                    return (false, default, EncryptionDecryptionFail.UnableToGetCertificate);
+                }
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "Unable to create signature");
+                e.LogException(_logger.LogCritical);
                 return (false, default(byte[]?), EncryptionDecryptionFail.UnableToGetCertificate);
             }
             RSA? rsa;
             try
             {
-                rsa = certificate.Value.GetRSAPrivateKey();
+                rsa = certificate.GetRSAPrivateKey();
             }
             catch (Exception e)
             {
@@ -90,28 +97,32 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             CancellationToken token)
         {
             Guard.ThrowWhenNull(data, token);
-            Response<X509Certificate2> certificate;
+            X509Certificate2 certificate;
             try
             {
-                //TODO: Add to memory cache
-                certificate = await _certificateClient.DownloadCertificateAsync(
-                    _options.Value.KeyVaultCertificateIdentifier,
-                    null,
-                    token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                if (result.WasDownloaded.HasValue && result.WasDownloaded.Value)
+                {
+                    certificate = result.Certificate!;
+                }
+                else 
+                {
+                    return (false, default, EncryptionDecryptionFail.UnableToGetCertificate);
+                }
             }
             catch (Exception e)
             {
                 _logger.LogCritical("Unable to download certificate {}", e);
                 return (false, default(byte[]?), EncryptionDecryptionFail.UnableToGetCertificate);
             }
-            if (certificate == null || certificate.Value == null || !certificate.Value.HasPrivateKey) 
+            if (certificate == null || !certificate.HasPrivateKey) 
             {
                 return (false, default(byte[]?), EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             RSA? rsa;
             try
             {
-                rsa = certificate.Value.GetRSAPrivateKey();
+                rsa = certificate.GetRSAPrivateKey();
             }
             catch (Exception e)
             {
@@ -142,17 +153,22 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             CancellationToken token)
         {
             Guard.ThrowWhenNull(data, token);
-            Response<KeyVaultCertificateWithPolicy> certificate;
+            KeyVaultCertificateWithPolicy certificate = null;
             try
             {
-                certificate = await _certificateClient.GetCertificateAsync(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                var result = await _certificateProvider.GetCertificate(_options.Value.KeyVaultCertificateIdentifier, token)
+                    .ConfigureAwait(false);
+                if (result.WasDownloaded.HasValue && result.WasDownloaded.Value) 
+                {
+                    certificate = result.CertificateWithPolicy!;
+                }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
-                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Unable to download certificate");
+                e.LogException(_logger.LogCritical);
                 return (false, default, EncryptionDecryptionFail.UnableToGetCertificate);
             }
-            if (certificate == null || certificate.Value == null || certificate.Value.Cer.Length == 0) 
+            if (certificate == null || certificate.Cer.Length == 0) 
             {
                 return (false, default, EncryptionDecryptionFail.NoPublicKey);
             }
@@ -161,7 +177,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             X509Certificate2 x509Cer;
             try
             {
-                x509Cer = new X509Certificate2(certificate.Value.Cer);
+                x509Cer = new X509Certificate2(certificate.Cer);
             }
             catch (Exception e)
             {
@@ -232,31 +248,33 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             byte[] baseSignature, 
             CancellationToken token)
         {
-            Response<X509Certificate2> certificate;
+            X509Certificate2 certificate = null;
             try
             {
-                certificate = await _certificateClient.DownloadCertificateAsync(_options.Value.KeyVaultCertificateIdentifier
-                                                                    , null
-                                                                    , token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                if(result.WasDownloaded.HasValue && result.WasDownloaded.Value) 
+                {
+                    certificate = result.Certificate!;
+                }
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error occurred");
+                e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
             HashAlgorithmName algName = new HashAlgorithmName("SHA256");
-            if (certificate == null || certificate.Value == null || !certificate.Value.HasPrivateKey) 
+            if (certificate == null || !certificate.HasPrivateKey) 
             {
                 return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             RSA? rsa;
             try
             {
-                rsa = certificate.Value.GetRSAPrivateKey();
+                rsa = certificate.GetRSAPrivateKey();
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error occurred");
+                e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             try
@@ -266,7 +284,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error occurred verifiying signature");
+                e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.VerifySignature);
             }
         }
@@ -288,7 +306,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                AggregateExceptionExtensions.LogCriticalException(e, _logger, "Failt to create the certificate using the public key");
+                e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
             RSA? rsa;

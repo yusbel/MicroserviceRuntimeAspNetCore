@@ -6,6 +6,7 @@ using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Providers.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -2,7 +2,7 @@
 using Sample.Sdk.Msg.Data;
 using System.Linq.Expressions;
 
-namespace Sample.Sdk.Msg.Providers
+namespace Sample.Sdk.Msg.Providers.Interfaces
 {
     public interface IOutgoingMessageProvider
     {

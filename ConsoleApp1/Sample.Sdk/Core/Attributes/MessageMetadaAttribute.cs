@@ -8,11 +8,13 @@ namespace Sample.Sdk.Core.Attributes
 {
     public class MessageMetadaAttribute : Attribute
     {
-        public MessageMetadaAttribute(string queueName) 
+        public MessageMetadaAttribute(string queueName, string decryptScope) 
         {
             QueueName = queueName;
+            DecryptScope = decryptScope;
         }
 
         public string QueueName { get; }
+        public string DecryptScope { get; }
     }
 }

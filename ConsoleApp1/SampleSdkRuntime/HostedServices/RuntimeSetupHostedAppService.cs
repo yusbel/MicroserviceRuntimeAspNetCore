@@ -60,6 +60,7 @@ namespace SampleSdkRuntime.HostedServices
             if(appSetupInfo.wasSuccess) 
             {
                 CreateSetupInfo(setupInfo, appSetupInfo.wasSuccess, appSetupInfo.app, appSetupInfo.clientSecret);
+                return;
             }
             throw new InvalidOperationException("Runtime was unable to setup the service instance");
         }

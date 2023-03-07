@@ -9,7 +9,7 @@ using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
-using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

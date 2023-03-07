@@ -74,7 +74,7 @@ namespace Sample.PayRoll.Messages.InComming.Services
                 var employeeAdded = await Convert(externalMessage);
                 var rnd = new Random();
                 var salary = rnd.Next(100, 1000);
-                await _payRoll.CreatePayRoll(employeeAdded.Key, salary, false, cancellationToken);
+                await _payRoll.CreatePayRoll(employeeAdded.EntityId, salary, false, cancellationToken);
                 return true;
             }
             catch (OperationCanceledException) { throw; }

@@ -12,6 +12,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Services.Interfaces;
 using System;
 using System.Collections.Concurrent;

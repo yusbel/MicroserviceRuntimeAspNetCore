@@ -1,18 +1,25 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core;
+using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Extensions;
+using Sample.Sdk.Core.Security;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Persistance.Context;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -20,20 +27,24 @@ using System.Transactions;
 
 namespace Sample.Sdk.Persistance
 {
-    public abstract class PersistenceObject<T, TC, TS> : BaseObject<T> where T : BaseObject<T> where TC : DbContext where TS : Entity
+    public abstract class PersistenceObject<TContext, TState> : BaseObject where TContext : DbContext where TState : Entity
     {
-        private readonly IEntityContext<TC, TS> _entityContext;
-        private readonly ILogger? _logger;
-        public abstract TS? GetEntity(); 
-        protected abstract void AttachEntity(TS entity);
+        private readonly IEntityContext<TContext, TState> _entityContext;
+        private readonly IMessageCryptoService _messageCryptoService;
+        private readonly IMessageInTransitService _metaDataService;
+        private readonly ILogger _logger;
+        public abstract TState? GetEntity(); 
+        protected abstract void AttachEntity(TState entity);
 
         public PersistenceObject(
             ILogger logger
             , ISymetricCryptoProvider cryptoProvider
             , IAsymetricCryptoProvider asymetricCryptoProvider
-            , IEntityContext<TC, TS> entityContext
+            , IEntityContext<TContext, TState> entityContext
             , IOptions<CustomProtocolOptions> options
-            , IMessageSender sender) : 
+            , IMessageSender sender
+            , IMessageCryptoService messageCryptoService
+            , IMessageInTransitService metaDataService) : 
             base(options
                 , cryptoProvider
                 , asymetricCryptoProvider
@@ -41,6 +52,8 @@ namespace Sample.Sdk.Persistance
         {
             Guard.ThrowWhenNull(logger, entityContext, sender);
             _entityContext = entityContext;
+            _messageCryptoService = messageCryptoService;
+            _metaDataService = metaDataService;
             _logger = logger;
         }
 
@@ -51,14 +64,14 @@ namespace Sample.Sdk.Persistance
         /// <exception cref="ApplicationSaveException">Ocurr when retriving entity or save entity fail</exception>
         protected override async Task Save(CancellationToken token)
         {
-            TS? entity;
+            TState? entity;
             try
             {
                 entity = GetEntity();
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger!);
+                e.LogException(_logger.LogCritical);
                 throw new ApplicationSaveException("Retrieving entity fail with exception", e);
             }
             if (entity == null || string.IsNullOrEmpty(entity.Id))
@@ -72,7 +85,7 @@ namespace Sample.Sdk.Persistance
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger!);
+                e.LogException(_logger.LogCritical);
                 throw new ApplicationSaveException("Saving entity fail", e);
             }
         }
@@ -84,15 +97,14 @@ namespace Sample.Sdk.Persistance
         /// <param name="sendNotification"></param>
         /// <returns></returns>
         /// <exception cref="ApplicationSaveException">Ocurred when message is null, entity is null, encryption, deserialization or save fail</exception>
-        protected override async Task<bool> Save<TE>(TE message, CancellationToken token, bool sendNotification = false) 
+        protected override async Task<bool> Save(ExternalMessage message, CancellationToken token, bool sendNotification = false) 
         {
-            if (message == null || string.IsNullOrEmpty(message.Key)) 
+            if (message == null) 
             {
                 throw new ApplicationSaveException("Save was invoked with message null value or key was null");
             }
-            if (token.IsCancellationRequested) 
-                token.ThrowIfCancellationRequested();
-            TS? entity;
+            token.ThrowIfCancellationRequested();
+            TState? entity;
             try
             {
                 entity = GetEntity();
@@ -106,19 +118,20 @@ namespace Sample.Sdk.Persistance
                 throw new ApplicationSaveException("Entity to save is null or identifier is null");
             }
             _entityContext.Add(entity);
-            message.CorrelationId = entity.Id.ToString();
-            var eventEntity = new OutgoingEventEntity()
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                MessageKey = message.Key,
-                CreationTime = DateTime.UtcNow.ToLong(),
-                IsDeleted = false,
-                Type = typeof(TE).FullName!,
-                Version = "1.0.0", 
-                MsgQueueName = message.MsgQueueName,
-                MsgDecryptScope = message.MsgDecryptScope
-            };
-            (bool wasEncrypted, EncryptedMessage? msg) = await EncryptExternalMessage(message, token).ConfigureAwait(false);
+                message.EntityId = entity.Id;
+                message.CorrelationId = entity.Id;
+                message.Content = JsonSerializer.Serialize(entity);
+                message = _metaDataService.Bind(message);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            var eventEntity = message.ConvertToOutgoingEventEntity(Guid.NewGuid().ToString());
+
+            (bool wasEncrypted, EncryptedMessage? msg) = await _messageCryptoService.EncryptExternalMessage(message, token).ConfigureAwait(false);
             if(!wasEncrypted || msg == null) 
             {
                 throw new ApplicationSaveException("Encrypted the message fail, verify exceptions logged");
@@ -152,7 +165,7 @@ namespace Sample.Sdk.Persistance
             }
             catch(Exception e) 
             {
-                e.LogCriticalException(_logger!);
+                e.LogException(_logger.LogCritical);
             }
         }
 

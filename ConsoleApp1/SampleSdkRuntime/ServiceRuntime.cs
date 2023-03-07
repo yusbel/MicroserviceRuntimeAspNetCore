@@ -154,7 +154,7 @@ namespace SampleSdkRuntime
                 })
                 .ConfigureServices((host, services) =>
                 {
-
+                    services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(host.Configuration);
                     services.AddRuntimeServices(host.Configuration);
                     services.AddHostedService<RuntimeSetupHostedAppService>();
                 }).Build();

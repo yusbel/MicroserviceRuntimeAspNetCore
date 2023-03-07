@@ -5,11 +5,11 @@ using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 
-namespace Sample.Sdk.Core.Security.Providers.Protocol
+namespace Sample.Sdk.Core.Security.Providers.Protocol.Interfaces
 {
-    public interface IPointToPointChannel   
+    public interface IPointToPointSession
     {
-        Task<(bool wasCreated, PointToPointChannel? channel, EncryptionDecryptionFail reason)> 
+        Task<(bool wasCreated, PointToPointSession? channel, EncryptionDecryptionFail reason)>
             Create(string identifier
             , string externalWellKnownEndpoint
             , CertificateClient certificateClient

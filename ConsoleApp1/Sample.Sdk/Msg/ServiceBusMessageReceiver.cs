@@ -14,6 +14,7 @@ using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
 using System;
@@ -80,7 +81,7 @@ namespace Sample.Sdk.Msg
             {
                 Id = Guid.NewGuid().ToString(),
                 Body = externalMsg.Content,
-                MessageKey = externalMsg.Key, 
+                MessageKey = externalMsg.EntityId, 
                 CreationTime = DateTime.Now.ToLong(), 
                 IsDeleted = false, 
                 Scheme = String.Empty, 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using System.Text.Json;
@@ -25,23 +26,18 @@ namespace Sample.Sdk.Msg.Providers
         /// <returns>List<ExternalMessage></returns>
         protected List<ExternalMessage> ConvertToExternalMessage(List<OutgoingEventEntity> outgoingEvents)
         {
-            List<ExternalMessage> externalMessages = new List<ExternalMessage>();
+            var externalMessages = new List<ExternalMessage>();
             foreach (var outgoingEvent in outgoingEvents)
             {
                 try
                 {
-                    var encryptedMsg = JsonSerializer.Deserialize<EncryptedMessage>(outgoingEvent.Body);
-                    externalMessages.Add(
-                        new ExternalMessage
-                        {
-                            Id = outgoingEvent.Id,
-                            Content = outgoingEvent.Body,
-                            CorrelationId = encryptedMsg?.CorrelationId ?? string.Empty
-                        });
+                    var externalMsg = outgoingEvent.ConvertToExternalMessage();
+                    if(externalMsg != null)
+                        externalMessages.Add(externalMsg);
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "Fail to create external message");
+                    e.LogException(_logger.LogCritical);
                 }
             }
             return externalMessages;

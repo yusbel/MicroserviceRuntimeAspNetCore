@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.InMemory
+namespace Sample.Sdk.InMemory.Interfaces
 {
     public interface IMemoryCacheState<TKey, T>
     {

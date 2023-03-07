@@ -3,7 +3,6 @@ using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Http.Data;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
-using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Services.Interfaces;
 using System;
@@ -18,6 +17,7 @@ using Sample.Sdk.Core.Azure;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.SymbolStore;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
+using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 
 namespace Sample.Sdk.Services
 {

@@ -5,7 +5,7 @@ using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Http.Data;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
-using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg.Data;
 using System;
 using System.Collections.Generic;

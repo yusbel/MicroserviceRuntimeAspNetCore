@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Sample.PayRoll;
-using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Persistance.Context;
@@ -9,6 +8,7 @@ using Sample.Sdk;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using Sample.PayRoll.Services.gRPC;
+using Sample.Sdk.Msg.Data.Options;
 
 ///$Env: AZURE_CLIENT_ID = "51df4bce-6532-4345-9be7-5be7af315003"
 /// $Env:AZURE_CLIENT_SECRET="tdm8Q~Cw_e7cLFadttN7Zebacx_kC5Y-0xaWZdv2"
@@ -22,7 +22,7 @@ WebApplicationBuilder appBuilder = WebApplication.CreateBuilder(args);
 
 appBuilder.Services.AddHostedService<PayRollHostApp>()
         .AddPayRollServiceDependencies(appBuilder.Configuration)
-        .AddSampleSdk(appBuilder.Configuration, "PayRoll:AzureServiceBusInfo:Configuration")
+        .AddSampleSdk(appBuilder.Configuration)
         .AddGrpc();
 
 appBuilder.WebHost.ConfigureKestrel(option =>

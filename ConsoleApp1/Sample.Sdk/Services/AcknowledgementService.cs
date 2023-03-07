@@ -12,6 +12,7 @@ using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Services.Interfaces;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 
 namespace Sample.Sdk.Services
 {
@@ -40,11 +41,11 @@ namespace Sample.Sdk.Services
                                         , EncryptedMessage encryptedMessageMetadata
                                         , CancellationToken token)
         {
-            (bool wasCreated, PointToPointChannel? channel) =
+            (bool wasCreated, PointToPointSession? channel) =
                                     await _securePointToPoint.GetOrCreateSessionChannel(
                                             encryptedMessageMetadata.WellKnownEndpoint
                                             , token);
-            if (!wasCreated || channel == null || channel.ChannelState == null)
+            if (!wasCreated || channel == null || channel.SessionState == null)
             {
                 return (false, default);
             }
@@ -52,7 +53,7 @@ namespace Sample.Sdk.Services
             string base64SessionId;
             try
             {
-                base64SessionId = Convert.ToBase64String(channel.ChannelState.SessionIdentifierEncrypted);
+                base64SessionId = Convert.ToBase64String(channel.SessionState.SessionIdentifierEncrypted);
             }
             catch (Exception e)
             {

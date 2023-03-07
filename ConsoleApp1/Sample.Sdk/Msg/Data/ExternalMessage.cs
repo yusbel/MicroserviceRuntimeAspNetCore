@@ -8,24 +8,29 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg.Data
 {
-    public class ExternalMessage : IMessageIdentifier
+    /// <summary>
+    /// Message being save on durable storage to send to the serivice provider
+    /// </summary>
+    public class ExternalMessage : MessageMetaData, IMessageIdentifier
     {
-        public string Key { get; set; }
-        public string MsgQueueName { get; set; }
-        public string MsgQueueEndpoint { get; set; }
-        public string MsgDecryptScope { get; set; }
-        public string CorrelationId { get; set; }
-        public string Content { get; set; }
+        /// <summary>
+        /// Database entity unique identifier
+        /// </summary>
+        public string EntityId { get; set; } = string.Empty;
+        /// <summary>
+        /// Use the entity id as correlation id, the correlation id is used to map to the message hub schema
+        /// </summary>
+        public string CorrelationId { get; set; } = string.Empty;
+        /// <summary>
+        /// Encrypted entity with security attributes
+        /// </summary>
+        public string Content { get; set; } = string.Empty;
+        /// <summary>
+        /// Message unique identifier used to track duplicate
+        /// </summary>
         public string Id 
-        { 
-            get 
-            {
-                return Key;
-            } 
-            set 
-            {
-                Key = value; 
-            }
-        }
+        {
+            get;set;
+        } = string.Empty;
     }
 }

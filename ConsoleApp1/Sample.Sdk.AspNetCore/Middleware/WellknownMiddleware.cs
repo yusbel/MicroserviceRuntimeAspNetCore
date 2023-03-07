@@ -11,9 +11,10 @@ using Sample.Sdk.Core;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security.Providers.Protocol.Dtos;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
-using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg.Data;
 using System;
 using System.Collections.Generic;
@@ -95,14 +96,14 @@ namespace Sample.EmployeeSubdomain.Middleware
                 });
                 return;
             }
-            PointToPointSession? session;
+            PointToPointSessionDto? session;
             try
             {
-                session = JsonSerializer.Deserialize<PointToPointSession>(Encoding.UTF8.GetString(ms.ToArray()));
+                session = JsonSerializer.Deserialize<PointToPointSessionDto>(Encoding.UTF8.GetString(ms.ToArray()));
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, $"Deserialization of message content to {nameof(PointToPointSession)}");
+                _logger.LogCritical(e, $"Deserialization of message content to {nameof(PointToPointSessionDto)}");
                 await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
                 {
                     Reason = EncryptionDecryptionFail.DeserializationFail

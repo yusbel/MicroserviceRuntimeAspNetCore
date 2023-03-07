@@ -8,8 +8,9 @@ using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
+using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
-using Sample.Sdk.InMemory;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg.Data;
 using System;
 using System.Buffers.Text;
@@ -23,23 +24,23 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
 {
     public class SecurePointToPoint : ISecurePointToPoint
     {
-        IInMemoryMessageBus<PointToPointChannel> _sessions;
+        IInMemoryMessageBus<PointToPointSession> _sessions;
         private readonly IOptions<CustomProtocolOptions> _options;
         private readonly CertificateClient _certificateClient;
         private readonly IHttpClientResponseConverter _httpClientResponseConverter;
         private readonly HttpClient _httpClient;
-        private readonly IPointToPointChannel _pointToPointChannel;
+        private readonly IPointToPointSession _pointToPointChannel;
         private readonly IExternalServiceKeyProvider _externalServiceKeyProvider;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<SecurePointToPoint> _logger;
         private readonly AzureKeyVaultOptions _serviceOptions;
         public SecurePointToPoint(
-            IInMemoryMessageBus<PointToPointChannel> sessions
+            IInMemoryMessageBus<PointToPointSession> sessions
             , IOptions<CustomProtocolOptions> options
             , IOptions<AzureKeyVaultOptions> serviceOptions
             , CertificateClient certificateClient
             , IHttpClientResponseConverter httpClientResponseConverter
-            , IPointToPointChannel pointToPointChannel
+            , IPointToPointSession pointToPointChannel
             , IExternalServiceKeyProvider externalServiceKeyProvider
             , ILoggerFactory loggerFactory
             , ILogger<SecurePointToPoint> logger)
@@ -107,7 +108,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , (bool wasDecrypted, byte[]? data, State.EncryptionDecryptionFail reason) result
             , int counter)
         {
-            PointToPointChannel? channel = null;
+            PointToPointSession? channel = null;
             if (token.IsCancellationRequested)
             {
                 result.reason = State.EncryptionDecryptionFail.TaskCancellationWasRequested;
@@ -124,7 +125,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             if (counter > 0 && result.wasDecrypted && result.reason == State.EncryptionDecryptionFail.SessionIsInvalid) 
             {
-                (bool wasCreated, PointToPointChannel? channel) createdChannel = 
+                (bool wasCreated, PointToPointSession? channel) createdChannel = 
                     await RemoveAndCreateSessionChannel(sessionIdentifier, token);
                 if(createdChannel.wasCreated && createdChannel.channel != null) 
                 {
@@ -141,7 +142,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             if(channel == null) 
             {
-                (bool wasCreated, PointToPointChannel? channel) channelCreated =
+                (bool wasCreated, PointToPointSession? channel) channelCreated =
                     await GetOrCreateSessionChannel(sessionIdentifier, token);
                 if (channelCreated.wasCreated && channelCreated.channel != null) 
                 {
@@ -171,11 +172,11 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
         /// <param name="identifier"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<(bool wasCreated, PointToPointChannel? channel)> GetOrCreateSessionChannel(
+        public async Task<(bool wasCreated, PointToPointSession? channel)> GetOrCreateSessionChannel(
             string identifier
             , CancellationToken token) 
         {
-            PointToPointChannel? channel;
+            PointToPointSession? channel;
             if (_sessions.TryGet(identifier, out var channelCollection))
             {
                 channel = channelCollection.First();
@@ -183,7 +184,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             try
             {   
-                (bool wasCreated, PointToPointChannel? channel, EncryptionDecryptionFail reason) channelCreated = 
+                (bool wasCreated, PointToPointSession? channel, EncryptionDecryptionFail reason) channelCreated = 
                     await _pointToPointChannel.Create(identifier
                                                         , _options.Value.WellknownSecurityEndpoint
                                                         , _certificateClient
@@ -206,12 +207,12 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
         }
 
-        private async Task<(bool wasCreated, PointToPointChannel? channel)> RemoveAndCreateSessionChannel(
+        private async Task<(bool wasCreated, PointToPointSession? channel)> RemoveAndCreateSessionChannel(
             string identifier
             , CancellationToken token) 
         {
             _sessions.GetAndRemove(identifier);
-            (bool wasCreated, PointToPointChannel? channel) createdChannel = 
+            (bool wasCreated, PointToPointSession? channel) createdChannel = 
                 await GetOrCreateSessionChannel(identifier, token);
             if(!createdChannel.wasCreated || createdChannel.channel == null) 
             {

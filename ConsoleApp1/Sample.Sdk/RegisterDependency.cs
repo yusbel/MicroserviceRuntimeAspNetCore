@@ -10,20 +10,26 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.EntityDatabaseContext;
+using Sample.Sdk.Core.Security;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Protocol.Http;
+using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
+using Sample.Sdk.Core.Security.Providers.Signature;
 using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory;
 using Sample.Sdk.InMemory.InMemoryListMessage;
+using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg.Providers;
+using Sample.Sdk.Msg.Providers.Interfaces;
 using Sample.Sdk.Services;
 using Sample.Sdk.Services.Interfaces;
 using Sample.Sdk.Services.Realtime;
@@ -34,6 +40,7 @@ using System.Configuration;
 using System.Data.Entity;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -44,26 +51,33 @@ namespace Sample.Sdk
     /// $Env:AZURE_TENANT_ID="c8656f45-daf5-42c1-9b29-ac27d3e63bf3"
     public static class SdkRegisterDependencies
     {
-        public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration, string serviceBusInfoSection = "")
+        public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<ServiceDbContext>();
             services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
-
+            services.Configure<MessageSettingsConfigurationOptions>(configuration.GetSection(MessageSettingsConfigurationOptions.SECTION_ID));
+            services.Configure<AzureKeyVaultOptions>(configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
             services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
+            services.AddTransient<IMessageInTransitService, MessageInTransitService>();
+            services.AddTransient<ISignatureCryptoProvider, SignatureCryptoProvider>();
+
+            services.AddSingleton<IMemoryCacheState<string, X509Certificate2>, MemoryCacheState<string, X509Certificate2>>();
+            services.AddSingleton<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>, MemoryCacheState<string, KeyVaultCertificateWithPolicy>>();
 
             services.AddTransient<IDecryptorService, DecryptorService>();
             services.AddTransient<IAcknowledgementService, AcknowledgementService>();
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
             services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
-            services.AddTransient<IPointToPointChannel, PointToPointChannel>();
+            services.AddTransient<IPointToPointSession, PointToPointSession>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
+            services.AddTransient<IMessageCryptoService, MessageCryptoService>();
 
             services.AddTransient<ISymetricCryptoProvider, AesSymetricCryptoProvider>();
             services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
             services.AddTransient<IExternalServiceKeyProvider, ExternalServiceKeyProvider>();
 
             services.Configure<CustomProtocolOptions>(configuration.GetSection(CustomProtocolOptions.Identifier));
-            services.AddSampleSdkInMemoryQueues(configuration);
+            
             services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(configuration);
             services.AddSampleSdkServiceBusReceiver(configuration);
             services.AddSampleSdkServiceBusSender(configuration);
@@ -71,9 +85,9 @@ namespace Sample.Sdk
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkInMemoryQueues(this IServiceCollection services, IConfiguration config) 
+        public static IServiceCollection AddSampleSdkInMemoryServices(this IServiceCollection services, IConfiguration config) 
         {
-            services.AddSingleton<IInMemoryMessageBus<PointToPointChannel>, InMemoryMessageBus<PointToPointChannel>>();
+            services.AddSingleton<IInMemoryMessageBus<PointToPointSession>, InMemoryMessageBus<PointToPointSession>>();
             services.AddSingleton<IMemoryCacheState<string, ShortLivedSessionState>, MemoryCacheState<string, ShortLivedSessionState>>();
             services.AddTransient<IMemoryCacheState<string, string>, MemoryCacheState<string, string>>();
             services.Configure<MemoryCacheOptions>(config);

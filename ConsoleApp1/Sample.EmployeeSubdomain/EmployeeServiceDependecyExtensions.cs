@@ -31,6 +31,7 @@ using Sample.Sdk.AspNetCore.Middleware;
 using Sample.EmployeeSubdomain.Messages.Acknowledgement;
 using Sample.Sdk;
 using Sample.Sdk.Core.EntityDatabaseContext;
+using Sample.Sdk.InMemory.Interfaces;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -43,7 +44,7 @@ namespace Sample.EmployeeSubdomain
             //Security
             services.AddTransient<IProcessAcknowledgement, MessageProcessAcknowledgement>();
             services.AddSingleton<IInMemoryMessageBus<ShortLivedSessionState>, InMemoryMessageBus<ShortLivedSessionState>>();
-            services.AddSingleton<IInMemoryMessageBus<PointToPointChannel>, InMemoryMessageBus<PointToPointChannel>>();
+            services.AddSingleton<IInMemoryMessageBus<PointToPointSession>, InMemoryMessageBus<PointToPointSession>>();
             
             services.AddTransient<IEmployee, Employee>();
             services.AddTransient<IEntityContext<EmployeeContext, EmployeeEntity>, EntityContext<EmployeeContext, EmployeeEntity>>();
@@ -61,7 +62,7 @@ namespace Sample.EmployeeSubdomain
             
             //Adding sdk dependecies
             services.AddSampleSdk(configuration);
-
+            services.AddSampleSdkInMemoryServices(configuration);
             return services;
         }
     }

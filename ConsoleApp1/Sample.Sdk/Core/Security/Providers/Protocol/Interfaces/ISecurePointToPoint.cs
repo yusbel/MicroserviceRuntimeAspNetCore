@@ -1,6 +1,6 @@
 ﻿using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 
-namespace Sample.Sdk.Core.Security.Providers.Protocol
+namespace Sample.Sdk.Core.Security.Providers.Protocol.Interfaces
 {
     public interface ISecurePointToPoint
     {
@@ -11,7 +11,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             , IAsymetricCryptoProvider cryptoProvider
             , CancellationToken token);
 
-        Task<(bool wasCreated, PointToPointChannel? channel)> GetOrCreateSessionChannel(
+        Task<(bool wasCreated, PointToPointSession? channel)> GetOrCreateSessionChannel(
             string identifier
             , CancellationToken token);
     }

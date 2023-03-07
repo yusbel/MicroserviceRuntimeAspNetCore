@@ -25,10 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Core\Security\Providers\Signature\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\azure-sdk-for-net\sdk\identity\Azure.Identity\src\Azure.Identity.csproj" />
   </ItemGroup>
 
