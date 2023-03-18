@@ -6,7 +6,7 @@ using SampleSdkRuntime;
 
 Console.WriteLine($"Processor count ${Environment.ProcessorCount}");
 
-var serviceArgs = new List<string>() { { "EmployeeService1270015500" } };
+var serviceArgs = new List<string>() { { "EmployeeService" }, { "1270015500" } };
 
 var employeeHost = HostService.Create(serviceArgs.ToArray());
 

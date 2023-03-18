@@ -1,6 +1,6 @@
 ﻿using Microsoft.Graph;
 
-namespace SampleSdkRuntime.Azure.Factory.Interfaces
+namespace Sample.Sdk.Core.Azure.Factory.Interfaces
 {
     public interface IGraphServiceClientFactory
     {

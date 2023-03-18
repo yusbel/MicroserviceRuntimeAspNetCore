@@ -8,7 +8,10 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric.Interface
 {
     public interface ISymetricCryptoProvider
     {
-        bool TryDecrypt(byte[] data, byte[] key, byte[] iv, out SymetricResult? result);
-        bool TryEncrypt(byte[] data, out SymetricResult? result);
+        bool TryDecrypt(byte[] cypherText, byte[] key, byte[] tag, byte[] iv, byte[] aad, out SymetricResult? result);
+        bool TryEncrypt(byte[] plainText, byte[] additionalData, out SymetricResult? result);
+
+        bool TryEncrypt(byte[] key, byte[] plainText, byte[] aad, out SymetricResult? result);
+        
     }
 }

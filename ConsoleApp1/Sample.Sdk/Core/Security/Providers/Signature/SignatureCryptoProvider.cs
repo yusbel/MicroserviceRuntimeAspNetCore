@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Msg.Data;
@@ -26,8 +27,9 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
             }
             token.ThrowIfCancellationRequested();
             (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) =
-                   await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(CreateBaseSignature(msg)), token)
-                   .ConfigureAwait(false);
+                   await _asymetricCryptoProvider
+                           .CreateSignature(Encoding.UTF8.GetBytes(msg.GetPlainSignature()), token)
+                           .ConfigureAwait(false);
             if (!wasCreated || data == null)
             {
                 throw new InvalidOperationException("Unable to create signature for encrypted message");
@@ -35,20 +37,5 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
             msg.Signature = Convert.ToBase64String(data);
         }
 
-        private string CreateBaseSignature(EncryptedMessage msg)
-        {
-            return $"{msg.EncryptedEncryptionKey}:" +
-                    $"{msg.EncryptedEncryptionIv}:" +
-                    $"{msg.CreatedOn}:" +
-                    $"{msg.EncryptedContent}:" +
-                    $"{msg.DecryptEndpoint}:" +
-                    $"{msg.WellKnownEndpoint}:" +
-                    $"{msg.AcknowledgementEndpoint}" +
-                    $"{msg.MsgQueueEndpoint}:" +
-                    $"{msg.MsgQueueName}:" +
-                    $"{msg.MsgDecryptScope}:" +
-                    $"{msg.CertificateLocation}:" +
-                    $"{msg.CertificateKey}";
-        }
     }
 }

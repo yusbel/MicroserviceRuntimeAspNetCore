@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <PackageReference Include="AutoFixture.AutoMoq" Version="4.17.0" />
+    <PackageReference Include="Json.Net" Version="1.0.33" />
+    <PackageReference Include="JsonFlatten" Version="1.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
     <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
@@ -23,8 +25,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConsoleApp1\ConsoleApp1.csproj" />
+    <ProjectReference Include="..\Sample.Employee.ServiceHost\Sample.Employee.ServiceHost.csproj" />
     <ProjectReference Include="..\Sample.Messaging\Sample.Messaging.csproj" />
     <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
+    <ProjectReference Include="..\SampleSdkRuntime\SampleSdkRuntime.csproj" />
   </ItemGroup>
 
 </Project>

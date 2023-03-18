@@ -1,22 +1,21 @@
 ﻿using Microsoft.Graph;
+using Microsoft.Graph.Models;
 
 namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
 {
-    public interface IApplicationRegistration
+    internal interface IApplicationRegistration
     {
         Task<(bool isValid, ServiceDependecyStatus.Setup reason)>
             VerifyApplicationSettings(
             string appIdentifier,
-            CancellationToken cancellationToken,
-            string prefix = "Service");
+            CancellationToken cancellationToken);
         Task<bool> DeleteAll(string appIdentifier,
-                                            CancellationToken cancellationToken,
-                                            string prefix = "Service");
+                                            CancellationToken cancellationToken);
 
-        Task<(bool wasFound, Application? app, ServicePrincipal? principal, string? clientSecret)>
-            GetApplicationDetails(string appId, CancellationToken token, string prefix = "Service");
+        Task<AppRegistrationSetup>
+            GetApplicationDetails(string appId, CancellationToken token);
 
-        Task<(bool wasSuccess, Application? app, ServicePrincipal? principal, string? clientSecret)>
-            DeleteAndCreate(string appIdentifier, CancellationToken token, string prefix = "Service");
+        Task<AppRegistrationSetup>
+            DeleteAndCreate(string appIdentifier, CancellationToken token);
     }
 }

@@ -1,7 +1,42 @@
-﻿namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
+﻿using Azure.ResourceManager.KeyVault.Models;
+using Azure.Security.KeyVault.Keys;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.Graph.Models;
+
+namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
 {
     public interface IKeyVaultProvider : IKeyVaultPolicyProvider
     {
-        Task<bool> SaveSecretInKeyVault(string secretKey, string secretText, int counter, CancellationToken cancellationToken);
+        Task<(bool wasSaved, KeyVaultKey keyVaultKey)>  
+            CreateOrDeleteKeyInKeyVaultWithRetry(string keyName,
+                                    KeyType keyType,
+                                    CreateKeyOptions keyOptions,
+                                    CancellationToken token,
+                                    Func<string, KeyType, CreateKeyOptions, Task<KeyVaultKey>> createOrDeleteKey,
+                                    int counter = 0,
+                                    int maxRetry = 3);
+
+        Task<(bool WasSaved, KeyVaultSecret? Secret)>
+            SaveOrDeleteSecretInKeyVaultWithRetry(string secretKey,
+                            string secretText,
+                            Func<string, string, Task<KeyVaultSecret>> saveOrDeleteSecret,
+                            CancellationToken cancellationToken,
+                            int counter = 0,
+                            int maxRetry = 3);
+
+        Task<(bool wasSaved, KeyVaultKey keyVaultKey)>
+           CreateOrDeleteOctKeyWithRetry(CreateOctKeyOptions keyOptions,
+                                   CancellationToken token,
+                                   Func<CreateOctKeyOptions, CancellationToken, Task<KeyVaultKey>> createOrDeleteKey,
+                                   int counter = 0,
+                                   int maxRetry = 3);
+
+        Task<(bool wasSaved, KeyVaultKey keyVaultKey)>
+           CreateOrDeleteKeyWithRetry(CreateKeyOptions keyOptions,
+                                   CancellationToken token,
+                                   Func<CreateKeyOptions, CancellationToken, Task<KeyVaultKey>> createOrDeleteKey,
+                                   int counter = 0,
+                                   int maxRetry = 3);
+
     }
 }

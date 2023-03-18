@@ -4,11 +4,13 @@ using Microsoft.Extensions.Logging;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Services.Interfaces;
+using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg.Providers.Interfaces;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -50,26 +52,48 @@ namespace Sample.EmployeeSubdomain.Services
         /// <returns></returns>
         public async Task<bool> Send(CancellationToken token)
         {
-            _ = Task.Run(()=> GenerateEmployee(token), token).ConfigureAwait(false);
+            //_ = Task.Run(()=> GenerateEmployee(token), token).ConfigureAwait(false);
             while (!token.IsCancellationRequested)
             {
-                var externalMsgs = await _outgoingMessageProvider.GetMessages(token, null).ConfigureAwait(false);
-                var sentMsgs = new List<ExternalMessage>();
-                await _sender.Send(token, null, msgSent=>
+                var externalMsgs = await _outgoingMessageProvider.GetMessages(token, (outgoingEvent => !outgoingEvent.IsDeleted && !outgoingEvent.IsSent)).ConfigureAwait(false);
+                var sentMsgs = new ConcurrentBag<ExternalMessage>();
+                var failMsgs = new ConcurrentBag<(ExternalMessage msg, MessageHandlingReason.SendFailedReason? reason, Exception exception)>();
+                try
                 {
-                    if (!sentMsgs.Any(msg=> msg.EntityId == msgSent.EntityId)) 
-                    {
-                        sentMsgs.Add(msgSent);
-                    }
-                }, null).ConfigureAwait(false);
+                    await Parallel.ForEachAsync(externalMsgs, async (msg, token) =>
+                            {
+                                await _sender.Send(token, msg,
+                                    msgSent =>
+                                    {
+                                        sentMsgs.Add(msg);
+                                    },
+                                    (msg, failReason, exception) =>
+                                    {
+                                        var failMsg = (msg, failReason, exception);
+                                        failMsgs.Add(failMsg);
+                                    }).ConfigureAwait(false);
+                            });
+                }
+                catch (Exception e)
+                {
+                    e.LogException(_logger.LogCritical, "An error ocurred processing messages to send");
+                    await Task.Delay(5000, token).ConfigureAwait(false);
+                }
+
                 var sentMsgResult = await _outgoingMessageProvider.UpdateSentMessages(sentMsgs, token, null).ConfigureAwait(false);
                 if (sentMsgs.Count != sentMsgResult) 
                 {
                     _logger.LogDebug("Request to update sent message count {sentMsgs.Count} does not match result {sentMsgResult}", sentMsgs.Count, sentMsgResult);
                 }
+
                 await Task.Delay(1000, token).ConfigureAwait(false);
             }
             return true;
+        }
+
+        private async Task OnErrorSavingSentMessages(ExternalMessage message, CancellationToken token) 
+        {
+
         }
 
         private async Task GenerateEmployee(CancellationToken token) 

@@ -3,6 +3,7 @@ using Azure.Core.Extensions;
 using Azure.Identity;
 using Azure.ResourceManager.ServiceBus.Models;
 using Azure.Security.KeyVault.Certificates;
+using Azure.Extensions.AspNetCore.DataProtection.Keys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.EntityDatabaseContext;
-using Sample.Sdk.Core.Security;
 using Sample.Sdk.Core.Security.Providers.Asymetric;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
@@ -43,6 +43,18 @@ using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.DataProtection;
+using Sample.Sdk.Core.Azure.Factory.Interfaces;
+using Sample.Sdk.Core.Azure.Factory;
+using Azure.Security.KeyVault.Keys.Cryptography;
+using Sample.Sdk.Core.Security.DataProtection;
+using Sample.Sdk.Core.Security;
+using Sample.Sdk.Core.Security.Interfaces;
+using System.Net.NetworkInformation;
+using Sample.Sdk.Core.Security.Providers.Certificate.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Certificate;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using System.Xml.Linq;
 
 namespace Sample.Sdk
 {
@@ -57,31 +69,52 @@ namespace Sample.Sdk
             services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
             services.Configure<MessageSettingsConfigurationOptions>(configuration.GetSection(MessageSettingsConfigurationOptions.SECTION_ID));
             services.Configure<AzureKeyVaultOptions>(configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
+            
             services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
-            services.AddTransient<ISignatureCryptoProvider, SignatureCryptoProvider>();
-
-            services.AddSingleton<IMemoryCacheState<string, X509Certificate2>, MemoryCacheState<string, X509Certificate2>>();
-            services.AddSingleton<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>, MemoryCacheState<string, KeyVaultCertificateWithPolicy>>();
-
-            services.AddTransient<IDecryptorService, DecryptorService>();
             services.AddTransient<IAcknowledgementService, AcknowledgementService>();
-            services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
-            services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
-            services.AddTransient<IPointToPointSession, PointToPointSession>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
-            services.AddTransient<IMessageCryptoService, MessageCryptoService>();
-
-            services.AddTransient<ISymetricCryptoProvider, AesSymetricCryptoProvider>();
-            services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
-            services.AddTransient<IExternalServiceKeyProvider, ExternalServiceKeyProvider>();
-
-            services.Configure<CustomProtocolOptions>(configuration.GetSection(CustomProtocolOptions.Identifier));
             
+            services.Configure<CustomProtocolOptions>(configuration.GetSection(CustomProtocolOptions.Identifier));
+
+            services.AddSampleSdkTokenCredentials(configuration);
             services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(configuration);
             services.AddSampleSdkServiceBusReceiver(configuration);
             services.AddSampleSdkServiceBusSender(configuration);
-            
+            services.AddSampleSdkCryptographic();
+
+            return services;
+        }
+
+        public static IServiceCollection AddSampleSdkCryptographic(this IServiceCollection services) 
+        {
+            services.AddSingleton<IMemoryCacheState<string, X509Certificate2>, MemoryCacheState<string, X509Certificate2>>();
+            services.AddSingleton<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>, MemoryCacheState<string, KeyVaultCertificateWithPolicy>>();
+
+            services.AddTransient<ISignatureCryptoProvider, SignatureCryptoProvider>();
+            services.AddTransient<IPointToPointSession, PointToPointSession>();
+            services.AddTransient<IExternalServiceKeyProvider, ExternalServiceKeyProvider>();
+            services.AddTransient<IMessageCryptoService, MessageCryptoService>();
+            services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
+            services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
+            services.AddTransient<ISymetricCryptoProvider, AesSymetricCryptoProvider>();
+            services.AddTransient<IAesKeyRandom, AesSymetricCryptoProvider>();
+            services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
+            services.AddTransient<ICertificateProvider, AzureKeyVaultCertificateProvider>();
+            return services;
+        }
+
+        public static IServiceCollection AddSampleSdkTokenCredentials(this IServiceCollection services, IConfiguration configuration) 
+        {
+            services.AddTransient<IClientOAuthTokenProviderFactory, ClientOAuthTokenProviderFactory>();
+            return services;
+        }
+
+        public static IServiceCollection AddSampleSdkDataProtection(this IServiceCollection services, IConfiguration configuration, string keyIdentifier)
+        {
+            var azureKeyVaultSettings = AzureKeyVaultOptions.Create();
+            configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION).Bind(azureKeyVaultSettings);
+            services.AddTransient<IMessageDataProtectionProvider, MessageDataProtectionProvider>();
             return services;
         }
 
@@ -93,7 +126,7 @@ namespace Sample.Sdk
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
 
-            services.AddHostedService<MessageSenderRealtimeHostedService>();
+            //services.AddHostedService<MessageSenderRealtimeHostedService>();
 
             services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();
             services.AddTransient<IMessageSender, ServiceBusMessageSender>();
@@ -104,8 +137,8 @@ namespace Sample.Sdk
             services.AddSingleton<IInMemoryCollection<ExternalMessageSentIdInMemoryList, string>
                 , InMemoryCollection<ExternalMessageSentIdInMemoryList, string>>();
 
-            services.AddSingleton<IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage>
-                , InMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage>>();
+            services.AddSingleton<IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage>
+                , InMemoryCollection<ExternalMessageInMemoryList, ExternalMessage>>();
 
             services.AddSingleton<IInMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>
                 , InMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>>();
@@ -137,6 +170,13 @@ namespace Sample.Sdk
                 config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION).Bind(keyVaultOptions);
                 azureClientBuilder.AddCertificateClient(new Uri(keyVaultOptions.VaultUri));
                 azureClientBuilder.AddSecretClient(new Uri(keyVaultOptions.VaultUri));
+                azureClientBuilder.AddKeyClient(new Uri(keyVaultOptions.VaultUri));
+                azureClientBuilder.UseCredential(serviceProvider => 
+                {
+                    var clientCredentialFactory = serviceProvider.GetRequiredService<IClientOAuthTokenProviderFactory>();
+                    clientCredentialFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
+                    return clientSecretCredential;
+                });
             });
             return services;
         }

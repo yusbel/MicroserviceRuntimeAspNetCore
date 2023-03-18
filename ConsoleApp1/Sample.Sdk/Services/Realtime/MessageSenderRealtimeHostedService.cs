@@ -48,7 +48,9 @@ namespace Sample.Sdk.Services.Realtime
                 }
             }, token);
             task.ConfigureAwait(false);
-            return task;
+            _logger.LogInformation("Message send service was initiated");
+            
+            return Task.CompletedTask;
         }
 
         /// <summary>

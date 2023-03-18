@@ -1,13 +1,12 @@
 ﻿using Microsoft.Extensions.Options;
-using Sample.Sdk.Core.Security;
-using Sample.Sdk.Services.Interfaces;
+using Sample.Sdk.Core.Security.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Services
+namespace Sample.Sdk.Core.Security
 {
     public class SecurityEndpointValidator : ISecurityEndpointValidator
     {

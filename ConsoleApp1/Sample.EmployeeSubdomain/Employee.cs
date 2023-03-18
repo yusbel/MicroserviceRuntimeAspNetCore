@@ -7,7 +7,7 @@ using Sample.EmployeeSubdomain.Messages;
 using Sample.Sdk;
 using Sample.Sdk.Core;
 using Sample.Sdk.Core.Exceptions;
-using Sample.Sdk.Core.Security;
+using Sample.Sdk.Core.Security.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
@@ -32,21 +32,13 @@ namespace Sample.EmployeeSubdomain
         private ILogger<Employee> _logger;
         public Employee(ILoggerFactory loggerFactory,
             IEntityContext<EmployeeContext, EmployeeEntity> entityContext,
-            IAsymetricCryptoProvider asymetricCryptoProvider,
-            ISymetricCryptoProvider cryptoProvider,
-            IOptions<CustomProtocolOptions> options,
-            IMessageSender messageSender,
             IMessageCryptoService messageCryptoService,
-            IMessageInTransitService metaDataService) : base(loggerFactory.CreateLogger("PersistanceObject")
-                , cryptoProvider
-                , asymetricCryptoProvider
+            IMessageInTransitService inTransitService) : base(loggerFactory.CreateLogger("PersistanceObject")
                 , entityContext
-                , options
-                , messageSender
                 , messageCryptoService
-                , metaDataService)
+                , inTransitService)
         {
-            Guard.ThrowWhenNull(entityContext, loggerFactory, messageSender);
+            Guard.ThrowWhenNull(entityContext, loggerFactory);
             _logger = loggerFactory.CreateLogger<Employee>();
         }
         public async Task<EmployeeEntity> CreateAndSave(string name, string email, CancellationToken token)
@@ -54,7 +46,8 @@ namespace Sample.EmployeeSubdomain
             _employee = new EmployeeEntity { Name = name, Email = email };
             try
             {
-                await Save(EmployeeAdded.CreateNotNullEvent(), token, sendNotification: true).ConfigureAwait(false);
+                var msg = EmployeeAdded.Create(_employee.Name, _employee.Email);
+                await Save(msg, token, sendNotification: true).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception) { throw; }

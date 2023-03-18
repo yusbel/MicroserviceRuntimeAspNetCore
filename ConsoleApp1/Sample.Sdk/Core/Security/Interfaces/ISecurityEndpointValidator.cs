@@ -1,4 +1,4 @@
-﻿namespace Sample.Sdk.Services.Interfaces
+﻿namespace Sample.Sdk.Core.Security.Interfaces
 {
     public interface ISecurityEndpointValidator
     {

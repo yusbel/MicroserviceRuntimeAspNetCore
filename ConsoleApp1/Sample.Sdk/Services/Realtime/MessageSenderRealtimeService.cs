@@ -25,14 +25,14 @@ namespace Sample.Sdk.Services.Realtime
     public class MessageSenderRealtimeService : IMessageRealtimeService
     {
         private readonly ILogger<MessageSenderRealtimeService> _logger;
-        private readonly IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage> _eventListToSend;
+        private readonly IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> _eventListToSend;
         private readonly IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> _eventListSent;
         private readonly IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> _failedEventList;
         private readonly IMessageSender _messageSender;
         private readonly IOutgoingMessageProvider _outgoingMessageProvider;
 
         public MessageSenderRealtimeService(ILogger<MessageSenderRealtimeService> logger,
-            IInMemoryDeDuplicateCache<ExternalMessageInMemoryList, ExternalMessage> eventListToSend,
+            IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> eventListToSend,
             IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> eventListSent,
             IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> failedEventList,
             IMessageSender messageSender,
@@ -88,37 +88,41 @@ namespace Sample.Sdk.Services.Realtime
         /// <returns></returns>
         private async Task SendMessage(CancellationToken token) 
         {
-            while (!token.IsCancellationRequested && _eventListToSend.TryTakeAll(out var eventListToSend)) 
+            while (!token.IsCancellationRequested) 
             {
-                eventListToSend.RemoveAll(e => e == null);
-                await Parallel.ForEachAsync(eventListToSend, async (eventEntity, token) =>
+                if (_eventListToSend.TryTakeAll(out var eventListToSend)) 
                 {
-                    await _messageSender.Send(token, eventEntity!, 
-                                    msg =>
-                                    {
-                                        //success send
-                                        if (msg != null) 
+                    eventListToSend.RemoveAll(e => e == null);
+                    await Parallel.ForEachAsync(eventListToSend, async (eventEntity, token) =>
+                    {
+                        await _messageSender.Send(token, eventEntity!,
+                                        msg =>
                                         {
-                                            _eventListSent.TryAdd(msg.Id);
-                                        }
-                                    }, (msg, reason, exception)=> 
-                                    {
-                                        //error on send
-                                        if(msg != null && exception == null) 
-                                        {
-                                            _failedEventList.Add(new MessageFailed()
+                                            //success send
+                                            if (msg != null)
                                             {
-                                                MessageId = msg.Id,
-                                                SendFailedReason = reason?.ToString() ?? string.Empty
-                                            });
-                                        }
-                                        if (msg != null && (exception is ServiceBusException)) 
+                                                _eventListSent.TryAdd(msg.Id);
+                                            }
+                                        }, (msg, reason, exception) =>
                                         {
-                                            _eventListToSend.TryAdd(msg);
-                                        }
-                                    }).ConfigureAwait(false);
+                                            //error on send
+                                            if (msg != null && exception == null)
+                                            {
+                                                _failedEventList.Add(new MessageFailed()
+                                                {
+                                                    MessageId = msg.Id,
+                                                    SendFailedReason = reason?.ToString() ?? string.Empty
+                                                });
+                                            }
+                                            if (msg != null && (exception is ServiceBusException))
+                                            {
+                                                _eventListToSend.TryAdd(msg);
+                                            }
+                                        }).ConfigureAwait(false);
 
-                }).ConfigureAwait(false);
+                    }).ConfigureAwait(false);
+                }
+                
                 await Task.Delay(1000, token).ConfigureAwait(false);
             }
         }
@@ -157,39 +161,43 @@ namespace Sample.Sdk.Services.Realtime
         /// <returns></returns>
         private async Task SaveFailedMessage(CancellationToken token) 
         {
-            while (!token.IsCancellationRequested && _failedEventList.TryTakeAll(out var msgs)) 
+            while (!token.IsCancellationRequested) 
             {
-                if (msgs.Any()) 
+                if (_failedEventList.TryTakeAll(out var msgs)) 
                 {
-                    var messageFaileds = new List<string>();
-                    msgs.ForEach(msg=> messageFaileds.Add(msg.MessageId));
-                    await _outgoingMessageProvider.UpdateSentMessages(messageFaileds, token,
-                        entity =>
-                        {
-                            var msgFailed = msgs.FirstOrDefault(msg => msg.MessageId == entity.Id);
-                            if (msgFailed != null)
+                    if (msgs.Any())
+                    {
+                        var messageFaileds = new List<string>();
+                        msgs.ForEach(msg => messageFaileds.Add(msg.MessageId));
+                        await _outgoingMessageProvider.UpdateSentMessages(messageFaileds, token,
+                            entity =>
                             {
-                                entity.SendFailReason = msgFailed.SendFailedReason;
-                            }
-                            entity.RetryCount = entity.RetryCount++;
-                            return entity;
-                        },
-                        (messageId, exception) => 
-                        {
-                            //on error
-                            if(messageId != null && 
-                                    (exception is Microsoft.EntityFrameworkCore.DbUpdateException || 
-                                    exception is OperationCanceledException)) 
-                            {
-                                var msgFailed = msgs.FirstOrDefault(msg => msg.MessageId == messageId);
-                                if(msgFailed != null) 
+                                var msgFailed = msgs.FirstOrDefault(msg => msg.MessageId == entity.Id);
+                                if (msgFailed != null)
                                 {
-                                    _failedEventList.Add(msgFailed);
+                                    entity.SendFailReason = msgFailed.SendFailedReason;
                                 }
-                            }
-                        })
-                        .ConfigureAwait(false);
+                                entity.RetryCount = entity.RetryCount++;
+                                return entity;
+                            },
+                            (messageId, exception) =>
+                            {
+                                //on error
+                                if (messageId != null &&
+                                        (exception is Microsoft.EntityFrameworkCore.DbUpdateException ||
+                                        exception is OperationCanceledException))
+                                {
+                                    var msgFailed = msgs.FirstOrDefault(msg => msg.MessageId == messageId);
+                                    if (msgFailed != null)
+                                    {
+                                        _failedEventList.Add(msgFailed);
+                                    }
+                                }
+                            })
+                            .ConfigureAwait(false);
+                    }
                 }
+                
                 await Task.Delay(TimeSpan.FromMinutes(5), token).ConfigureAwait(false);
             }
         }
@@ -201,25 +209,29 @@ namespace Sample.Sdk.Services.Realtime
         /// <returns></returns>
         private async Task UpdateOutgoingEventEntity(CancellationToken token) 
         {
-            while (!token.IsCancellationRequested && _eventListSent.TryTakeAll(out var listToUpdate)) 
+            while (!token.IsCancellationRequested) 
             {
-                await _outgoingMessageProvider.UpdateSentMessages(listToUpdate!, token, 
-                    (eventEntity) => 
+                if (_eventListSent.TryTakeAll(out var listToUpdate)) 
+                {
+                    await _outgoingMessageProvider.UpdateSentMessages(listToUpdate!, token,
+                    (eventEntity) =>
                     {
                         eventEntity.IsSent = true;
                         return eventEntity;
                     },
-                    (failMsgId, exception) => 
+                    (failMsgId, exception) =>
                     {
-                        if (failMsgId != null 
-                            && (exception is Microsoft.EntityFrameworkCore.DbUpdateException 
-                                || exception is OperationCanceledException)) 
+                        if (failMsgId != null
+                            && (exception is Microsoft.EntityFrameworkCore.DbUpdateException
+                                || exception is OperationCanceledException))
                         {
                             _eventListSent.TryAdd(failMsgId);
                         }
                     })
                     .ConfigureAwait(false);
-                await Task.Delay(TimeSpan.FromMinutes(5), token).ConfigureAwait(false);
+                }
+                
+                await Task.Delay(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
             }
         }
     }

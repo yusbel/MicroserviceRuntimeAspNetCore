@@ -16,6 +16,13 @@ namespace Sample.EmployeeSubdomain.Messages
     [MessageMetada(queueName: "employeeadded", decryptScope: "EmployeeAdded.Decrypt")]
     public class EmployeeAdded : ExternalMessage
     {
+        public string Name { get; init; } = string.Empty;
+        public string Email { get; init; } = string.Empty;
+
+        public static EmployeeAdded Create(string name, string email) 
+        {
+            return new EmployeeAdded { Name = name, Email = email };
+        }
         public static EmployeeAdded CreateNotNullEvent() 
         { 
             return new EmployeeAdded(); 

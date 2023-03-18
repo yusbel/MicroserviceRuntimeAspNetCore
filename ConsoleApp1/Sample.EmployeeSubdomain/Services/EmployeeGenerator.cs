@@ -41,7 +41,7 @@ namespace Sample.EmployeeSubdomain.Services
                 {
                     var rnd = new Random();
                     var employees = new List<Tuple<string, string>>();
-                    for (var i = 0; i < 1; i++)
+                    for (var i = 0; i < 1000; i++)
                     {
                         employees.Add(new Tuple<string, string>($"yusbel{rnd.Next(0, 100)}", $"yusbel@gmail.com {rnd.Next(0, 100)}"));
                     }
@@ -63,17 +63,17 @@ namespace Sample.EmployeeSubdomain.Services
                         }
                         catch (Exception e)
                         {
-                            e.LogCriticalException(_logger, $"Error, managed thread: {Thread.CurrentThread.ManagedThreadId}");
+                            e.LogException(_logger.LogCritical);
                         }
                     }).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException oce) 
                 {
-                    oce.LogCriticalException(_logger, "Operation canceled exception");
+                    oce.LogException(_logger.LogCritical);
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "Error, managed thread");
+                    e.LogException(_logger.LogCritical);
                 }
                 _logger.LogInformation("Employee generator finished");
             }, token);

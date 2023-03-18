@@ -13,8 +13,9 @@ using Sample.Sdk.Core;
 using Microsoft.Graph;
 using Sample.Sdk.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using SampleSdkRuntime.Azure.Factory.Interfaces;
 using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
+using Sample.Sdk.Core.Azure.Factory.Interfaces;
+using Microsoft.Graph.Models;
 
 namespace SampleSdkRuntime.Azure.KeyVaultLibs
 {
@@ -38,6 +39,10 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
             yield return IdentityAccessKeyPermission.Get;
             yield return IdentityAccessKeyPermission.List;
             yield return IdentityAccessKeyPermission.Create;
+            yield return IdentityAccessKeyPermission.WrapKey;
+            yield return IdentityAccessKeyPermission.UnwrapKey;
+            yield return IdentityAccessKeyPermission.Verify;
+            yield return IdentityAccessKeyPermission.Delete;
         }
 
         private IEnumerable<IdentityAccessCertificatePermission> GetKeyVaultPermissionsCertificateForServiceAccount()
@@ -86,7 +91,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error ocurred when deleting the service policy for service principal account");
+                e.LogException(_logger.LogCritical);
                 return false;
             }
             return true;

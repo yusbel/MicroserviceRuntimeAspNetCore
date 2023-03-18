@@ -27,7 +27,7 @@ namespace Sample.Sdk.Services.Interfaces
                                             CancellationToken cancellationToken);
         Task<bool> ProcessExternalMessage(
                                         IServiceScope serviceScope, 
-                                        ExternalMessage externalMessage, 
+                                        Dictionary<string,string> externalMessage, 
                                         CancellationToken cancellationToken);
 
         Task<bool> UpdateInComingEventEntity(

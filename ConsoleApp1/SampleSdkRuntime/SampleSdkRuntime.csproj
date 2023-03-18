@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Graph" Version="4.54.0" />
+    <PackageReference Include="Microsoft.Graph" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +24,11 @@
   </ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="SampleSdkRuntimeTests" />
+		<InternalsVisibleTo Include="Microsoft.Extensions.DependencyInjection" />
+		<InternalsVisibleTo Include="System" />
+	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="Sample.Sdk.Tests" />
 	</ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.Factory.Interfaces
+namespace Sample.Sdk.Core.Azure.Factory.Interfaces
 {
     public interface IClientOAuthTokenProviderFactory
     {

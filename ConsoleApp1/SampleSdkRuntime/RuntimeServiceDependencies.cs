@@ -5,11 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Sample.Sdk;
+using Sample.Sdk.Core.Azure.Factory;
+using Sample.Sdk.Core.Azure.Factory.Interfaces;
 using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount;
-using SampleSdkRuntime.Azure.DataOptions;
-using SampleSdkRuntime.Azure.Factory;
-using SampleSdkRuntime.Azure.Factory.Interfaces;
 using SampleSdkRuntime.Azure.KeyVaultLibs;
 using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.HostedServices;
@@ -17,6 +16,7 @@ using SampleSdkRuntime.HostedServices.Interfaces;
 using SampleSdkRuntime.Providers;
 using SampleSdkRuntime.Providers.Data;
 using SampleSdkRuntime.Providers.Interfaces;
+using SampleSdkRuntime.Providers.Registration;
 using SampleSdkRuntime.Providers.RuntimeObservers;
 using System;
 using System.Collections.Generic;
@@ -33,13 +33,13 @@ namespace SampleSdkRuntime
         {
             services.AddRuntimeServiceBusClientAdmin(config);
             services.AddRuntimeServiceSettings(config);
-            services.Configure<RuntimeAzureOptions>(config.GetSection("RuntimeAzureOptions"));
             return services;
         }
         private static IServiceCollection AddRuntimeServiceSettings(this IServiceCollection services, IConfiguration configuration) 
         {
-            services.AddTransient<IApplicationRegistration, ApplicationRegistration>();
-            services.AddTransient<IClientOAuthTokenProviderFactory, ClientOAuthTokenProviderFactory>();
+            services.AddTransient<IServiceCredentialProvider, ServiceCredentialProvider>();
+            services.AddTransient<IServiceRegistrationProvider, ServiceRegistrationProvider>();
+            services.AddTransient<IApplicationRegistration, ApplicationRegistrationProvider>();
             services.AddTransient<IKeyVaultPolicyProvider, KeyVaultPolicyProvider>();
             services.AddTransient<IGraphServiceClientFactory, GraphServiceClientFactory>();
             services.AddTransient<IArmClientFactory, ArmClientFactory>();
@@ -52,7 +52,6 @@ namespace SampleSdkRuntime
             services.AddTransient<IAsyncObserver<VerificationResult, VerificationRepairResult>, AppRegRepairObserver>();
             services.AddTransient<IKeyVaultProvider, KeyVaultProvider>();
             services.AddTransient<IRuntimeVerificationService, RuntimeVerificationService>();
-            services.Configure<RuntimeAzureOptions>(configuration.GetSection("Empty"));
             return services;
         }
         private static IServiceCollection AddRuntimeServiceBusClientAdmin(this IServiceCollection services, IConfiguration config)

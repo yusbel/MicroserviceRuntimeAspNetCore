@@ -1,10 +1,13 @@
 ﻿using Azure.Core;
 using Azure.Identity;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk;
+using Sample.Sdk.Core;
 using Sample.Sdk.Core.Exceptions;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.Exceptions;
@@ -50,7 +53,7 @@ namespace SampleSdkRuntime
         /// <returns></returns>
         public static async Task RunAsync(string[] args, IHostBuilder serviceHostBuilder = null)
         {
-            //Environment.SetEnvironmentVariable(AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
+            Environment.SetEnvironmentVariable(AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
             //Environment.SetEnvironmentVariable(AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
             //Environment.SetEnvironmentVariable(AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
 
@@ -58,7 +61,7 @@ namespace SampleSdkRuntime
             //Environment.SetEnvironmentVariable(RUNTIME_AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
             //Environment.SetEnvironmentVariable(RUNTIME_AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
 
-            if (args.Length == 0)
+            if (args.Count() < 2)
                 throw new RuntimeStartException("Service runtime must receive a value setting as an argument with the service instance identifier");
             ILogger<ServiceRuntime> logger = GetLogger();
 
@@ -66,7 +69,7 @@ namespace SampleSdkRuntime
             var runtimeToken = runtimeTokenSource.Token;
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            (bool isValid, SetupInfo? setupInfo, FaultyType? reason, IHost host) setupResult;
+            (bool isValid, ServiceRegistration? serviceReg, FaultyType? reason, IHost host) setupResult;
             try
             {
                 setupResult = await RunSetupAsync(args, sw, runtimeToken).ConfigureAwait(false);
@@ -80,19 +83,19 @@ namespace SampleSdkRuntime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(logger, "An error ocurred when settting up the service");
+                e.LogException(logger.LogCritical);
                 sw.Stop();
                 return;
             }
 
-            //To work on tomorrow
-            if (serviceHostBuilder != null && setupResult.isValid && setupResult.setupInfo != null)
+            if (serviceHostBuilder != null && setupResult.isValid && setupResult.serviceReg != null)
             {
                 var serviceHostVariables = new Dictionary<string, string>
                 {
-                    { AZURE_TENANT_ID, setupResult.setupInfo.Value.ServiceAccountInfo.TenantId },
-                    { AZURE_CLIENT_ID, setupResult.setupInfo.Value.ServiceAccountInfo.ApplicationClientId },
-                    { AZURE_CLIENT_SECRET, setupResult.setupInfo.Value.ServiceAccountInfo.ClientSecret },
+                    { AZURE_TENANT_ID, Environment.GetEnvironmentVariable(AZURE_TENANT_ID) },
+                    { AZURE_CLIENT_ID, setupResult.serviceReg.Credentials.First().ClientId },
+                    { AZURE_CLIENT_SECRET, setupResult.serviceReg.Credentials.First().ServiceSecretText },
+                    { SERVICE_INSTANCE_ID, setupResult.serviceReg.ServiceInstanceId },
                     { IS_RUNTIME, "false" }
                 };
                 serviceHostBuilder.ConfigureAppConfiguration(builder => 
@@ -101,11 +104,23 @@ namespace SampleSdkRuntime
                 });
                 serviceHostBuilder.ConfigureServices((host, services) => 
                 {
+                    services.TryAddSingleton<IServiceContext>((serviceProvider => 
+                    {
+                        var serviceContext = new Data.ServiceContext(setupResult.serviceReg);
+                        return serviceContext;
+                    }));
                     services.AddRuntimeServices(host.Configuration);
                 });
-                var app = serviceHostBuilder.Build();
-                var hostAppLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-                await app.RunAsync(runtimeToken);
+                try 
+                {
+                    var app = serviceHostBuilder.Build();
+                    await app.RunAsync(runtimeToken);
+                }
+                catch(Exception e) 
+                {
+                    e.LogException(logger.LogCritical);
+                }
+
             }
         }
         private static ILogger<ServiceRuntime> GetLogger()
@@ -132,7 +147,7 @@ namespace SampleSdkRuntime
         /// <param name="cancellationToken">runtime token to stop the setup hosted service</param>
         /// <returns>valid when the service computed as expected. faulty if the service dependencies were not configured prperly</returns>
         /// <exception cref="RuntimeStartException">Throw the exception if the runtime is unable to setup the service</exception>
-        private static async Task<(bool isValid, SetupInfo? setupInfo, FaultyType? reason, IHost? host)> 
+        private static async Task<(bool isValid, ServiceRegistration? setupInfo, FaultyType? reason, IHost? host)> 
             RunSetupAsync(string[] args, 
                             Stopwatch sw, 
                             CancellationToken cancellationToken) 
@@ -145,7 +160,7 @@ namespace SampleSdkRuntime
                 { RUNTIME_AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16" },
                 { RUNTIME_AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x" },
                 { IS_RUNTIME, "true" },
-                { SERVICE_INSTANCE_ID, args.First() }
+                { SERVICE_INSTANCE_ID, $"{args[0]}-{args[1]}" }
             };
             IHost hostRuntimeSetup = Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(configBuilder => 
@@ -154,7 +169,9 @@ namespace SampleSdkRuntime
                 })
                 .ConfigureServices((host, services) =>
                 {
+                    services.AddSampleSdkTokenCredentials(host.Configuration);
                     services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(host.Configuration);
+                    services.AddSampleSdkCryptographic();
                     services.AddRuntimeServices(host.Configuration);
                     services.AddHostedService<RuntimeSetupHostedAppService>();
                 }).Build();
@@ -162,54 +179,51 @@ namespace SampleSdkRuntime
             var logger = hostRuntimeSetup.Services.GetRequiredService<ILogger<ServiceRuntime>>();
             try
             {
-                _ = Task.Run(async () => await hostRuntimeSetup.RunAsync(setupToken).ConfigureAwait(false), setupToken).ConfigureAwait(false);
+                _ = Task.Run(async () => 
+                {
+                    try
+                    {
+                        await hostRuntimeSetup.RunAsync(setupToken).ConfigureAwait(false);
+                    }
+                    catch (Exception e) 
+                    {
+                        e.LogException(logger.LogCritical);
+                    }
+                }, setupToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                e.LogCriticalException(logger, "Runtime task fail");
+                e.LogException(logger.LogCritical);
                 tokenSource.Cancel();
                 tokenSource.Dispose();
                 throw;
             }
 
-            (bool isValid, SetupInfo? setupInfo, FaultyType? reason) checkRuntimeResult;
+            (bool isValid, ServiceRegistration? serviceReg, FaultyType? reason) checkRuntimeResult;
             try
             {
-                checkRuntimeResult = await CheckRuntimeService<SetupInfo>(
+                checkRuntimeResult = await CheckRuntimeService<ServiceRegistration>(
                                                     sw,
                                                     TimeSpan.FromMinutes(5),
                                                     TimeSpan.FromMilliseconds(100),
                                                     setupToken,
                                                     configuration,
                                                     logger);
-                if (checkRuntimeResult.setupInfo.HasValue && checkRuntimeResult.setupInfo.Value.IsFaulty
+                if (!checkRuntimeResult.serviceReg!.WasSuccessful 
                     && checkRuntimeResult.reason == FaultyType.TimeOutReached)
                 {
                     tokenSource.Cancel();
                     tokenSource.Dispose();
                     throw new RuntimeStartException("Time out was reached");
                 }
-                if (checkRuntimeResult.setupInfo.HasValue && checkRuntimeResult.setupInfo.Value.IsFaulty
-                    && checkRuntimeResult.reason == FaultyType.InfoDataTypeMissMatch)
-                {
-                    tokenSource.Cancel();
-                    tokenSource.Dispose();
-                    throw new RuntimeStartException("Runtime info environemnt can't be deserialized to runtime info");
-                }
-                if (!checkRuntimeResult.isValid)
-                {
-                    tokenSource.Cancel();
-                    await hostRuntimeSetup.StopAsync().ConfigureAwait(false);
-                    hostRuntimeSetup.Dispose();
-                }
                 return (checkRuntimeResult.isValid, 
-                        checkRuntimeResult.setupInfo, 
+                        checkRuntimeResult.serviceReg, 
                         checkRuntimeResult.reason, 
                         !checkRuntimeResult.isValid ? default : hostRuntimeSetup);
             }
             catch (Exception e)
             {
-                e.LogCriticalException(logger, "check runtime setup fail");
+                e.LogException(logger.LogCritical);
                 tokenSource.Cancel();
                 await hostRuntimeSetup.StopAsync().ConfigureAwait(false);
                 hostRuntimeSetup.Dispose();
@@ -236,12 +250,12 @@ namespace SampleSdkRuntime
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(logger, "Deserializing fail");
+                    e.LogException(logger.LogCritical);
                     return (false, default, FaultyType.InfoDataTypeMissMatch);
                 }
                 if(info != null) 
                 {
-                    return (info.IsValid, info, default);
+                    return (info.WasSuccessful, info, default);
                 }
                 return (true, info, FaultyType.InfoDataTypeMissMatch);
             }
@@ -253,7 +267,7 @@ namespace SampleSdkRuntime
             {
                 token.ThrowIfCancellationRequested();
             }
-            await Task.Delay(delay);
+            await Task.Delay(delay).ConfigureAwait(false);
 
             return await CheckRuntimeService<T>(
                             sw, 
@@ -261,7 +275,7 @@ namespace SampleSdkRuntime
                             delay,
                             token, 
                             configuration, 
-                            logger);
+                            logger).ConfigureAwait(false);
         }
 
     }

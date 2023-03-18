@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Sample.Sdk.Core.Azure;
+using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Data;
 using System.Text;
 using System.Text.Json;
@@ -10,46 +13,37 @@ namespace SampleSdkRuntime.HostedServices
     {
         private readonly IConfiguration _configuration;
         private SemaphoreSlim? _semaphore = null;
-        private SetupInfo? _setupInfo;
+        private ServiceRegistration? _serviceReg;
 
         public RuntimeHostedServiceBase(IConfiguration configuration)
         {
             _configuration = configuration;
             _semaphore = new SemaphoreSlim(1);
         }
-        protected void CreateSetupInfo(SetupInfo setupInfo, bool wasCreated, Application? app, string? clientSecret)
+        protected void CreateSetupInfo(ServiceRegistration serviceReg)
         {
-            setupInfo.IsValid = wasCreated;
-            setupInfo.CreatedOn = DateTime.UtcNow;
-            setupInfo.IsFaulty = !wasCreated;
-            setupInfo.InValidServicesIdWithException = new List<(string, string)>() { (String.Empty, String.Empty) };
-            setupInfo.ServiceAccountInfo = new ServiceAccountInfo()
-            {
-                ApplicationClientId = app == null ? string.Empty : app!.AppId,
-                ClientSecret = string.IsNullOrEmpty(clientSecret) ? string.Empty : clientSecret,
-                TenantId = _configuration.GetValue<string>(ServiceRuntime.RUNTIME_AZURE_TENANT_ID)
-            };
-            SetSetupInfo(setupInfo);
+            serviceReg.WasSuccessful = serviceReg != null;
+            SetServiceReg(serviceReg);
             SetEnvironmentVariableForHostService();
         }
-        protected SetupInfo? GetSetupInfo()
+        protected ServiceRegistration? GetServiceReg()
         {
             _semaphore!.Wait();
             try
             {
-                return _setupInfo;
+                return _serviceReg;
             }
             finally
             {
                 _semaphore.Release();
             }
         }
-        protected void SetSetupInfo(SetupInfo setupInfo)
+        protected void SetServiceReg(ServiceRegistration serviceReg)
         {
             _semaphore!.Wait();
             try
             {
-                _setupInfo = setupInfo;
+                _serviceReg = serviceReg;
             }
             finally
             {
@@ -59,12 +53,12 @@ namespace SampleSdkRuntime.HostedServices
 
         protected void SetEnvironmentVariableForHostService()
         {
-            var setupInfo = GetSetupInfo();
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID, setupInfo!.Value.ServiceAccountInfo.TenantId);
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_ID, setupInfo!.Value.ServiceAccountInfo.ApplicationClientId);
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_SECRET, setupInfo!.Value.ServiceAccountInfo.ClientSecret);
-            Environment.SetEnvironmentVariable(ServiceRuntime.SERVICE_INSTANCE_ID, setupInfo!.Value.ServiceInstanceIdentifier);
-            Environment.SetEnvironmentVariable(ServiceRuntime.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(setupInfo))));
+            var serviceReg = GetServiceReg();
+            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID)); ;
+            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_ID, GetServiceReg().Credentials.First().ClientId);
+            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_SECRET, GetServiceReg().Credentials.First().ServiceSecretText);
+            Environment.SetEnvironmentVariable(ServiceRuntime.SERVICE_INSTANCE_ID, serviceReg.ServiceInstanceId);
+            Environment.SetEnvironmentVariable(ServiceRuntime.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(serviceReg))));
         }
 
         public void Dispose()

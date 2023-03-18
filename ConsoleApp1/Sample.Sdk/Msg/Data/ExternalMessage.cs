@@ -11,8 +11,9 @@ namespace Sample.Sdk.Msg.Data
     /// <summary>
     /// Message being save on durable storage to send to the serivice provider
     /// </summary>
-    public class ExternalMessage : MessageMetaData, IMessageIdentifier
+    public class ExternalMessage : InTransitData, IMessageIdentifier
     {
+        public string Content { get; init; } = string.Empty;
         /// <summary>
         /// Database entity unique identifier
         /// </summary>
@@ -21,10 +22,7 @@ namespace Sample.Sdk.Msg.Data
         /// Use the entity id as correlation id, the correlation id is used to map to the message hub schema
         /// </summary>
         public string CorrelationId { get; set; } = string.Empty;
-        /// <summary>
-        /// Encrypted entity with security attributes
-        /// </summary>
-        public string Content { get; set; } = string.Empty;
+
         /// <summary>
         /// Message unique identifier used to track duplicate
         /// </summary>

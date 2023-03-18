@@ -32,6 +32,7 @@ using Sample.EmployeeSubdomain.Messages.Acknowledgement;
 using Sample.Sdk;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.InMemory.Interfaces;
+using Sample.Sdk.Services.Realtime;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -53,7 +54,7 @@ namespace Sample.EmployeeSubdomain
                 options.EnableDetailedErrors(true);
             });
             services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
-            //services.AddHostedService<MessageSenderHostedService>();
+            services.AddHostedService<MessageSenderRealtimeHostedService>();
             services.AddHostedService<EmployeeGenerator>();
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
@@ -63,6 +64,7 @@ namespace Sample.EmployeeSubdomain
             //Adding sdk dependecies
             services.AddSampleSdk(configuration);
             services.AddSampleSdkInMemoryServices(configuration);
+            services.AddSampleSdkDataProtection(configuration, configuration.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions"));
             return services;
         }
     }

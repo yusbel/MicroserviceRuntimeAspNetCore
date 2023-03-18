@@ -1,11 +1,15 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Data;
+using SampleSdkRuntime.Extensions;
 using SampleSdkRuntime.HostedServices.Interfaces;
 using SampleSdkRuntime.Providers.Data;
 using SampleSdkRuntime.Providers.Interfaces;
+using SampleSdkRuntime.Providers.Registration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,18 +22,18 @@ namespace SampleSdkRuntime.HostedServices
 {
     public class RuntimeSetupHostedAppService : RuntimeHostedServiceBase, IHostedService
     {
-        private readonly IApplicationRegistration? _applicationRegistration;
         private readonly IConfiguration? _configuration;
         private readonly IRuntimeVerificationService _runtimeVerificationService;
+        private readonly IServiceProvider _serviceProvider;
         private CancellationTokenSource? tokenSource;
 
-        public RuntimeSetupHostedAppService(IApplicationRegistration applicationRegistration,
-            IConfiguration configuration,
-            IRuntimeVerificationService runtimeVerificationService) : base(configuration)
+        public RuntimeSetupHostedAppService(IConfiguration configuration,
+            IRuntimeVerificationService runtimeVerificationService,
+            IServiceProvider serviceProvider) : base(configuration)
         {
-            _applicationRegistration = applicationRegistration;
             _configuration = configuration;
             _runtimeVerificationService = runtimeVerificationService;
+            _serviceProvider = serviceProvider;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -43,26 +47,23 @@ namespace SampleSdkRuntime.HostedServices
         }
 
         private async Task CreateSetup(CancellationToken token)
-        {  
-            var setupInfo = new SetupInfo()
-            {
-                ServiceInstanceIdentifier = _configuration.GetValue<string>(ServiceRuntime.SERVICE_INSTANCE_ID)
-            };
+        {
+            Environment.SetEnvironmentVariable(ServiceRuntime.RUNTIME_SETUP_INFO, string.Empty);
+            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ServiceRuntime.SERVICE_INSTANCE_ID);
+            
             //Create application service, service principel, add service pricipal password to key vault and add policy to query for secret
-            (bool wasSuccess, Application? app, ServicePrincipal? principal, string? clientSecret) appSetupInfo =
-                    await _applicationRegistration!.GetApplicationDetails(setupInfo.ServiceInstanceIdentifier, token)
-                                                    .ConfigureAwait(false);
-            if (!appSetupInfo.wasSuccess) 
+            var serviceRegProvider = _serviceProvider.GetRequiredService<IServiceRegistrationProvider>();
+            var serviceReg = await serviceRegProvider.GetServiceRegistration(ServiceInstanceIdentifier, token)
+                                                        .ConfigureAwait(false);
+            if (serviceReg == null || !serviceReg.WasSuccessful)
             {
-                appSetupInfo = await _applicationRegistration.DeleteAndCreate(setupInfo.ServiceInstanceIdentifier, token)
-                                                    .ConfigureAwait(false);
+                serviceReg = ServiceRegistrationProvider.Create(_serviceProvider)
+                                    .ConfigureServiceCredential(ServiceInstanceIdentifier, token)
+                                    .ConfigureServiceCryptoSecret(token)
+                                    .Build();
             }
-            if(appSetupInfo.wasSuccess) 
-            {
-                CreateSetupInfo(setupInfo, appSetupInfo.wasSuccess, appSetupInfo.app, appSetupInfo.clientSecret);
-                return;
-            }
-            throw new InvalidOperationException("Runtime was unable to setup the service instance");
+            CreateSetupInfo(serviceReg!);
+            return;
         }
 
         private async Task VerifySetup(CancellationToken cancellationToken) 

@@ -43,7 +43,7 @@ namespace Sample.Sdk.Services
         {
             (bool wasCreated, PointToPointSession? channel) =
                                     await _securePointToPoint.GetOrCreateSessionChannel(
-                                            encryptedMessageMetadata.WellKnownEndpoint
+                                            encryptedMessageMetadata.WellknownEndpoint
                                             , token);
             if (!wasCreated || channel == null || channel.SessionState == null)
             {

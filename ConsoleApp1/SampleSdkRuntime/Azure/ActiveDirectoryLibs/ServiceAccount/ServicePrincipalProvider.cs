@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Sample.Sdk.Core.Azure.Factory.Interfaces;
 using Sample.Sdk.Core.Exceptions;
-using SampleSdkRuntime.Azure.Factory.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,14 +47,13 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
             if (graph == null) { return default; }
             try
             {
-                principal = await graph.ServicePrincipals.Request()
-                                            .AddAsync(new ServicePrincipal()
-                                            {
-                                                AppId = identifier,
-                                                AppRoleAssignmentRequired = true
-                                            }, cancellationToken);
+                principal = await graph.ServicePrincipals.PostAsync(new ServicePrincipal()
+                                                                    {
+                                                                        AppId = identifier,
+                                                                        AppRoleAssignmentRequired = true
+                                                                    },null, cancellationToken);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 throw;
             }
@@ -71,19 +71,21 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
         public async Task<ServicePrincipal?> GetServicePrincipal(string identifier, CancellationToken cancellationToken)
         {
             var graph = _graphServiceClientFactory.Create();
-            IGraphServiceServicePrincipalsCollectionPage servicePrincipals = null;
+            ServicePrincipalCollectionResponse? servicePrincipals = null;
             try
             {
-                servicePrincipals = await graph!.ServicePrincipals.Request()
-                    .Filter($"appid eq '{identifier}'")
-                    .GetAsync(cancellationToken);
-                if (servicePrincipals == null || servicePrincipals.Count == 0)
+                servicePrincipals = await graph!.ServicePrincipals.GetAsync(reqConfig => 
+                                                {
+                                                    reqConfig.QueryParameters.Filter = $"appid eq '{identifier}'";
+                                                }, cancellationToken).ConfigureAwait(false);
+                    
+                if (servicePrincipals == null || servicePrincipals?.Value?.Count == 0)
                 {
                     return default;
                 }
-                return servicePrincipals.First();
+                return servicePrincipals?.Value?.First();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 throw;
             }
@@ -103,12 +105,12 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
             if (principal == null) { return false; }
             try
             {
-                await graph!.ServicePrincipals[identifier].Request().DeleteAsync(cancellationToken);
+                await graph!.ServicePrincipals[identifier].DeleteAsync(null, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, $"Microsoft graph fail to remove service principal with identifier {identifier}");
+                e.LogException(_logger.LogCritical);
             }
             return false;
         }

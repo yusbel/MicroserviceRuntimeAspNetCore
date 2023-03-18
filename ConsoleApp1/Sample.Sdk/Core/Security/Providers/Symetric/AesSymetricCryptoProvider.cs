@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using System;
@@ -10,9 +11,12 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core.Security.Providers.Symetric
 {
-    public class AesSymetricCryptoProvider : ISymetricCryptoProvider
+    public class AesSymetricCryptoProvider : ISymetricCryptoProvider, IAesKeyRandom
     {
         private const int KeySize = 256;
+        private const int NonceSize = 13;
+        private const int TagSize = 16;
+
         private readonly ILogger<AesSymetricCryptoProvider> _logger;
 
         public AesSymetricCryptoProvider(
@@ -20,54 +24,74 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
         {
             _logger = logger;
         }
-        
-        public bool TryDecrypt(byte[] data, byte[] key, byte[] iv, out SymetricResult? result)
+
+        public byte[] GenerateRandomKey(int keySize)
+        {
+            using var aes = Aes.Create();
+            aes.KeySize = KeySize;
+            aes.GenerateKey();
+            return aes.Key;
+        }
+
+        public bool TryDecrypt(byte[] cypherText, byte[] key, byte[] tag, byte[] nonce, byte[] aad, out SymetricResult? result)
         {
             try
-            {
-                using var aesCng = AesCng.Create();
-                aesCng.Key = key;
-                aesCng.IV = iv;
-                var plainData = aesCng.DecryptCbc(data, iv, PaddingMode.PKCS7);
+            {   using var aesCcm = new AesCcm(key);
+                var plainText = new byte[cypherText.Length];
+                aesCcm.Decrypt(nonce, cypherText, tag, plainText, aad);
                 result = new SymetricResult()
                 {
                     Key = key,
-                    Iv = iv,
-                    PlainData = plainData.ToArray()
+                    Nonce = nonce,
+                    PlainData = plainText, 
+                    Aad = aad, 
+                    Tag = tag, 
+                    EncryptedData = cypherText
                 };
                 return true;
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "Symetric decript fail");
+                e.LogException(_logger.LogCritical);
                 result = default;
                 return false;
             }
         }
 
-
-        public bool TryEncrypt(byte[] data, out SymetricResult? result)
+        public bool TryEncrypt(byte[] plainText, byte[] additionalAuthData, out SymetricResult? result)
         {
             try
             {
-                using var aesCng = AesCng.Create();
-                var key = aesCng.Key;
-                var iv = aesCng.IV;
-                var encryptedData = aesCng.EncryptCbc(data, iv, PaddingMode.PKCS7);
-                result = new SymetricResult()
-                {
-                    Key = key,
-                    Iv = iv,
-                    EncryptedData = encryptedData.ToArray()
-                };
-                return true;
+                var key = GenerateRandomKey(KeySize);
+                return TryEncrypt(key, plainText, additionalAuthData, out result);
             }
             catch (Exception e)
             {
-                _logger.LogCritical("An error occurred when encrypting", e);
+                e.LogException(_logger.LogCritical);
                 result = default;
                 return false;
             }
+        }
+
+        public bool TryEncrypt(byte[] key, byte[] plainText, byte[] aad, out SymetricResult? result)
+        {
+            using var aesCcm = new AesCcm(key);
+            var rng = RandomNumberGenerator.Create();
+            var nonce = new byte[NonceSize];
+            rng.GetBytes(nonce, 0, NonceSize);
+            var cypherText = new byte[plainText.Length];
+            var tag = new byte[TagSize];
+            aesCcm.Encrypt(nonce, plainText, cypherText, tag, aad);
+            result = new SymetricResult()
+            {
+                Key = key,
+                Nonce = nonce,
+                Tag = tag.ToArray(),
+                Aad = aad,
+                EncryptedData = cypherText,
+                PlainData = plainText
+            };
+            return true;
         }
     }
 }

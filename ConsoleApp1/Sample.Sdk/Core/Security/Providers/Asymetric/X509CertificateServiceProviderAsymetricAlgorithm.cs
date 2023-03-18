@@ -1,6 +1,8 @@
 ﻿using Azure;
 using Azure.Security.KeyVault.Certificates;
+using Azure.Security.KeyVault.Keys.Cryptography;
 using Microsoft.Azure.Amqp.Framing;
+using Microsoft.Azure.KeyVault.Cryptography.Algorithms;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Azure;
@@ -33,7 +35,6 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             , ILogger<X509CertificateServiceProviderAsymetricAlgorithm> logger
             , ICertificateProvider certificateProvider)
         {
-            Guard.ThrowWhenNull(options, certificateProvider);
             _options = options;
             _logger = logger;
             _certificateProvider = certificateProvider;
@@ -92,7 +93,8 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         /// <param name="token">cancellaton token to stop processing</param>
         /// <returns>Return plain data</returns>
         /// <exception cref="ApplicationException">Returns application exception is certificate is invalid</exception>
-        public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Decrypt(
+        public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> 
+            Decrypt(
             byte[] data, 
             CancellationToken token)
         {
@@ -112,7 +114,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                _logger.LogCritical("Unable to download certificate {}", e);
+                e.LogException(_logger.LogCritical);
                 return (false, default(byte[]?), EncryptionDecryptionFail.UnableToGetCertificate);
             }
             if (certificate == null || !certificate.HasPrivateKey) 
@@ -126,17 +128,17 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             catch (Exception e)
             {
-                _logger.LogCritical($"An error ocurrend when getting private key {e}");
+                e.LogException(_logger.LogCritical);
                 return (false, default(byte[]?), EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             try
             {
-                var plainData = rsa?.Decrypt(data, RSAEncryptionPadding.Pkcs1);
+                var plainData = rsa?.Decrypt(data, RSAEncryptionPadding.OaepSHA512);
                 return (true, plainData, EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
-                _logger.LogCritical($"An error occurred when decrypting {e}");
+                e.LogException(_logger.LogCritical);
                 return (false, default(byte[]?), EncryptionDecryptionFail.DecryptionFail);
             }
         }
@@ -148,9 +150,9 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         /// <param name="token"></param>
         /// <returns>Return encrypted data</returns>
         /// <exception cref="ApplicationException">Returns application exception is certificate is invalid</exception>
-        public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(
-            byte[] data, 
-            CancellationToken token)
+        public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> 
+            Encrypt(byte[] data, 
+                    CancellationToken token)
         {
             Guard.ThrowWhenNull(data, token);
             KeyVaultCertificateWithPolicy certificate = null;
@@ -172,81 +174,45 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             {
                 return (false, default, EncryptionDecryptionFail.NoPublicKey);
             }
-            if (token.IsCancellationRequested) 
-                return (false, default, EncryptionDecryptionFail.TaskCancellationWasRequested);
-            X509Certificate2 x509Cer;
+            token.ThrowIfCancellationRequested();
             try
             {
-                x509Cer = new X509Certificate2(certificate.Cer);
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical(e, "Unable to create certificate");
-                return (false, default, EncryptionDecryptionFail.UnableToGetCertificate);
-            }
-            RSA? rsa;
-            try
-            {
-                rsa = x509Cer.GetRSAPublicKey();
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical(e, "An error occurred when encrypting");
-                return (false, default, EncryptionDecryptionFail.NoPublicKey);
-            }
-            try
-            {
-                var encryptedData = rsa?.Encrypt(data, RSAEncryptionPadding.Pkcs1);
+                var x509Cer = new X509Certificate2(certificate.Cer);
+                var rsa = x509Cer.GetRSAPublicKey();
+                var encryptedData = rsa?.Encrypt(data, RSAEncryptionPadding.OaepSHA512);
                 return (true, encryptedData, default);
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "Unable to encrypt data with public key");
-                return (false, default, EncryptionDecryptionFail.EncryptFail);
-            } 
+                e.LogException(_logger.LogCritical);
+                return (false, default, EncryptionDecryptionFail.NoPublicKey);
+            }
         }
 
-        public (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(
-            byte[] publicKey, 
-            byte[] data, 
-            CancellationToken token)
+        public (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) 
+            Encrypt(byte[] publicKey, 
+                    byte[] data, 
+                    CancellationToken token)
         {
-            X509Certificate2 certificate;
             try
             {
-                certificate = new X509Certificate2(publicKey);
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical($"An error occurred {e}");
-                return (false, default(byte[]?), EncryptionDecryptionFail.UnableToGetCertificate);
-            }
-            RSA? rsa;
-            try
-            {
-                rsa = certificate.GetRSAPublicKey();
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical($"An error ocurred when reading public key {e}");
-                return (false, default(byte[]?), EncryptionDecryptionFail.NoPublicKey);
-            }
-            try
-            {
-                var plainData = rsa?.Encrypt(data, RSAEncryptionPadding.Pkcs1);
+                var certificate = new X509Certificate2(publicKey);
+                var rsa = certificate.GetRSAPublicKey();
+                var plainData = rsa?.Encrypt(data, RSAEncryptionPadding.OaepSHA512);
                 return (true, plainData, EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
-                _logger.LogCritical($"An error ocurrend when encryptiing {e}");
-                return (false, default(byte[]?), EncryptionDecryptionFail.EncryptFail);
+                e.LogException( _logger.LogCritical);
+                return (false, default(byte[]?), EncryptionDecryptionFail.NoPublicKey);
             }
         }
 
-        public async Task<(bool wasValid, EncryptionDecryptionFail reason)> VerifySignature(
-            byte[] hashValue, 
-            byte[] baseSignature, 
-            CancellationToken token)
+        public async Task<(bool wasValid, EncryptionDecryptionFail reason)> 
+            VerifySignature(
+                byte[] hashValue, 
+                byte[] baseSignature, 
+                CancellationToken token)
         {
             X509Certificate2 certificate = null;
             try
@@ -262,72 +228,42 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
                 e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
-            HashAlgorithmName algName = new HashAlgorithmName("SHA256");
             if (certificate == null || !certificate.HasPrivateKey) 
             {
                 return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
             }
-            RSA? rsa;
             try
             {
-                rsa = certificate.GetRSAPrivateKey();
-            }
-            catch (Exception e)
-            {
-                e.LogException(_logger.LogCritical);
-                return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
-            }
-            try
-            {
-                bool? result = rsa?.VerifyHash(hashValue, baseSignature, algName, RSASignaturePadding.Pkcs1);
+                var rsa = certificate.GetRSAPrivateKey();
+                bool? result = rsa?.VerifyHash(hashValue, baseSignature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                 return (result.HasValue ? result.Value : false, EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
                 e.LogException(_logger.LogCritical);
-                return (false, EncryptionDecryptionFail.VerifySignature);
+                return (false, default);
             }
         }
 
-        public (bool wasValid, EncryptionDecryptionFail reason) VerifySignature(
-            byte[] publicKey, 
-            byte[] signature, 
-            byte[] baseSignature,
-            CancellationToken token)
+        public (bool wasValid, EncryptionDecryptionFail reason) 
+            VerifySignature(
+                byte[] publicKey, 
+                byte[] signature, 
+                byte[] baseSignature,
+                CancellationToken token)
         {
-            if (token.IsCancellationRequested) 
-            {
-                return (false, EncryptionDecryptionFail.TaskCancellationWasRequested);
-            }
-            X509Certificate2 certificate;
+            token.ThrowIfCancellationRequested();
             try
             {
-                certificate = new X509Certificate2(publicKey);
-            }
-            catch (Exception e)
-            {
-                e.LogException(_logger.LogCritical);
-                return (false, EncryptionDecryptionFail.UnableToGetCertificate);
-            }
-            RSA? rsa;
-            try
-            {
-                rsa = certificate.GetRSAPublicKey();
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical($"An error occurred when getting the public key {e}");
-                return (false, EncryptionDecryptionFail.NoPublicKey);
-            }
-            try
-            {
+                var certificate = new X509Certificate2(publicKey);
+                var rsa = certificate.GetRSAPublicKey();
                 var result = rsa?.VerifyData(baseSignature, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                 return (result.HasValue ? result.Value : false, EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
-                _logger.LogCritical($"An error occurred when verifying signature {e}");
-                return (false, EncryptionDecryptionFail.VerifySignature);
+                e.LogException(_logger.LogCritical);
+                return (false, EncryptionDecryptionFail.NoPublicKey);
             }
         }
     }

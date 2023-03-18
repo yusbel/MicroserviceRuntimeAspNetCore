@@ -51,7 +51,7 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
         public async Task<(bool? WasDownloaded, X509Certificate2? Certificate)>
             DownloadCertificate(string certificateName, CancellationToken token, string? version = null)
         {
-            if (!string.IsNullOrEmpty(certificateName))
+            if (string.IsNullOrEmpty(certificateName))
             {
                 throw new ArgumentNullException(nameof(certificateName));
             }

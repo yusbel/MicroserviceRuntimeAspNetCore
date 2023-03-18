@@ -27,7 +27,7 @@ namespace Sample.Sdk.Msg
 
         public ExternalMessage Bind(ExternalMessage message)
         {
-            message.CertificateLocation = _keyVaultOptions.Value.VaultUri;
+            message.CertificateVaultUri = _keyVaultOptions.Value.VaultUri;
             message.CertificateKey = _keyVaultOptions.Value.KeyVaultCertificateIdentifier;
             var msgAttr = message.GetType().GetCustomAttribute(typeof(MessageMetadaAttribute));
             if (msgAttr is MessageMetadaAttribute msgAttribute && !string.IsNullOrEmpty(msgAttribute.QueueName))

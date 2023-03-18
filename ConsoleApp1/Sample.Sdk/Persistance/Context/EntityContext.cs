@@ -1,7 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.InMemory.InMemoryListMessage;
+using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,12 +18,16 @@ namespace Sample.Sdk.Persistance.Context
     {
         private readonly ILogger _logger;
         private TC _dbContext;
+        private readonly IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> _eventToSend;
+
         public EntityContext(
             ILoggerFactory logger, 
-            TC dbContext)
+            TC dbContext,
+            IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> eventToSend)
         {           
             _logger = logger.CreateLogger("EntityContext");
             _dbContext = dbContext;
+            _eventToSend = eventToSend;
         }
 
         public void Add(T add)
@@ -46,7 +54,7 @@ namespace Sample.Sdk.Persistance.Context
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "Exception ocurred when retieving a user by id");
+                e.LogException(_logger.LogCritical);
                 throw;
             }
         }
@@ -81,7 +89,7 @@ namespace Sample.Sdk.Persistance.Context
                     }
                     catch (Exception e) 
                     {
-                        AggregateExceptionExtensions.LogCriticalException(e, _logger, "Removing transaction from the table transaction log fail.");
+                        e.LogException(_logger.LogCritical);
                     }
                 });
             return true;
@@ -106,8 +114,9 @@ namespace Sample.Sdk.Persistance.Context
                     }).ConfigureAwait(false);
 
             _dbContext.ChangeTracker.AcceptAllChanges();
+            _eventToSend.Add(eventEntity.ConvertToExternalMessage()!);
             return true;
-        }
+            }
 
         public void Update(T entity) => _dbContext.Entry(entity).State = EntityState.Modified;
 

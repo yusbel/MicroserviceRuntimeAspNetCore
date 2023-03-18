@@ -1,5 +1,6 @@
 ﻿using Azure.ResourceManager.KeyVault.Models;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 
 namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
 {

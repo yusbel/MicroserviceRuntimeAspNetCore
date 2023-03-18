@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Security.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.EntityModel;
@@ -36,14 +37,14 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IServiceProvider _serviceProvider;
         private readonly IMessageBusReceiver<ExternalMessage> _messageBusReceiver;
         private readonly ILogger<MessageReceiverRealtimeService<T>> _logger;
-        private readonly IDecryptorService _decryptorService;
+        private readonly IMessageCryptoService _cryptoService;
         private readonly IAcknowledgementService _acknowledgementService;
         private CancellationTokenSource? _cancellationTokenSource;
         public MessageReceiverRealtimeService(
             IMessageComputation<T> computations,
             IMessageBusReceiver<ExternalMessage> messageBusReceiver,
             ILogger<MessageReceiverRealtimeService<T>> logger,
-            IDecryptorService decryptorService,
+            IMessageCryptoService cryptoService,
             IAcknowledgementService acknowledgementService,
             IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
             IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
@@ -57,7 +58,7 @@ namespace Sample.Sdk.Services.Realtime
             _inComingEvents = inComingEvents;
             _messageBusReceiver = messageBusReceiver;
             _logger = logger;
-            _decryptorService = decryptorService;
+            _cryptoService = cryptoService;
             _acknowledgementService = acknowledgementService;
             _persistMessages = persistMessages;
             _incompatibleMessages = incompatibleMessages;
@@ -163,7 +164,7 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error ocurred when sending ack messages");
+                e.LogException(_logger.LogCritical);
             }
             finally
             {
@@ -198,7 +199,7 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "An error ocurred when retriving message from incoming event entity table to send acknowldegement");
+                e.LogException(_logger.LogCritical);
             }
             finally
             {
@@ -231,7 +232,7 @@ namespace Sample.Sdk.Services.Realtime
                             catch (InvalidOperationException) { throw; }
                             catch (Exception e)
                             {
-                                e.LogCriticalException(_logger, "Updating incoming event entity fail");
+                                e.LogException(_logger.LogCritical);
                                 await Task.Delay(1000);
                             }
                         }
@@ -242,7 +243,7 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "Error ocurred when updating message");
+                e.LogException(_logger.LogCritical);
             }
             finally
             {
@@ -270,7 +271,7 @@ namespace Sample.Sdk.Services.Realtime
                             }
                             catch (Exception e)
                             {
-                                e.LogCriticalException(_logger, $"Unable to deserialize the message with message key {message.MessageKey} and message id {message.Id}");
+                                e.LogException(_logger.LogCritical);
                                 _incompatibleMessages.TryAdd(new InCompatibleMessage()
                                 {
                                     OriginalMessageKey = message.MessageKey,
@@ -282,17 +283,17 @@ namespace Sample.Sdk.Services.Realtime
                                 return;
                             }
 
-                            (bool wasEncrypted, ExternalMessage? externalMsg, EncryptionDecryptionFail reason) decryptorResult;
+                            (bool wasEncrypted, Dictionary<string,string> externalMsg, EncryptionDecryptionFail reason) decryptorResult;
                             try
                             {
-                                decryptorResult = await _decryptorService.GetDecryptedExternalMessage(encryptedMessageWithMetadata!,
-                                                                                    _asymetricCryptoProvider,
-                                                                                    cancellationToken);
+                                decryptorResult = await _cryptoService.GetDecryptedExternalMessage(encryptedMessageWithMetadata!,
+                                                                                                    cancellationToken)
+                                                                        .ConfigureAwait(false);
                             }
                             catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
-                                e.LogCriticalException(_logger, $"An error ocurred when decrypting message with key {message.MessageKey} and identifier {message.Id}");
+                                e.LogException(_logger.LogCritical);
                                 return;
                             }
                             try
@@ -308,7 +309,7 @@ namespace Sample.Sdk.Services.Realtime
                             catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
-                                e.LogCriticalException(_logger, $"An error ocurred when processing the message with key {message.MessageKey} and identifier {message.Id}");
+                                e.LogException(_logger.LogCritical);
                             }
                         });
                         await Task.Delay(1000);
@@ -318,7 +319,7 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, $"An exception of type {e.GetType()} ocurred when computing");
+                e.LogException(_logger.LogCritical);
             }
             finally
             {
@@ -356,7 +357,7 @@ namespace Sample.Sdk.Services.Realtime
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "An error ocurred");
+                    e.LogException(_logger.LogCritical);
                 }
                 finally
                 {
@@ -397,14 +398,14 @@ namespace Sample.Sdk.Services.Realtime
                         }
                         catch (Exception e)
                         {
-                            e.LogCriticalException(_logger, "");
+                            e.LogException(_logger.LogCritical);
                             //TODO:Inspect exception from database to slow the loop count and raise cancel operation.
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "An error ocurred");
+                    e.LogException(_logger.LogCritical);
                 }
                 finally
                 {

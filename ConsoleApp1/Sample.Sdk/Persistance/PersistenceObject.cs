@@ -6,7 +6,8 @@ using Sample.Sdk.Core;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Extensions;
-using Sample.Sdk.Core.Security;
+using Sample.Sdk.Core.Security.DataProtection;
+using Sample.Sdk.Core.Security.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
@@ -31,29 +32,20 @@ namespace Sample.Sdk.Persistance
     {
         private readonly IEntityContext<TContext, TState> _entityContext;
         private readonly IMessageCryptoService _messageCryptoService;
-        private readonly IMessageInTransitService _metaDataService;
+        private readonly IMessageInTransitService _inTransitService;
         private readonly ILogger _logger;
         public abstract TState? GetEntity(); 
         protected abstract void AttachEntity(TState entity);
 
-        public PersistenceObject(
-            ILogger logger
-            , ISymetricCryptoProvider cryptoProvider
-            , IAsymetricCryptoProvider asymetricCryptoProvider
+        public PersistenceObject(ILogger logger
             , IEntityContext<TContext, TState> entityContext
-            , IOptions<CustomProtocolOptions> options
-            , IMessageSender sender
             , IMessageCryptoService messageCryptoService
-            , IMessageInTransitService metaDataService) : 
-            base(options
-                , cryptoProvider
-                , asymetricCryptoProvider
-                , logger)
+            , IMessageInTransitService inTransitService)
         {
-            Guard.ThrowWhenNull(logger, entityContext, sender);
+            Guard.ThrowWhenNull(logger, entityContext);
             _entityContext = entityContext;
             _messageCryptoService = messageCryptoService;
-            _metaDataService = metaDataService;
+            _inTransitService = inTransitService;
             _logger = logger;
         }
 
@@ -64,7 +56,7 @@ namespace Sample.Sdk.Persistance
         /// <exception cref="ApplicationSaveException">Ocurr when retriving entity or save entity fail</exception>
         protected override async Task Save(CancellationToken token)
         {
-            TState? entity;
+            TState? entity = null;
             try
             {
                 entity = GetEntity();
@@ -72,11 +64,10 @@ namespace Sample.Sdk.Persistance
             catch (Exception e)
             {
                 e.LogException(_logger.LogCritical);
-                throw new ApplicationSaveException("Retrieving entity fail with exception", e);
             }
             if (entity == null || string.IsNullOrEmpty(entity.Id))
             {
-                throw new ApplicationSaveException("Entity to save is null or identifier is null");
+                throw new ArgumentNullException("Entity to save is null or identifier is null");
             }
             _entityContext.Add(entity);
             try
@@ -86,7 +77,7 @@ namespace Sample.Sdk.Persistance
             catch (Exception e)
             {
                 e.LogException(_logger.LogCritical);
-                throw new ApplicationSaveException("Saving entity fail", e);
+                throw new InvalidOperationException("Saving entity fail", e);
             }
         }
         /// <summary>
@@ -101,7 +92,7 @@ namespace Sample.Sdk.Persistance
         {
             if (message == null) 
             {
-                throw new ApplicationSaveException("Save was invoked with message null value or key was null");
+                throw new ArgumentNullException("Save was invoked with message null value or key was null");
             }
             token.ThrowIfCancellationRequested();
             TState? entity;
@@ -111,19 +102,18 @@ namespace Sample.Sdk.Persistance
             }
             catch (Exception e)
             {
-                throw new ApplicationSaveException("Retrieving entity to save raised an exception", e);
+                throw new InvalidOperationException("Retrieving entity to save raised an exception", e);
             }
             if(entity == null || string.IsNullOrEmpty(entity.Id)) 
             {
-                throw new ApplicationSaveException("Entity to save is null or identifier is null");
+                throw new ArgumentNullException("Entity to save is null or identifier is null");
             }
             _entityContext.Add(entity);
             try
             {
                 message.EntityId = entity.Id;
                 message.CorrelationId = entity.Id;
-                message.Content = JsonSerializer.Serialize(entity);
-                message = _metaDataService.Bind(message);
+                message = _inTransitService.Bind(message);
             }
             catch (Exception)
             {
@@ -131,10 +121,11 @@ namespace Sample.Sdk.Persistance
             }
             var eventEntity = message.ConvertToOutgoingEventEntity(Guid.NewGuid().ToString());
 
-            (bool wasEncrypted, EncryptedMessage? msg) = await _messageCryptoService.EncryptExternalMessage(message, token).ConfigureAwait(false);
+            (bool wasEncrypted, EncryptedMessage? msg) = 
+                await _messageCryptoService.EncryptExternalMessage(message, token).ConfigureAwait(false);
             if(!wasEncrypted || msg == null) 
             {
-                throw new ApplicationSaveException("Encrypted the message fail, verify exceptions logged");
+                throw new ArgumentNullException("Encrypted the message fail, verify exceptions logged");
             }
             try 
             {
@@ -142,7 +133,7 @@ namespace Sample.Sdk.Persistance
             }
             catch (Exception e) 
             {
-                throw new ApplicationSaveException("Serializing encrypted message fail", e);
+                throw new InvalidOperationException("Serializing encrypted message fail", e);
             }
             try
             {
@@ -152,7 +143,7 @@ namespace Sample.Sdk.Persistance
             catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
-                throw new ApplicationSaveException("Failed to save", e);
+                throw new InvalidOperationException("Failed to save", e);
             }
         }
 
