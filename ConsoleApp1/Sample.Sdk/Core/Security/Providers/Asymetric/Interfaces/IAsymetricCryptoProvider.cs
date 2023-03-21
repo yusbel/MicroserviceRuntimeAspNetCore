@@ -16,8 +16,14 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
     /// </summary>
     public interface IAsymetricCryptoProvider : ISignatureVerifier
     {
-        Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Decrypt(byte[] data, CancellationToken token);
-        Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(byte[] data, CancellationToken token);
+        Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Decrypt(byte[] data, 
+            Enums.Enums.AzureKeyVaultOptionsType keyVaultType, 
+            string certificateName,
+            CancellationToken token);
+        Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(byte[] data, 
+            Enums.Enums.AzureKeyVaultOptionsType keyVaultType, 
+            string certificateName,
+            CancellationToken token);
         (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
     }
 }

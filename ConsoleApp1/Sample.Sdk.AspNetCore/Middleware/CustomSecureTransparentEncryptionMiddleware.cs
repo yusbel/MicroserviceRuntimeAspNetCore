@@ -98,77 +98,77 @@ namespace Sample.EmployeeSubdomain.Middleware
                         });
                         return;
                     }
-                    var result = await _cryptoProvider.Decrypt(
-                                                    Convert.FromBase64String(encryptedData.Encrypted)
-                                                    , CancellationToken.None);
-                    if (!result.wasDecrypted || result.data == null)
-                    {
-                        await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
-                        {
-                            PointToPointSessionIdentifier = encryptedData.SessionEncryptedIdentifier,
-                            Reason = result.reason
-                        });
-                        return;
-                    }
-                    byte[] externalPublicKeyBase64String;
-                    try
-                    {
-                        externalPublicKeyBase64String = Convert.FromBase64String(shortLivedSession.ExternalPublicKey);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogCritical(e, "An error ocurred converting string to by array");
-                        await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
-                        {
-                            Reason = EncryptionDecryptionFail.Base64StringConvertionFail
-                        });
-                        return;
-                    }
-                    //Encrypt with external public key
-                    (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) contentEncrypted =
-                        _cryptoProvider.Encrypt(externalPublicKeyBase64String
-                                                , result.data
-                                                , CancellationToken.None);
-                    if (!contentEncrypted.wasEncrypted || contentEncrypted.data == null)
-                    {
-                        await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
-                        {
-                            Reason = EncryptionDecryptionFail.EncryptFail
-                        });
-                        return;
-                    }
-                    string contentEncryptedBase64;
-                    try
-                    {
-                        contentEncryptedBase64 = Convert.ToBase64String(contentEncrypted.data);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogCritical(e, "An error ocurred when converting to base 64 string");
-                        throw;
-                    }
-                    //Signature with my private key
-                    var createdOn = DateTime.Now.Ticks;
-                    var baseSign = $"{encryptedData.SessionEncryptedIdentifier}:{createdOn}:{contentEncryptedBase64}";
-                    (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) singnature =
-                                        await _cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign), token);
-                    if (!singnature.wasCreated || singnature.data == null)
-                    {
-                        await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
-                        {
-                            Reason = EncryptionDecryptionFail.SignatureCreationFail
-                        });
-                        return;
-                    }
-                    var reponseEncryptedData = new EncryptedData()
-                    {
-                        CreatedOn = createdOn,
-                        Encrypted = contentEncryptedBase64,
-                        SessionEncryptedIdentifier = encryptedData.SessionEncryptedIdentifier,
-                        Signature = Convert.ToBase64String(singnature.data)
-                    };
+                    //var result = await _cryptoProvider.Decrypt(
+                    //                                Convert.FromBase64String(encryptedData.Encrypted)
+                    //                                , CancellationToken.None);
+                    //if (!result.wasDecrypted || result.data == null)
+                    //{
+                    //    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                    //    {
+                    //        PointToPointSessionIdentifier = encryptedData.SessionEncryptedIdentifier,
+                    //        Reason = result.reason
+                    //    });
+                    //    return;
+                    //}
+                    //byte[] externalPublicKeyBase64String;
+                    //try
+                    //{
+                    //    externalPublicKeyBase64String = Convert.FromBase64String(shortLivedSession.ExternalPublicKey);
+                    //}
+                    //catch (Exception e)
+                    //{
+                    //    _logger.LogCritical(e, "An error ocurred converting string to by array");
+                    //    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                    //    {
+                    //        Reason = EncryptionDecryptionFail.Base64StringConvertionFail
+                    //    });
+                    //    return;
+                    //}
+                    ////Encrypt with external public key
+                    //(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) contentEncrypted =
+                    //    _cryptoProvider.Encrypt(externalPublicKeyBase64String
+                    //                            , result.data
+                    //                            , CancellationToken.None);
+                    //if (!contentEncrypted.wasEncrypted || contentEncrypted.data == null)
+                    //{
+                    //    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status503ServiceUnavailable, new InValidHttpResponseMessage()
+                    //    {
+                    //        Reason = EncryptionDecryptionFail.EncryptFail
+                    //    });
+                    //    return;
+                    //}
+                    //string contentEncryptedBase64;
+                    //try
+                    //{
+                    //    contentEncryptedBase64 = Convert.ToBase64String(contentEncrypted.data);
+                    //}
+                    //catch (Exception e)
+                    //{
+                    //    _logger.LogCritical(e, "An error ocurred when converting to base 64 string");
+                    //    throw;
+                    //}
+                    ////Signature with my private key
+                    //var createdOn = DateTime.Now.Ticks;
+                    //var baseSign = $"{encryptedData.SessionEncryptedIdentifier}:{createdOn}:{contentEncryptedBase64}";
+                    //(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) singnature =
+                    //                    await _cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign), token);
+                    //if (!singnature.wasCreated || singnature.data == null)
+                    //{
+                    //    await context.Response.CreateFailTransparentEncryption(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+                    //    {
+                    //        Reason = EncryptionDecryptionFail.SignatureCreationFail
+                    //    });
+                    //    return;
+                    //}
+                    //var reponseEncryptedData = new EncryptedData()
+                    //{
+                    //    CreatedOn = createdOn,
+                    //    Encrypted = contentEncryptedBase64,
+                    //    SessionEncryptedIdentifier = encryptedData.SessionEncryptedIdentifier,
+                    //    Signature = Convert.ToBase64String(singnature.data)
+                    //};
                     context.Response.StatusCode = StatusCodes.Status200OK;
-                    await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(reponseEncryptedData)));
+                    //await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(reponseEncryptedData)));
                     return;
                 }
                 //Session was not found

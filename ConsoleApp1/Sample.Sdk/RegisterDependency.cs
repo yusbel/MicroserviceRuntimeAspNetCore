@@ -56,6 +56,7 @@ using Sample.Sdk.Core.Security.Providers.Certificate;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using System.Xml.Linq;
 using Sample.Sdk.Services.Msg;
+using Sample.Sdk.Core.Enums;
 
 namespace Sample.Sdk
 {
@@ -71,9 +72,8 @@ namespace Sample.Sdk
             services.Configure<MessageSettingsConfigurationOptions>(configuration.GetSection(MessageSettingsConfigurationOptions.SECTION_ID));
             services.Configure<AzureKeyVaultOptions>(configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
             
-            services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
+            //services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
-            services.AddTransient<IAcknowledgementService, AcknowledgementService>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
             
             services.Configure<CustomProtocolOptions>(configuration.GetSection(CustomProtocolOptions.Identifier));
@@ -93,11 +93,11 @@ namespace Sample.Sdk
             services.AddSingleton<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>, MemoryCacheState<string, KeyVaultCertificateWithPolicy>>();
 
             services.AddTransient<ISignatureCryptoProvider, SignatureCryptoProvider>();
-            services.AddTransient<IPointToPointSession, PointToPointSession>();
+            //services.AddTransient<IPointToPointSession, PointToPointSession>();
             services.AddTransient<IExternalServiceKeyProvider, ExternalServiceKeyProvider>();
             services.AddTransient<IMessageCryptoService, MessageCryptoService>();
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();
-            services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
+            //services.AddTransient<ISecurePointToPoint, SecurePointToPoint>();
             services.AddTransient<ISymetricCryptoProvider, AesSymetricCryptoProvider>();
             services.AddTransient<IAesKeyRandom, AesSymetricCryptoProvider>();
             services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
@@ -168,12 +168,33 @@ namespace Sample.Sdk
 
         public static IServiceCollection AddSampleSdkAzureKeyVaultCertificateAndSecretClient(this IServiceCollection services, IConfiguration config) 
         {
+            services.Configure<List<AzureKeyVaultOptions>>(configOptions => 
+            {
+                configOptions.AddRange(GetAzureKeyVaultOptions(config));
+            });
             services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
+            //list of client certificates
+            services.AddTransient(serviceProvider => 
+            {
+                var keyVaultOptions = GetAzureKeyVaultOptions(config);
+                var clientTokenFactory = serviceProvider.GetRequiredService<IClientOAuthTokenProviderFactory>();
+                if (clientTokenFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential)) 
+                {
+                    var certificateClients = new List<KeyValuePair<Enums.AzureKeyVaultOptionsType, CertificateClient>>();
+                    foreach (var option in keyVaultOptions)
+                    {
+                        certificateClients.Add(KeyValuePair.Create(option.Type, 
+                            new CertificateClient(new Uri(option.VaultUri), clientSecretCredential)));
+                    }
+                    return certificateClients;
+                }
+                throw new InvalidOperationException("Unable to create client secret credential");
+            });
             services.AddAzureClients((azureClientBuilder) =>
             {
-                var keyVaultOptions = AzureKeyVaultOptions.Create();
-                config.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION).Bind(keyVaultOptions);
-                azureClientBuilder.AddCertificateClient(new Uri(keyVaultOptions.VaultUri));
+                var options = GetAzureKeyVaultOptions(config);
+                var keyVaultOptions = options.First(option => option.Type == Enums.AzureKeyVaultOptionsType.ServiceInstance);
+                
                 azureClientBuilder.AddSecretClient(new Uri(keyVaultOptions.VaultUri));
                 azureClientBuilder.AddKeyClient(new Uri(keyVaultOptions.VaultUri));
                 azureClientBuilder.UseCredential(serviceProvider => 
@@ -211,6 +232,18 @@ namespace Sample.Sdk
             });
             
             return services;
+        }
+
+        private static List<AzureKeyVaultOptions> GetAzureKeyVaultOptions(IConfiguration configuration) 
+        {
+            var options = new List<AzureKeyVaultOptions> 
+            {
+                new AzureKeyVaultOptions{ Type = Enums.AzureKeyVaultOptionsType.Runtime },
+                new AzureKeyVaultOptions{ Type = Enums.AzureKeyVaultOptionsType.ServiceInstance }
+            };
+            configuration.GetSection(AzureKeyVaultOptions.RUNTIME_KEYVAULT_SECTION).Bind(options.First(option => option.Type == Enums.AzureKeyVaultOptionsType.Runtime));
+            configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION).Bind(options.First(option=> option.Type == Enums.AzureKeyVaultOptionsType.ServiceInstance));
+            return options;
         }
     }
 }

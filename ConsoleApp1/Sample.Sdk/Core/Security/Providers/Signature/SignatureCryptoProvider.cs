@@ -19,7 +19,9 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
         {
             _asymetricCryptoProvider = asymetricCryptoProvider;
         }
-        public async Task CreateSignature(EncryptedMessage msg, CancellationToken token)
+        public async Task CreateSignature(EncryptedMessage msg, 
+            Enums.Enums.AzureKeyVaultOptionsType keyVaultType, 
+            CancellationToken token)
         {
             if (msg == null)
             {
@@ -29,7 +31,7 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
             var plainSign = msg.GetPlainSignature();
             (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) =
                    await _asymetricCryptoProvider
-                           .CreateSignature(Encoding.UTF8.GetBytes(plainSign), token)
+                           .CreateSignature(Encoding.UTF8.GetBytes(plainSign), keyVaultType, token)
                            .ConfigureAwait(false);
             if (!wasCreated || data == null)
             {

@@ -42,7 +42,7 @@ namespace Sample.Sdk.Tests.Security
 
             var senderServiceOptions = senderFixture.Freeze<IOptions<AzureKeyVaultOptions>>();
             senderServiceOptions.Value.VaultUri = "https://learningkeyvaultyusbel.vault.azure.net/";
-            senderServiceOptions.Value.KeyVaultCertificateIdentifier = "HttpMessageAsymetricEncryptorCertificate";
+            senderServiceOptions.Value.DefaultCertificateName = "HttpMessageAsymetricEncryptorCertificate";
             _azureKeyVaultOptions = senderServiceOptions;
 
             _certificateClient = new CertificateClient(new Uri(senderServiceOptions.Value.VaultUri)

@@ -23,16 +23,16 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
     public class AzureKeyVaultCertificateProvider : ICertificateProvider
     {
         private readonly IMemoryCacheState<string, X509Certificate2> _certificates;
-        private readonly CertificateClient _certificateClient;
+        private readonly List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>> _certificateClients;
         private readonly IMemoryCacheState<string, KeyVaultCertificateWithPolicy> _certificatesWithPolicy;
 
         public AzureKeyVaultCertificateProvider(IMemoryCacheState<string, X509Certificate2> certificates,
-            CertificateClient certificateClient,
+            List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>> certificateClients,
             IMemoryCacheState<string, KeyVaultCertificateWithPolicy> certificatesWithPolicy)
         {
-            Guard.ThrowWhenNull(certificates, certificateClient);
+            Guard.ThrowWhenNull(certificates, certificateClients);
             _certificates = certificates;
-            _certificateClient = certificateClient;
+            _certificateClients = certificateClients;
             _certificatesWithPolicy = certificatesWithPolicy;
         }
 
@@ -49,25 +49,27 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
         /// <exception cref="PlatformNotSupportedException">Can not create this certificate</exception>
         /// <exception cref="RequestFailedException">See error code</exception>
         public async Task<(bool? WasDownloaded, X509Certificate2? Certificate)>
-            DownloadCertificate(string certificateName, CancellationToken token, string? version = null)
+            DownloadCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token, string? version = null)
         {
             if (string.IsNullOrEmpty(certificateName))
             {
                 throw new ArgumentNullException(nameof(certificateName));
             }
-            if (_certificates.Cache.TryGetValue(certificateName, out X509Certificate2 certificate))
+            var certificateId = $"Download{GetCertificateId(certificateName, keyVaultType)}";
+            if (_certificates.Cache.TryGetValue(certificateId, out X509Certificate2 certificate))
             {
                 return (true, certificate);
             }
             token.ThrowIfCancellationRequested();
+            var certificateClient = GetCertificateClient(keyVaultType);
             try
             {
-                certificate = await _certificateClient.DownloadCertificateAsync(certificateName, version, token)
+                certificate = await certificateClient.DownloadCertificateAsync(certificateName, version, token)
                                                         .ConfigureAwait(false);
                 if (certificate != null)
                 {
-                    _certificates.Cache.Set(certificateName, certificate, TimeSpan.FromHours(5));
-                    return (true, _certificates.Cache.Get<X509Certificate2>(certificateName));
+                    _certificates.Cache.Set(certificateId, certificate, TimeSpan.FromHours(5));
+                    return (true, _certificates.Cache.Get<X509Certificate2>(certificateId));
                 }
                 return (false, default);
             }
@@ -82,24 +84,25 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
         /// <returns><see cref="KeyVaultCertificateWithPolicy"/></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public async Task<(bool? WasDownloaded, KeyVaultCertificateWithPolicy? CertificateWithPolicy)> 
-            GetCertificate(string certificateName, CancellationToken token)
-
+            GetCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token)
         {
             if (string.IsNullOrEmpty(certificateName)) 
             {
                 throw new ArgumentNullException($"{nameof(certificateName)}");
             }
+            var certificateId = $"Get{GetCertificateId(certificateName, keyVaultType)}";
+            var certificateClient = GetCertificateClient(keyVaultType);
             try
             {
-                if (_certificatesWithPolicy.Cache.TryGetValue(certificateName, out KeyVaultCertificateWithPolicy certificate))
+                if (_certificatesWithPolicy.Cache.TryGetValue(certificateId, out KeyVaultCertificateWithPolicy certificate))
                 {
                     return (true, certificate);
                 }
-                certificate = await _certificateClient.GetCertificateAsync(certificateName, token).ConfigureAwait(false);
+                certificate = await certificateClient.GetCertificateAsync(certificateName, token).ConfigureAwait(false);
                 if (certificate != null)
                 {
-                    _certificatesWithPolicy.Cache.Set(certificateName, certificate, TimeSpan.FromHours(5));
-                    return (true, _certificatesWithPolicy.Cache.Get<KeyVaultCertificateWithPolicy>(certificateName));
+                    _certificatesWithPolicy.Cache.Set(certificateId, certificate, TimeSpan.FromHours(5));
+                    return (true, _certificatesWithPolicy.Cache.Get<KeyVaultCertificateWithPolicy>(certificateId));
                 }
                 else 
                 {
@@ -107,6 +110,18 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
                 }
             }
             catch (Exception) { throw; }
+        }
+
+        private string GetCertificateId(string certificateName, Enums.Enums.AzureKeyVaultOptionsType azureKeyVaultType) 
+        {
+            return $"{certificateName}{azureKeyVaultType}";
+        }
+
+        private CertificateClient GetCertificateClient(Enums.Enums.AzureKeyVaultOptionsType azureKeyVaultOptionsType) 
+        {
+            return _certificateClients.Where(client => client.Key == azureKeyVaultOptionsType)
+                                        .Select(item => item.Value)
+                                        .First();
         }
     }
 }

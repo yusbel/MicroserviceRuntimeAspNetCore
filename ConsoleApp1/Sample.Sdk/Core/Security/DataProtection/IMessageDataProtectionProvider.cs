@@ -4,21 +4,31 @@ namespace Sample.Sdk.Core.Security.DataProtection
 {
     public interface IMessageDataProtectionProvider
     {
-        bool TryEncrypt(List<byte[]> keys, List<KeyValuePair<SymetricResult, SymetricResult>> data, byte[] aad,
-                                    out List<KeyValuePair<SymetricResult, SymetricResult>> msgProtectionResult);
+        Task<List<KeyValuePair<SymetricResult, SymetricResult>>> Protect(
+            List<KeyValuePair<SymetricResult, SymetricResult>> data,
+            byte[] aad,
+            CancellationToken token);
 
-        bool TryEncrypt(List<KeyValuePair<SymetricResult, SymetricResult>> data, byte[] aad,
-                            out List<KeyValuePair<SymetricResult, SymetricResult>> msgProtectionResult);
+        Task<List<KeyValuePair<string, string>>>
+            UnProtect(List<KeyValuePair<SymetricResult, SymetricResult>> data,
+            byte[] aad,
+            CancellationToken token);
+
+        //bool TryEncrypt(List<byte[]> keys, List<KeyValuePair<SymetricResult, SymetricResult>> data, byte[] aad,
+        //                            out List<KeyValuePair<SymetricResult, SymetricResult>> msgProtectionResult);
+
+        //bool TryEncrypt(List<KeyValuePair<SymetricResult, SymetricResult>> data, byte[] aad,
+        //                    out List<KeyValuePair<SymetricResult, SymetricResult>> msgProtectionResult);
 
         //bool TryEncrypt(List<KeyValuePair<SymetricResult, SymetricResult>> data, int keyIndex, byte[] aad,
         //                        out List<KeyValuePair<SymetricResult, SymetricResult>> encryptedSymetricResult);
-        bool TryDecrypt(List<KeyValuePair<SymetricResult, SymetricResult>> data, int keyIndex, byte[] aad,
-            out List<KeyValuePair<SymetricResult, SymetricResult>> result);
+        //bool TryDecrypt(List<KeyValuePair<SymetricResult, SymetricResult>> data, int keyIndex, byte[] aad,
+        //    out List<KeyValuePair<SymetricResult, SymetricResult>> result);
 
-        Task<List<KeyValuePair<SymetricResult, SymetricResult>>> EncryptMessageKeys(
-                                            List<KeyValuePair<SymetricResult, SymetricResult>> keys,
-                                            CancellationToken token);
-        Task<List<KeyValuePair<SymetricResult, SymetricResult>>> DecryptMessageKeys(List<KeyValuePair<SymetricResult, SymetricResult>> encryptedKeys, CancellationToken token);
+        //Task<List<KeyValuePair<SymetricResult, SymetricResult>>> EncryptMessageKeys(
+        //                                    List<KeyValuePair<SymetricResult, SymetricResult>> keys,
+        //                                    CancellationToken token);
+        //Task<List<KeyValuePair<SymetricResult, SymetricResult>>> DecryptMessageKeys(List<KeyValuePair<SymetricResult, SymetricResult>> encryptedKeys, CancellationToken token);
 
         //bool TryDecrypt(List<KeyValuePair<byte[], byte[]>> keys,
         //    Dictionary<byte[], byte[]> data,

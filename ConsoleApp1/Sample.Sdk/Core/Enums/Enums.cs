@@ -9,5 +9,7 @@ namespace Sample.Sdk.Core.Enums
     public class Enums
     {
         public enum StringType { WithPlainDataOnly, WithEncryptedDataOnly, WithoutPlainAndEncryptedData }
+
+        public enum AzureKeyVaultOptionsType { Runtime, ServiceInstance }
     }
 }

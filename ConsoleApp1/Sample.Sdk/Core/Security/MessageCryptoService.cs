@@ -31,43 +31,25 @@ namespace Sample.Sdk.Core.Security
     public class MessageCryptoService : IMessageCryptoService
     {
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
-        private readonly ISymetricCryptoProvider _symetricCryptoProvider;
-        private readonly IOptions<CustomProtocolOptions> _protocolOptions;
         private readonly ISignatureCryptoProvider _signatureCryptoProvider;
         private readonly ILogger<MessageCryptoService> _logger;
         private readonly IMessageDataProtectionProvider _msgDataProtection;
         private readonly ISecurityEndpointValidator _endpointValidator;
-        private readonly IExternalServiceKeyProvider _serviceKeyProvider;
-        private readonly HttpClient _httpClient;
-        private readonly IOptions<AzureKeyVaultOptions> _keyVaultOptions;
-        private readonly ISecurePointToPoint _securePointToPoint;
-        private readonly IServiceContext _serviceContext;
+        private readonly IOptions<List<AzureKeyVaultOptions>> _keyVaultOptions;
 
         public MessageCryptoService(IAsymetricCryptoProvider asymetricCryptoProvider,
-            ISymetricCryptoProvider symetricCryptoProvider,
-            IOptions<CustomProtocolOptions> protocolOptions,
             ISignatureCryptoProvider signatureCryptoProvider,
             ILogger<MessageCryptoService> logger,
             IMessageDataProtectionProvider msgDataProtection,
             ISecurityEndpointValidator endpointValidator,
-            IExternalServiceKeyProvider serviceKeyProvider,
-            HttpClient httpClient,
-            IOptions<AzureKeyVaultOptions> keyVaultOptions,
-            ISecurePointToPoint securePointToPoint,
-            IServiceContext serviceContext)
+            IOptions<List<AzureKeyVaultOptions>> keyVaultOptions)
         {
             _asymetricCryptoProvider = asymetricCryptoProvider;
-            _symetricCryptoProvider = symetricCryptoProvider;
-            _protocolOptions = protocolOptions;
             _signatureCryptoProvider = signatureCryptoProvider;
             _logger = logger;
             _msgDataProtection = msgDataProtection;
             _endpointValidator = endpointValidator;
-            _serviceKeyProvider = serviceKeyProvider;
-            _httpClient = httpClient;
             _keyVaultOptions = keyVaultOptions;
-            _securePointToPoint = securePointToPoint;
-            _serviceContext = serviceContext;
         }
 
         /// <summary>
@@ -82,70 +64,48 @@ namespace Sample.Sdk.Core.Security
             var msg = ConvertExternalMessage(plainText);
             //using context keys
             var aad = plainText.GetInTransitAadData();
-            if (_msgDataProtection.TryEncrypt(_serviceContext.GetAesKeys().ToList(), msg, aad, out var firstEncryptionResult)) 
-            {   
-                token.ThrowIfCancellationRequested();
-                firstEncryptionResult = firstEncryptionResult.ConvertAll(item => 
-                                                {
-                                                    item.Key.PlainData = item.Key.EncryptedData;
-                                                    item.Value.PlainData = item.Value.EncryptedData;
-                                                    return item;
-                                                }).ToList();
-                //using random keys
-                if (_msgDataProtection.TryEncrypt(firstEncryptionResult, aad, out var doubleSymetricResult)) 
-                {
-                    List<KeyValuePair<SymetricResult, SymetricResult>> doubleEncryptionResult;
-                    token.ThrowIfCancellationRequested();
-                    try
-                    {
-                        doubleEncryptionResult = await _msgDataProtection.EncryptMessageKeys(doubleSymetricResult, token)
-                                                                        .ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        throw;
-                    }
-                    var listKeyEncryptedContent = new List<string>();
-                    var listValueEncryptedContent = new List<string>();
-                    for (var i = 0; i < doubleEncryptionResult.Count; i++) 
-                    {
-                        listKeyEncryptedContent.Add(doubleEncryptionResult[i].Key.ConvertToBase64String());
-                        listValueEncryptedContent.Add(doubleEncryptionResult[i].Value.ConvertToBase64String());
-                    }
+            var doubleEncryptionResult = await _msgDataProtection.Protect(msg, aad, token).ConfigureAwait(false);
 
-                    token.ThrowIfCancellationRequested();
-
-                    var encryptedMsg = new EncryptedMessage()
-                    {
-                        CypherPropertyNameKey = listKeyEncryptedContent,
-                        CypherPropertyValueKey = listValueEncryptedContent,
-                        CorrelationId = plainText.CorrelationId,
-                        Key = plainText.EntityId,
-                        CreatedOn = DateTime.Now.Ticks,
-                        WellknownEndpoint = plainText.WellknownEndpoint,
-                        DecryptEndpoint = plainText.DecryptEndpoint,
-                        AcknowledgementEndpoint = plainText.AcknowledgementEndpoint,
-                        CertificateVaultUri = plainText.CertificateVaultUri,
-                        CertificateKey = plainText.CertificateKey,
-                        MsgDecryptScope = plainText.MsgDecryptScope,
-                        MsgQueueEndpoint = plainText.MsgQueueEndpoint,
-                        MsgQueueName = plainText.MsgQueueName
-                    };
-                    try
-                    {
-                        await _signatureCryptoProvider.CreateSignature(encryptedMsg, token).ConfigureAwait(false);
-                        return (true, encryptedMsg);
-                    }
-                    catch (OperationCanceledException) { throw; }
-                    catch (Exception e)
-                    {
-                        e.LogException(_logger.LogCritical);
-                        return (false, default);
-                    }
-                }
+            var listKeyEncryptedContent = new List<string>();
+            var listValueEncryptedContent = new List<string>();
+            for (var i = 0; i < doubleEncryptionResult.Count; i++)
+            {
+                listKeyEncryptedContent.Add(doubleEncryptionResult[i].Key.ConvertToBase64String());
+                listValueEncryptedContent.Add(doubleEncryptionResult[i].Value.ConvertToBase64String());
             }
-            
-            return (false, default);
+
+            token.ThrowIfCancellationRequested();
+
+            var encryptedMsg = new EncryptedMessage()
+            {
+                CypherPropertyNameKey = listKeyEncryptedContent,
+                CypherPropertyValueKey = listValueEncryptedContent,
+                CorrelationId = plainText.CorrelationId,
+                Key = plainText.EntityId,
+                CreatedOn = DateTime.Now.Ticks,
+                WellknownEndpoint = plainText.WellknownEndpoint,
+                DecryptEndpoint = plainText.DecryptEndpoint,
+                AcknowledgementEndpoint = plainText.AcknowledgementEndpoint,
+                CertificateVaultUri = plainText.CertificateVaultUri,
+                CertificateKey = plainText.CertificateKey,
+                MsgDecryptScope = plainText.MsgDecryptScope,
+                MsgQueueEndpoint = plainText.MsgQueueEndpoint,
+                MsgQueueName = plainText.MsgQueueName
+            };
+            try
+            {
+                await _signatureCryptoProvider.CreateSignature(encryptedMsg, 
+                    Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance, 
+                    token)
+                    .ConfigureAwait(false);
+                return (true, encryptedMsg);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception e)
+            {
+                e.LogException(_logger.LogCritical);
+                return (false, default);
+            }
         }
 
         public async Task<(bool wasDecrypted, List<KeyValuePair<string,string>> message, EncryptionDecryptionFail reason)>
@@ -168,12 +128,14 @@ namespace Sample.Sdk.Core.Security
                 var plainSig = encryptedMessage.GetPlainSignature();
                 isValidSignature = await _asymetricCryptoProvider.VerifySignature(Convert.FromBase64String(encryptedMessage.Signature)
                                             , Encoding.UTF8.GetBytes(plainSig)
+                                            , Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance
+                                            , _keyVaultOptions.Value.Where(o=> o.Type == Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance).Select(item=> item.DefaultCertificateName).First()
                                             , token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 e.LogException(_logger.LogCritical);
-                return (false, default, EncryptionDecryptionFail.Base64StringConvertionFail);
+                return (false, default!, EncryptionDecryptionFail.Base64StringConvertionFail);
             }
 
             var encryptedContent = new List<KeyValuePair<SymetricResult, SymetricResult>>();
@@ -182,34 +144,16 @@ namespace Sample.Sdk.Core.Security
                 encryptedContent.Add(KeyValuePair.Create(encryptedMessage.CypherPropertyNameKey[i].ToSymetricResult(),
                                                             encryptedMessage.CypherPropertyValueKey[i].ToSymetricResult()));
             }
-            var keyDecryptionResult = await _msgDataProtection.DecryptMessageKeys(encryptedContent, token).ConfigureAwait(false);
+
             var aad = encryptedMessage.GetAadData();
-            if (_msgDataProtection.TryDecrypt(keyDecryptionResult, 1, aad, out var firstDecryptionResult)) 
-            {
-                firstDecryptionResult = firstDecryptionResult.ConvertAll(kvp =>
-                {
-                    kvp.Key.EncryptedData = kvp.Key.PlainData;
-                    kvp.Value.EncryptedData = kvp.Value.PlainData;
-                    return kvp;
-                }).ToList();
-                if (_msgDataProtection.TryDecrypt(firstDecryptionResult, 0, aad, out var secondDecryptionResult)) 
-                {
-                    var plainDataResult = new List<KeyValuePair<string, string>>();
-                    for (var i = 0; i < secondDecryptionResult.Count; i++) 
-                    {
-                        plainDataResult.Add(KeyValuePair.Create(Encoding.UTF8.GetString(secondDecryptionResult[i].Key.PlainData),
-                                                                Encoding.UTF8.GetString(secondDecryptionResult[i].Value.PlainData)));
-                    }
-                    return (true, plainDataResult, default);
-                }
-            }
-            return (false, default, EncryptionDecryptionFail.DecryptionFail);
+            var plainResult = await _msgDataProtection.UnProtect(encryptedContent, aad, token).ConfigureAwait(false);
+            return (true, plainResult, EncryptionDecryptionFail.None);
         }
 
         private List<KeyValuePair<SymetricResult, SymetricResult>> ConvertExternalMessage(ExternalMessage message) 
         {
             var result = new List<KeyValuePair<SymetricResult, SymetricResult>>();
-            var jsonStr = JsonConvert.SerializeObject(message);
+            var jsonStr = System.Text.Json.JsonSerializer.Serialize(message, message.GetType());
             var jObj = JObject.Parse(jsonStr);
             var flatted = jObj.Flatten(false);
             flatted.Keys.ToList().ForEach(key => 

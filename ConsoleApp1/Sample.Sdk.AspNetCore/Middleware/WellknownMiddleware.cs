@@ -149,53 +149,53 @@ namespace Sample.EmployeeSubdomain.Middleware
                 return;
             }
             //Decrypting session id that was encrypted with this service public key
-            (bool wasDecrypted, byte[]? decryptedData, EncryptionDecryptionFail reason) =
-                await _cryptoProvider.Decrypt(encryptedSessionIdBase64Bytes, CancellationToken.None);
-            if (!wasDecrypted || decryptedData == null)
-            {
-                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
-                {
-                    Reason = EncryptionDecryptionFail.DecryptionFail
-                });
-                return;
-            }
-            (bool wasEncrypted, byte[]? encryptedData, EncryptionDecryptionFail encryptedReason) =
-                    _cryptoProvider.Encrypt(publicKeyBase64Bytes, decryptedData, CancellationToken.None);
-            if (!wasEncrypted || encryptedData == null)
-            {
-                await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
-                {
-                    Reason = EncryptionDecryptionFail.EncryptFail
-                });
-                return;
-            }
-            var shortLivedSession = new ShortLivedSessionState()
-            {
-                ExternalPublicKey = session.PublicKey,
-                PlainSessionIdentifier = Convert.ToBase64String(decryptedData),
-                EncryptedSessionIdentifier = session.EncryptedSessionIdentifier
-            };
-            _memoryCache.Cache.GetOrCreate<ShortLivedSessionState>(
-                    shortLivedSession.EncryptedSessionIdentifier
-                    , (cacheEntry) =>
-                    {
-                        cacheEntry.SetValue(shortLivedSession);
-                        cacheEntry.SetAbsoluteExpiration(TimeSpan.FromMilliseconds(100));
-                        return shortLivedSession;
-                    });
+            //(bool wasDecrypted, byte[]? decryptedData, EncryptionDecryptionFail reason) =
+            //    await _cryptoProvider.Decrypt(encryptedSessionIdBase64Bytes, CancellationToken.None);
+            //if (!wasDecrypted || decryptedData == null)
+            //{
+            //    await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+            //    {
+            //        Reason = EncryptionDecryptionFail.DecryptionFail
+            //    });
+            //    return;
+            //}
+            //(bool wasEncrypted, byte[]? encryptedData, EncryptionDecryptionFail encryptedReason) =
+            //        _cryptoProvider.Encrypt(publicKeyBase64Bytes, decryptedData, CancellationToken.None);
+            //if (!wasEncrypted || encryptedData == null)
+            //{
+            //    await context.Response.CreateFailWellknownEndpoint(StatusCodes.Status400BadRequest, new InValidHttpResponseMessage()
+            //    {
+            //        Reason = EncryptionDecryptionFail.EncryptFail
+            //    });
+            //    return;
+            //}
+            //var shortLivedSession = new ShortLivedSessionState()
+            //{
+            //    ExternalPublicKey = session.PublicKey,
+            //    PlainSessionIdentifier = Convert.ToBase64String(decryptedData),
+            //    EncryptedSessionIdentifier = session.EncryptedSessionIdentifier
+            //};
+            //_memoryCache.Cache.GetOrCreate<ShortLivedSessionState>(
+            //        shortLivedSession.EncryptedSessionIdentifier
+            //        , (cacheEntry) =>
+            //        {
+            //            cacheEntry.SetValue(shortLivedSession);
+            //            cacheEntry.SetAbsoluteExpiration(TimeSpan.FromMilliseconds(100));
+            //            return shortLivedSession;
+            //        });
             context.Response.StatusCode = 200;
-            await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(Convert.ToBase64String(encryptedData)));
+            //await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(Convert.ToBase64String(encryptedData)));
             return;
         }
 
         private async Task ProcessGetPublicKey(HttpContext context)
         {
-            _logger.LogInformation("Retrieving certificate from {}", _keyVaultOption.Value.KeyVaultCertificateIdentifier);
+            _logger.LogInformation("Retrieving certificate from {}", _keyVaultOption.Value.DefaultCertificateName);
             Response<KeyVaultCertificateWithPolicy> certificate;
             try
             {
                 certificate = await _certificateClient.GetCertificateAsync(
-                                _keyVaultOption.Value.KeyVaultCertificateIdentifier
+                                _keyVaultOption.Value.DefaultCertificateName
                                 , CancellationToken.None);
             }
             catch (Exception e)

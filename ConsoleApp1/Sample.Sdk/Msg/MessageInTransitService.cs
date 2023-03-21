@@ -35,7 +35,7 @@ namespace Sample.Sdk.Msg
             message.AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint;
             message.WellknownEndpoint = _protocolOptions.Value.WellknownSecurityEndpoint;
             message.CertificateVaultUri = _keyVaultOptions.Value.VaultUri;
-            message.CertificateKey = _keyVaultOptions.Value.KeyVaultCertificateIdentifier;
+            message.CertificateKey = _keyVaultOptions.Value.DefaultCertificateName;
             var msgAttr = message.GetType().GetCustomAttribute(typeof(MessageMetadaAttribute));
             if (msgAttr is MessageMetadaAttribute msgAttribute && !string.IsNullOrEmpty(msgAttribute.QueueName))
             {

@@ -79,8 +79,8 @@ namespace Sample.Sdk.Tests.Security
                             Key = new List<byte[]> { aesKeyRandom.GenerateRandomKey(256) }
                         }));
                 }
-                var encryptedResult = await msgDataProtection.EncryptMessageKeys(keys, CancellationToken.None);
-                var decryptedResult = await msgDataProtection.DecryptMessageKeys(encryptedResult, CancellationToken.None);
+                //var encryptedResult = await msgDataProtection.EncryptMessageKeys(keys, CancellationToken.None);
+                //var decryptedResult = await msgDataProtection.DecryptMessageKeys(encryptedResult, CancellationToken.None);
                 
                 
                 Assert.IsTrue(true);

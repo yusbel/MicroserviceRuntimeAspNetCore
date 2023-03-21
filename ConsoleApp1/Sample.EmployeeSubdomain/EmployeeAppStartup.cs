@@ -32,9 +32,9 @@ namespace Sample.EmployeeSubdomain
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             
-            app.UseMiddleware<WellknownMiddleware>();
-            app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
-            app.UseMiddleware<CustomProtocolAcknowledgementMiddleware>();
+            //app.UseMiddleware<WellknownMiddleware>();
+            //app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
+            //app.UseMiddleware<CustomProtocolAcknowledgementMiddleware>();
 
             //app.UseMiddleware<WebHookMiddleware>();//would be replaced with EventGrid
 

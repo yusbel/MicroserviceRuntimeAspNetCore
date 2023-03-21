@@ -54,7 +54,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             var baseSignature = $"{Convert.ToBase64String(_sessionState.SessionIdentifierEncrypted)}:{createdOn}:{Convert.ToBase64String(encryptedData)}";
             (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
-                await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature), token);
+                await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature), Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance, token);
             if(!signature.wasCreated || signature.data == null) 
             {
                 return (false, default, default);
@@ -90,8 +90,10 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
                 return (false, default, EncryptionDecryptionFail.VerifySignature);
             }
             (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainData = 
-                await cryptoProvider.Decrypt(Convert.FromBase64String(result.data.Encrypted)
-                                                , CancellationToken.None);
+                await cryptoProvider.Decrypt(Convert.FromBase64String(result.data.Encrypted), 
+                Enums.Enums.AzureKeyVaultOptionsType.Runtime, 
+                "",
+                CancellationToken.None);
             if (!plainData.wasDecrypted || plainData.data == null) 
             {
                 return (false, default, default);
@@ -130,7 +132,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             Response<X509Certificate2> certificate;
             try
             {
-                certificate = await certificateClient.DownloadCertificateAsync(options.KeyVaultCertificateIdentifier, null, token);
+                certificate = await certificateClient.DownloadCertificateAsync(options.DefaultCertificateName, null, token);
             }
             catch (Exception e)
             {

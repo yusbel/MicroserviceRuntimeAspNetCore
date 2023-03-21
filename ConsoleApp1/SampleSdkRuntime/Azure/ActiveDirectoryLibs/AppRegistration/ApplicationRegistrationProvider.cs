@@ -129,7 +129,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
                         await _keyVaultProvider.DeleteAccessPolicy(tenantId,
                                                             new Guid(application.Id),
                                                             new Guid(servicePricipal!.Id),
-                                                            _azureKeyVaultOptions.Value.KeyVaultResourceId,
+                                                            _azureKeyVaultOptions.Value.ResourceId,
                                                             cancellationToken).ConfigureAwait(false);
                     }
                     else
@@ -198,7 +198,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
                 var tenantId = _clientSecretCredFactory.GetDefaultTenantId();
                 var keyPolicyResult = await _keyVaultProvider.CreatePolicy(
                                                     tenantId,
-                                                    _azureKeyVaultOptions.Value.KeyVaultResourceId,
+                                                    _azureKeyVaultOptions.Value.ResourceId,
                                                     applications.Value.First(),
                                                     servicePrincipal!,
                                                     CancellationToken.None);
@@ -244,7 +244,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
 
                 (string tenantId, string clientId, string clientSecret) = _clientSecretCredFactory.GetAzureTokenCredentials();
                 var keyVaultPolicyResult = await _keyVaultProvider.CreatePolicy(tenantId,
-                                                            _azureKeyVaultOptions.Value.KeyVaultResourceId,
+                                                            _azureKeyVaultOptions.Value.ResourceId,
                                                             app,
                                                             principal,
                                                             token);

@@ -39,7 +39,6 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IMessageReceiver _messageBusReceiver;
         private readonly ILogger<MessageReceiverRealtimeService> _logger;
         private readonly IMessageCryptoService _cryptoService;
-        private readonly IAcknowledgementService _acknowledgementService;
         private CancellationTokenSource? _cancellationTokenSource;
         public MessageReceiverRealtimeService(
             IMessageComputation computations,
@@ -47,7 +46,6 @@ namespace Sample.Sdk.Services.Realtime
             IMessageReceiver messageBusReceiver,
             ILogger<MessageReceiverRealtimeService> logger,
             IMessageCryptoService cryptoService,
-            IAcknowledgementService acknowledgementService,
             IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
             IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
             IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> incompatibleMessages,
@@ -62,7 +60,6 @@ namespace Sample.Sdk.Services.Realtime
             _messageBusReceiver = messageBusReceiver;
             _logger = logger;
             _cryptoService = cryptoService;
-            _acknowledgementService = acknowledgementService;
             _persistMessages = persistMessages;
             _incompatibleMessages = incompatibleMessages;
             _corruptedMessages = corruptedMessages;
@@ -144,7 +141,7 @@ namespace Sample.Sdk.Services.Realtime
                             (bool wasSent, EncryptionDecryptionFail reason) sentResult;
                             try
                             {
-                                sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsg, token).ConfigureAwait(false);
+                                //sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsg, token).ConfigureAwait(false);
                             }
                             catch (OperationCanceledException) { throw; }
                             catch (Exception e)
@@ -153,11 +150,11 @@ namespace Sample.Sdk.Services.Realtime
                                 await Task.Delay(1000, token).ConfigureAwait(false); //adding delay in case is a glitch
                                 continue;
                             }
-                            if (sentResult.wasSent)
-                            {
-                                message.WasAcknowledge = true;
-                                _persistMessages.TryAdd(message);
-                            }
+                            //if (sentResult.wasSent)
+                            //{
+                            //    message.WasAcknowledge = true;
+                            //    _persistMessages.TryAdd(message);
+                            //}
                         }
 
                         await Task.Delay(1000, token).ConfigureAwait(false);

@@ -58,7 +58,7 @@ namespace Sample.Sdk.Core.Http
             if (request.Content != null) 
             {
                 (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainContent = 
-                    await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), token);
+                    await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), Enums.Enums.AzureKeyVaultOptionsType.Runtime, "", token);
                 if (!plainContent.wasDecrypted || plainContent.data == null) 
                 {
                     return request;
@@ -74,7 +74,7 @@ namespace Sample.Sdk.Core.Http
                     {
                         var encryptedStr = string.Join(",", header.Value);
                         (bool wasDecrypt, byte[]? data, EncryptionDecryptionFail reason) plainStr = 
-                            await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), token);
+                            await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), Enums.Enums.AzureKeyVaultOptionsType.Runtime, "",  token);
                         if(plainStr.wasDecrypt && plainStr.data != null) 
                         {
                             header.Value.ToList().RemoveAll(h => h.Length > 0);
@@ -112,13 +112,13 @@ namespace Sample.Sdk.Core.Http
             var encryptedTypeMsg = (EncryptedHttpRequestMessage)request;
             if (encryptedTypeMsg.Content != null) 
             {
-                (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedContent = 
-                    await _cryptoProvider.Encrypt(await encryptedTypeMsg.Content.ReadAsByteArrayAsync(), token);
-                if (!encryptedContent.wasDecrypted || encryptedContent.data == null) 
-                {
-                    return request;
-                }
-                request.Content = new ByteArrayContent(encryptedContent.data);
+                //(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedContent = ;
+                //    //await _cryptoProvider.Encrypt(await encryptedTypeMsg.Content.ReadAsByteArrayAsync(), default , token);
+                //if (!encryptedContent.wasDecrypted || encryptedContent.data == null) 
+                //{
+                //    return request;
+                //}
+                //request.Content = new ByteArrayContent(encryptedContent.data);
                 isEncrypted = true;
             }
             if(encryptedTypeMsg.Headers.Any() 
@@ -130,13 +130,13 @@ namespace Sample.Sdk.Core.Http
                     .ForEach(async header =>
                                     {
                                         var strToEncrypt = String.Join(",", header.Value);
-                                        (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedHeader = 
-                                            await _cryptoProvider.Encrypt(Encoding.UTF8.GetBytes(strToEncrypt), token);
-                                        if(encryptedHeader.wasEncrypted && encryptedHeader.data != null) 
-                                        {
-                                            header.Value.ToList().RemoveAll(str => str.Length > 0);
-                                            header.Value.ToList().Add(Encoding.UTF8.GetString(encryptedHeader.data));
-                                        }
+                                        //(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) encryptedHeader = 
+                                        //    await _cryptoProvider.Encrypt(Encoding.UTF8.GetBytes(strToEncrypt), token);
+                                        //if(encryptedHeader.wasEncrypted && encryptedHeader.data != null) 
+                                        //{
+                                        //    header.Value.ToList().RemoveAll(str => str.Length > 0);
+                                        //    header.Value.ToList().Add(Encoding.UTF8.GetString(encryptedHeader.data));
+                                        //}
                                     });
                 isEncrypted = true;
             }

@@ -29,7 +29,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             Response<X509Certificate2> certificate;
             try
             {
-                certificate = await client.DownloadCertificateAsync(options.KeyVaultCertificateIdentifier, null, token);
+                certificate = await client.DownloadCertificateAsync(options.DefaultCertificateName, null, token);
             }
             catch (Exception e) 
             {
@@ -120,7 +120,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             try
             {
-                var cerPublicKey = await certClient.GetCertificateAsync(options.KeyVaultCertificateIdentifier, token);
+                var cerPublicKey = await certClient.GetCertificateAsync(options.DefaultCertificateName, token);
                 return (true, cerPublicKey.Value.Cer);
             }
             catch (Exception e)

@@ -61,7 +61,7 @@ namespace Sample.Sdk.Services
                 return (false, EncryptionDecryptionFail.Base64StringConvertionFail);
             }
             var baseSign = $"{base64SessionId}:{createdOn}:{encryptedMessage}";
-            var signature = await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign), token);
+            var signature = await _asymetricCryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSign), Core.Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance, token);
             if (!signature.wasCreated || signature.data == null)
             {
                 return (false, signature.reason);

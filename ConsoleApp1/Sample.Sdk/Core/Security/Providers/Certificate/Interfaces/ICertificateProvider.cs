@@ -14,10 +14,10 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate.Interfaces
     public interface ICertificateProvider
     {
         Task<(bool? WasDownloaded, X509Certificate2? Certificate)>
-            DownloadCertificate(string certificateName, CancellationToken token, string? version = null);
+            DownloadCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token, string? version = null);
 
 
         Task<(bool? WasDownloaded, KeyVaultCertificateWithPolicy? CertificateWithPolicy)> 
-            GetCertificate(string certificateName, CancellationToken token);
+            GetCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token);
     }
 }

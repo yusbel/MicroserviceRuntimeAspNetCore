@@ -26,12 +26,12 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
     /// </summary>
     public class X509CertificateServiceProviderAsymetricAlgorithm : IAsymetricCryptoProvider
     {
-        private readonly IOptions<AzureKeyVaultOptions> _options;
+        private readonly IOptions<List<AzureKeyVaultOptions>> _options;
         private readonly ILogger<X509CertificateServiceProviderAsymetricAlgorithm> _logger;
         private readonly ICertificateProvider _certificateProvider;
 
         public X509CertificateServiceProviderAsymetricAlgorithm(
-            IOptions<AzureKeyVaultOptions> options
+            IOptions<List<AzureKeyVaultOptions>> options
             , ILogger<X509CertificateServiceProviderAsymetricAlgorithm> logger
             , ICertificateProvider certificateProvider)
         {
@@ -43,12 +43,18 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         public async Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> 
             CreateSignature(
             byte[] baseString, 
+            Enums.Enums.AzureKeyVaultOptionsType type,
             CancellationToken token)
         {
             X509Certificate2 certificate = null;
+            var azureKeyVaultOption = _options.Value.First(option => option.Type == type);
+            if (string.IsNullOrEmpty(azureKeyVaultOption.DefaultCertificateName)) 
+            {
+                throw new InvalidOperationException("Default certificate name is requried when creating signature");
+            }
             try
             {
-                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(azureKeyVaultOption.DefaultCertificateName, type, token).ConfigureAwait(false);
                 if (result.WasDownloaded.HasValue && result.WasDownloaded.Value)
                 {
                     certificate = result.Certificate!;
@@ -96,13 +102,17 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> 
             Decrypt(
             byte[] data, 
+            Enums.Enums.AzureKeyVaultOptionsType keyVaultType,
+            string certificateName,
             CancellationToken token)
         {
             Guard.ThrowWhenNull(data, token);
             X509Certificate2 certificate;
+            var certName = _options.Value.Where(o=> o.Type == keyVaultType)
+                                        .Select(c=> c.CertificateNames.Where(cert=> cert == certificateName).First()).First();
             try
             {
-                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(certName, keyVaultType, token).ConfigureAwait(false);
                 if (result.WasDownloaded.HasValue && result.WasDownloaded.Value)
                 {
                     certificate = result.Certificate!;
@@ -133,8 +143,19 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
             try
             {
-                var plainData = rsa?.Decrypt(data, RSAEncryptionPadding.OaepSHA512);
-                return (true, plainData, EncryptionDecryptionFail.None);
+                var blockSize = GetByteLength(data.Length, rsa!.KeySize / 8);
+                var counter = 0;
+                var decryptedData = new List<byte[]>();
+                do 
+                {
+                    var decrypt = data.ToList().Skip(counter * blockSize).Take(blockSize).ToArray();
+                    var decryptResult = rsa?.Decrypt(decrypt, RSAEncryptionPadding.OaepSHA384);
+                    decryptedData.Add(decryptResult!);
+                    counter++;
+                } while (counter * blockSize < data.Length);
+                var plainData = new List<byte>();
+                decryptedData.ForEach(item=> item.ToList().ForEach(plainData.Add));
+                return (true, plainData.ToArray(), EncryptionDecryptionFail.None);
             }
             catch (Exception e)
             {
@@ -152,14 +173,18 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         /// <exception cref="ApplicationException">Returns application exception is certificate is invalid</exception>
         public async Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> 
             Encrypt(byte[] data, 
+                    Enums.Enums.AzureKeyVaultOptionsType keyVaultType,
+                    string certificateName,
                     CancellationToken token)
         {
             Guard.ThrowWhenNull(data, token);
             KeyVaultCertificateWithPolicy certificate = null;
+            var certName = _options.Value.Where(o => o.Type == keyVaultType)
+                                        .Select(cert => cert.CertificateNames.Where(c => c == certificateName).First()).First();  
             try
             {
-                var result = await _certificateProvider.GetCertificate(_options.Value.KeyVaultCertificateIdentifier, token)
-                    .ConfigureAwait(false);
+                var result = await _certificateProvider.GetCertificate(certName, keyVaultType, token)
+                                                        .ConfigureAwait(false);
                 if (result.WasDownloaded.HasValue && result.WasDownloaded.Value) 
                 {
                     certificate = result.CertificateWithPolicy!;
@@ -179,8 +204,22 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             {
                 var x509Cer = new X509Certificate2(certificate.Cer);
                 var rsa = x509Cer.GetRSAPublicKey();
-                var encryptedData = rsa?.Encrypt(data, RSAEncryptionPadding.OaepSHA512);
-                return (true, encryptedData, default);
+                var encryptedData = new List<byte[]>();
+                int blockSize = GetByteLength(data.Length, rsa!.KeySize / 8);
+                int counter = 0;
+                do
+                {
+                    var encrypt = data.Skip(counter * blockSize).Take(blockSize).ToArray();
+                    var encryptResult = rsa?.Encrypt(encrypt, RSAEncryptionPadding.OaepSHA384);
+                    encryptedData.Add(encryptResult);
+                    counter++;
+                } while (counter * blockSize < data.Length);
+                var toReturn = new List<byte>();
+                encryptedData.ForEach(item=> 
+                { 
+                    item.ToList().ForEach(toReturn.Add);
+                });
+                return (true, toReturn.ToArray(), default);
             }
             catch (Exception e)
             {
@@ -212,12 +251,16 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             VerifySignature(
                 byte[] hashValue, 
                 byte[] baseSignature, 
+                Enums.Enums.AzureKeyVaultOptionsType keyVaultOptionsType,
+                string certificateName,
                 CancellationToken token)
         {
             X509Certificate2 certificate = null;
+            var certName = _options.Value.Where(o=> o.Type == keyVaultOptionsType)
+                                          .Select(cert=> cert.CertificateNames.Where(c=> c == certificateName).First()).First();      
             try
             {
-                var result = await _certificateProvider.GetCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                var result = await _certificateProvider.GetCertificate(certName, keyVaultOptionsType, token).ConfigureAwait(false);
                 if(result.WasDownloaded.HasValue && result.WasDownloaded.Value && result.CertificateWithPolicy != null) 
                 {
                     certificate = new X509Certificate2(result.CertificateWithPolicy.Cer);
@@ -265,6 +308,13 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
                 e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.NoPublicKey);
             }
+        }
+
+        private int GetByteLength(int dataByteSize, int keySize)
+        {
+            if (dataByteSize <= keySize) 
+                return dataByteSize;
+            return GetByteLength(dataByteSize / 2, keySize);
         }
     }
 }
