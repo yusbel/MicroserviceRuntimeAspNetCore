@@ -35,13 +35,13 @@ namespace Sample.EmployeeSubdomain.Services
         {
             _tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _tokenSource.Token;
-            return Task.Run(async () => 
+            Task.Run(async () => 
             {
                 try
                 {
                     var rnd = new Random();
                     var employees = new List<Tuple<string, string>>();
-                    for (var i = 0; i < 1000; i++)
+                    for (var i = 0; i < 1; i++)
                     {
                         employees.Add(new Tuple<string, string>($"yusbel{rnd.Next(0, 100)}", $"yusbel@gmail.com {rnd.Next(0, 100)}"));
                     }
@@ -49,8 +49,7 @@ namespace Sample.EmployeeSubdomain.Services
                     {
                         try
                         {
-                            if (stopToken.IsCancellationRequested)
-                                stopToken.ThrowIfCancellationRequested();
+                            stopToken.ThrowIfCancellationRequested();
                             using (var scope = _serviceProvider.CreateScope())
                             {
                                 var employeeService = scope.ServiceProvider.GetRequiredService<IEmployee>();
@@ -78,6 +77,7 @@ namespace Sample.EmployeeSubdomain.Services
                 _logger.LogInformation("Employee generator finished");
             }, token);
 
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

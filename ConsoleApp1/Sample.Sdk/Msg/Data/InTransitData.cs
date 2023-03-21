@@ -13,8 +13,8 @@ namespace Sample.Sdk.Msg.Data
         public string MsgDecryptScope { get; set; } = string.Empty;
         public string MsgQueueName { get; set; } = string.Empty;
         public string MsgQueueEndpoint { get; set; } = string.Empty;
-        public string WellknownEndpoint { get; init; } = string.Empty;
-        public string DecryptEndpoint { get; init; } = string.Empty;
-        public string AcknowledgementEndpoint { get; init; } = string.Empty;
+        public string WellknownEndpoint { get; set; } = string.Empty;
+        public string DecryptEndpoint { get; set; } = string.Empty;
+        public string AcknowledgementEndpoint { get; set; } = string.Empty;
     }
 }

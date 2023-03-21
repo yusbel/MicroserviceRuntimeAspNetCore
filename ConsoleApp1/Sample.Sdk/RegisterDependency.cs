@@ -55,6 +55,7 @@ using Sample.Sdk.Core.Security.Providers.Certificate.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Certificate;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using System.Xml.Linq;
+using Sample.Sdk.Services.Msg;
 
 namespace Sample.Sdk
 {
@@ -120,16 +121,20 @@ namespace Sample.Sdk
 
         public static IServiceCollection AddSampleSdkInMemoryServices(this IServiceCollection services, IConfiguration config) 
         {
+            services.AddHostedService<MessageSenderRealtimeHostedService>();
+            services.AddHostedService<MessageReceiverRealtimeHostedService>();
+            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
+            services.AddTransient<IMessageComputation, ComputeReceivedMessage>();
+            services.AddTransient<IMessageRealtimeService, MessageReceiverRealtimeService>();
+            services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();
+            services.AddTransient<IMessageSender, ServiceBusMessageSender>();
+            services.AddTransient<IMessageReceiver, ServiceBusMessageReceiver>();
+
             services.AddSingleton<IInMemoryMessageBus<PointToPointSession>, InMemoryMessageBus<PointToPointSession>>();
             services.AddSingleton<IMemoryCacheState<string, ShortLivedSessionState>, MemoryCacheState<string, ShortLivedSessionState>>();
             services.AddTransient<IMemoryCacheState<string, string>, MemoryCacheState<string, string>>();
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
-
-            //services.AddHostedService<MessageSenderRealtimeHostedService>();
-
-            services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();
-            services.AddTransient<IMessageSender, ServiceBusMessageSender>();
 
             services.AddSingleton<IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>
                 , InMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>>();

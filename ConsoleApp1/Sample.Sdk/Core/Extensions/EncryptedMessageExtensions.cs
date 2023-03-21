@@ -16,20 +16,8 @@ namespace Sample.Sdk.Core.Extensions
                 $"{message.AcknowledgementEndpoint}" +
                 $"{message.DecryptEndpoint}" +
                 $"{message.WellknownEndpoint}" +
-                $"{message.DoubleCypherPropertyKeyKey}" +
-                $"{message.DoubleCypherPropertyNameKey}" +
-                $"{message.CypherPropertyNameKey}" +
-                $"{message.CypherPropertyValueKey}" +
-                $"{message.CypherContentKey}" +
-                $"{message.CypherContentValue}" +
-                $"{message.NonceKey}" +
-                $"{message.NonceValue}" +
-                $"{message.DoubleNonceKey}" +
-                $"{message.DoubleNonceValue}" +
-                $"{message.TagKey}" +
-                $"{message.TagValue}" +
-                $"{message.DoubleTagKey}" +
-                $"{message.DoubleTagValue}"+
+                $"{string.Join(",", message.CypherPropertyNameKey)}" +
+                $"{string.Join(",", message.CypherPropertyValueKey)}" +
                 $"{message.CreatedOn}";
         }
     }

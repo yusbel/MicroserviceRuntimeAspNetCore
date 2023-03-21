@@ -14,7 +14,7 @@ namespace Sample.Sdk.Core.Security.Interfaces
         Task<(bool wasEncrypted, EncryptedMessage? msg)>
             EncryptExternalMessage(ExternalMessage toEncrypt, CancellationToken token);
 
-        Task<(bool wasDecrypted, Dictionary<string,string> message, EncryptionDecryptionFail reason)>
+        Task<(bool wasDecrypted, List<KeyValuePair<string,string>> message, EncryptionDecryptionFail reason)>
         GetDecryptedExternalMessage(
            EncryptedMessage encryptedMessage,
            CancellationToken token);

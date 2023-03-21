@@ -15,18 +15,19 @@ namespace Sample.Sdk.Services.Realtime
     /// <summary>
     /// It will required specific task 
     /// </summary>
-    public class MessageReceiverRealtimeHostedService<T> : IHostedService where T : class, IMessageIdentifier
+    public class MessageReceiverRealtimeHostedService : IHostedService
     {
         private CancellationTokenSource? _cancellationTokenSource;
-        private readonly ILogger<MessageReceiverRealtimeHostedService<T>> _logger;
+        private readonly ILogger<MessageReceiverRealtimeHostedService> _logger;
         private readonly IMessageRealtimeService _messageRealtimeService;
         private Task? _innerTask;
         private Task? _outerTask;
 
         public MessageReceiverRealtimeHostedService(IServiceProvider serviceProvider)
         {
-            _logger = serviceProvider.GetRequiredService<ILogger<MessageReceiverRealtimeHostedService<T>>>();
-            _messageRealtimeService = serviceProvider.GetRequiredService<IMessageRealtimeService>();
+            _logger = serviceProvider.GetRequiredService<ILogger<MessageReceiverRealtimeHostedService>>();
+            var realtimeServices = serviceProvider.GetRequiredService<IEnumerable<IMessageRealtimeService>>();
+            _messageRealtimeService = realtimeServices.Where(service => service is MessageReceiverRealtimeService).FirstOrDefault()!;
         }
 
         /// <summary>
@@ -46,21 +47,22 @@ namespace Sample.Sdk.Services.Realtime
                 {
                     _innerTask = Task.Run(async () =>
                     {
-                        await _messageRealtimeService.Compute(token);
+                        await _messageRealtimeService.Compute(token).ConfigureAwait(false);
                     });
+                    _innerTask.ConfigureAwait(false);
                     _innerTask.Wait(token);
                 }
                 catch (TaskCanceledException tce)
                 {
-                    tce.LogCriticalException(_logger, "Task was cancelled");
+                    tce.LogException(_logger.LogCritical);
                 }
                 catch (OperationCanceledException oe)
                 {
-                    oe.LogCriticalException(_logger, "An error ocurred");
+                    oe.LogException(_logger.LogCritical);
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "An error ocurred");
+                    e.LogException(_logger.LogCritical);
                     _cancellationTokenSource.Cancel();
                 }
                 finally
@@ -68,7 +70,7 @@ namespace Sample.Sdk.Services.Realtime
                     _cancellationTokenSource.Dispose();
                 }
             }, token);
-            return _outerTask;
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -79,11 +81,11 @@ namespace Sample.Sdk.Services.Realtime
             }
             catch (Exception e)
             {
-                e.LogCriticalException(_logger, "Errors ocurred when stopping the service", nameof(MessageReceiverRealtimeHostedService<T>));
+                e.LogException(_logger.LogCritical);
             }
             finally
             {
-                _cancellationTokenSource?.Dispose();//TODO would i throw exceptions
+                _cancellationTokenSource?.Dispose();//TODO would it throw exceptions?
             }
             return Task.CompletedTask;
         }

@@ -1,6 +1,7 @@
 ﻿using JsonFlatten;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sample.Sdk.Core.Constants;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.Msg.Data;
 using System;
@@ -28,6 +29,31 @@ namespace Sample.Sdk.Core.Extensions
                 MsgQueueEndpoint = message.MsgQueueEndpoint, 
                 CertificateKey = message.CertificateKey, 
                 CertificateLocation = message.CertificateVaultUri
+            };
+        }
+
+        public static InComingEventEntity ConvertToInComingEventEntity(this ExternalMessage message) 
+        {
+            return new InComingEventEntity() 
+            {
+                Id = Guid.NewGuid().ToString(),
+                Body = message.Content, 
+                MessageKey = message.EntityId, 
+                CreationTime = DateTime.Now.ToLong(),
+                IsDeleted = false, Scheme = string.Empty, 
+                Version = "1.0.0", 
+                WasAcknowledge = false, 
+                Type = message.Type, 
+                CertificateKey = message.CertificateKey, 
+                CertificateLocation = message.CertificateVaultUri, 
+                MsgDecryptScope= message.MsgDecryptScope, 
+                MsgQueueEndpoint= message.MsgQueueEndpoint, 
+                MsgQueueName= message.MsgQueueName, 
+                AcknowledgementEndpoint = message.AcknowledgementEndpoint, 
+                DecryptEndpoint = message.DecryptEndpoint, 
+                WellknownEndpoint= message.WellknownEndpoint, 
+                WasProcessed = false, 
+                ServiceInstanceId = Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID)!
             };
         }
 

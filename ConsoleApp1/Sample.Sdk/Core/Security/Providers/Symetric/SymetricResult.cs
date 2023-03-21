@@ -8,11 +8,12 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
 {
     public class SymetricResult
     {
-        public byte[] PlainData { get; init; }
-        public byte[] EncryptedData { get; init; }
-        public byte[] Key { get; init; }
-        public byte[] Nonce { get; init; }
-        public byte[] Tag { get; init; }
+        public byte[] PlainData { get; set; }
+        public byte[] EncryptedData { get; set; }
+        public List<byte[]> Key { get; init; } = new List<byte[]>();
+        public List<byte[]> Nonce { get; init; } = new List<byte[]>();
+        public List<byte[]> Tag { get; init; } = new List<byte[]>(); 
         public byte[] Aad { get; init; }
     }
+
 }

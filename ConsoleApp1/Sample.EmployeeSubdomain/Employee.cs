@@ -30,16 +30,11 @@ namespace Sample.EmployeeSubdomain
     public class Employee : PersistenceObject<EmployeeContext, EmployeeEntity>, IEmployee
     {
         private ILogger<Employee> _logger;
-        public Employee(ILoggerFactory loggerFactory,
-            IEntityContext<EmployeeContext, EmployeeEntity> entityContext,
-            IMessageCryptoService messageCryptoService,
-            IMessageInTransitService inTransitService) : base(loggerFactory.CreateLogger("PersistanceObject")
-                , entityContext
-                , messageCryptoService
-                , inTransitService)
+        public Employee(ILogger<Employee> logger,
+            IServiceProvider serviceProvider) : base(serviceProvider)
         {
-            Guard.ThrowWhenNull(entityContext, loggerFactory);
-            _logger = loggerFactory.CreateLogger<Employee>();
+            _logger = logger;
+   ;
         }
         public async Task<EmployeeEntity> CreateAndSave(string name, string email, CancellationToken token)
         {
@@ -55,7 +50,7 @@ namespace Sample.EmployeeSubdomain
         }
         public override EmployeeEntity GetEntity() => _employee;
         protected override void AttachEntity(EmployeeEntity entity) => _employee = entity;
-        private EmployeeEntity _employee;
+        private EmployeeEntity? _employee;
 
     }
 }

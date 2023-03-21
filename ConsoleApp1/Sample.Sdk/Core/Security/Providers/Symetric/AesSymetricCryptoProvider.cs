@@ -41,11 +41,11 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
                 aesCcm.Decrypt(nonce, cypherText, tag, plainText, aad);
                 result = new SymetricResult()
                 {
-                    Key = key,
-                    Nonce = nonce,
+                    Key = new List<byte[]> { key },
+                    Nonce = new List<byte[]> { nonce },
                     PlainData = plainText, 
                     Aad = aad, 
-                    Tag = tag, 
+                    Tag = new List<byte[]> { tag.ToArray() }, 
                     EncryptedData = cypherText
                 };
                 return true;
@@ -84,9 +84,9 @@ namespace Sample.Sdk.Core.Security.Providers.Symetric
             aesCcm.Encrypt(nonce, plainText, cypherText, tag, aad);
             result = new SymetricResult()
             {
-                Key = key,
-                Nonce = nonce,
-                Tag = tag.ToArray(),
+                Key = new List<byte[]> { key },
+                Nonce = new List<byte[]> { nonce },
+                Tag = new List<byte[]> { tag.ToArray() },
                 Aad = aad,
                 EncryptedData = cypherText,
                 PlainData = plainText

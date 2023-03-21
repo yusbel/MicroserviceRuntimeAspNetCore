@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg.Interfaces
 {
-    public interface IMessageBusReceiver<T> where T : ExternalMessage
+    public interface IMessageReceiver
     {
         public Task<ExternalMessage> Receive(
             CancellationToken token

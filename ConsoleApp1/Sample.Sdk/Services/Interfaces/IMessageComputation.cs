@@ -6,6 +6,7 @@ using Sample.Sdk.Services.Converter;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,8 +15,7 @@ namespace Sample.Sdk.Services.Interfaces
     /// <summary>
     /// Interface that define the computation for message between services
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IMessageComputation<T> : IExternalMessageConverter<T> where T : class, IMessageIdentifier
+    public interface IMessageComputation
     {
         Task<bool> SaveInComingEventEntity(
                             IServiceScope serviceScope,
@@ -23,13 +23,9 @@ namespace Sample.Sdk.Services.Interfaces
                             CancellationToken cancellationToken);
         Task<IEnumerable<InComingEventEntity>> GetInComingEventsAsync(
                                             IServiceScope serviceScope,
-                                            Func<InComingEventEntity, bool> condition,
+                                            Expression<Func<InComingEventEntity, bool>> condition,
                                             CancellationToken cancellationToken);
-        Task<bool> ProcessExternalMessage(
-                                        IServiceScope serviceScope, 
-                                        Dictionary<string,string> externalMessage, 
-                                        CancellationToken cancellationToken);
-
+        
         Task<bool> UpdateInComingEventEntity(
                         IServiceScope serviceScope, 
                         InComingEventEntity eventEntity, 

@@ -1,4 +1,5 @@
-﻿using Sample.Sdk.Msg.Interfaces;
+﻿using Microsoft.Graph.Models;
+using Sample.Sdk.Msg.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,19 @@ namespace Sample.Sdk.Msg.Data
     /// </summary>
     public class ExternalMessage : InTransitData, IMessageIdentifier
     {
+        private string _type = string.Empty;
+        public string Type 
+        {
+            get 
+            {
+                if(_type == string.Empty) 
+                {
+                    return GetType().AssemblyQualifiedName!;
+                }
+                return _type;
+            }
+            set { _type = value; }
+        }
         public string Content { get; init; } = string.Empty;
         /// <summary>
         /// Database entity unique identifier

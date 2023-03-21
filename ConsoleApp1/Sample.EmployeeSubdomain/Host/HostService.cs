@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Refit;
 using Polly;
+using Microsoft.Extensions.Logging;
 
 namespace Sample.EmployeeSubdomain.Host
 {
@@ -28,6 +29,7 @@ namespace Sample.EmployeeSubdomain.Host
         {
             var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(_args)
                 //called before any other configuration to avoid overriding any services configuration
+                
                 .ConfigureWebHost(host =>
                 {
                     host.UseEnvironment("Development");

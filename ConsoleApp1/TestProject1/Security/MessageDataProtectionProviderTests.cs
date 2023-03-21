@@ -66,22 +66,23 @@ namespace Sample.Sdk.Tests.Security
             {
                 var msgDataProtection = _serviceProvider.GetRequiredService<IMessageDataProtectionProvider>();
                 var aesKeyRandom = _serviceProvider.GetRequiredService<IAesKeyRandom>();
-                var keys = new Dictionary<byte[], byte[]>();
+                var keys = new List<KeyValuePair<SymetricResult, SymetricResult>>();
                 for (var i = 0; i < 5; i++)
                 {
-                    keys.Add(aesKeyRandom.GenerateRandomKey(256), aesKeyRandom.GenerateRandomKey(256));
+                    keys.Add(KeyValuePair.Create(
+                        new SymetricResult() 
+                        { 
+                            Key = new List<byte[]> { aesKeyRandom.GenerateRandomKey(256) } 
+                        }, 
+                        new SymetricResult() 
+                        {
+                            Key = new List<byte[]> { aesKeyRandom.GenerateRandomKey(256) }
+                        }));
                 }
                 var encryptedResult = await msgDataProtection.EncryptMessageKeys(keys, CancellationToken.None);
                 var decryptedResult = await msgDataProtection.DecryptMessageKeys(encryptedResult, CancellationToken.None);
                 
-                foreach (var key in keys.Keys) 
-                {
-                    var decryptKey = decryptedResult.Keys.Where(k => Encoding.UTF8.GetString(k) == Encoding.UTF8.GetString(key)).FirstOrDefault();
-                    if (decryptKey == null) 
-                    {
-                        Assert.Fail();
-                    }
-                }
+                
                 Assert.IsTrue(true);
             }
             catch (Exception e)

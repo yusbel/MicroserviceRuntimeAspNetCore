@@ -17,7 +17,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
     public interface IAsymetricCryptoProvider : ISignatureVerifier
     {
         Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Decrypt(byte[] data, CancellationToken token);
-        Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(byte[] data, CancellationToken token);
-        (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
+        Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> Encrypt(byte[] data, CancellationToken token);
+        (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
     }
 }

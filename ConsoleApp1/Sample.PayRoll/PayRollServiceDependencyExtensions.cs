@@ -18,8 +18,7 @@ using Sample.PayRoll.Services;
 using Sample.Sdk.Core.Security;
 using Sample.PayRoll.Services.Processors.Converter;
 using Sample.Sdk.Services.Interfaces;
-using Sample.PayRoll.Services.Processors;
-using Sample.PayRoll.Services.HostedServices;
+using Sample.PayRoll.Messages.InComming.Services;
 
 namespace Sample.PayRoll
 {
@@ -32,8 +31,8 @@ namespace Sample.PayRoll
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();
             services.AddTransient<IMessageSender, ServiceBusMessageSender>();
             services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
-            services.AddSingleton<IMessageBusReceiver<EmployeeAdded>, ServiceBusMessageReceiver<EmployeeAdded>>();
-            services.AddHostedService<EmployeeAddedHostedService>();
+            services.AddSingleton<IMessageReceiver, ServiceBusMessageReceiver>();
+            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
             
             //Configuration Options
             services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID));

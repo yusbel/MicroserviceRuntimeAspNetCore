@@ -25,9 +25,10 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageReceiverRealtimeService<T> : IMessageRealtimeService where T : class, IMessageIdentifier
+    public class MessageReceiverRealtimeService : IMessageRealtimeService
     {
-        private readonly IMessageComputation<T> _computations;
+        private readonly IMessageComputation _computations;
+        private readonly IComputeExternalMessage _computeExternalMessage;
         private readonly IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> _inComingEvents;
         private readonly IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> _incompatibleMessages;
         private readonly IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> _corruptedMessages;
@@ -35,15 +36,16 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IMessageBusReceiver<ExternalMessage> _messageBusReceiver;
-        private readonly ILogger<MessageReceiverRealtimeService<T>> _logger;
+        private readonly IMessageReceiver _messageBusReceiver;
+        private readonly ILogger<MessageReceiverRealtimeService> _logger;
         private readonly IMessageCryptoService _cryptoService;
         private readonly IAcknowledgementService _acknowledgementService;
         private CancellationTokenSource? _cancellationTokenSource;
         public MessageReceiverRealtimeService(
-            IMessageComputation<T> computations,
-            IMessageBusReceiver<ExternalMessage> messageBusReceiver,
-            ILogger<MessageReceiverRealtimeService<T>> logger,
+            IMessageComputation computations,
+            IComputeExternalMessage computeExternalMessage,
+            IMessageReceiver messageBusReceiver,
+            ILogger<MessageReceiverRealtimeService> logger,
             IMessageCryptoService cryptoService,
             IAcknowledgementService acknowledgementService,
             IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
@@ -55,6 +57,7 @@ namespace Sample.Sdk.Services.Realtime
             IServiceProvider serviceProvider)
         {
             _computations = computations;
+            _computeExternalMessage = computeExternalMessage;
             _inComingEvents = inComingEvents;
             _messageBusReceiver = messageBusReceiver;
             _logger = logger;
@@ -85,12 +88,13 @@ namespace Sample.Sdk.Services.Realtime
             var taskUpdate = UpdateInComingEventEntity(token);
             _ = taskUpdate.ConfigureAwait(false);
             tasks.Add(taskUpdate);
+
             var taskRetrieveAck = RetrieveAcknowledgementMessage(token);
             _ = taskRetrieveAck.ConfigureAwait(false);
-            tasks.Add(taskRetrieveAck);
+            //tasks.Add(taskRetrieveAck);
             var taskSentAck = SendAckMessages(token);
             _ = taskSentAck.ConfigureAwait(false);
-            tasks.Add(taskSentAck);
+            //tasks.Add(taskSentAck);
             try
             {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -122,17 +126,17 @@ namespace Sample.Sdk.Services.Realtime
                     {
                         foreach (var message in messages)
                         {
-                            EncryptedMessage encryptMsgMetadata;
+                            EncryptedMessage encryptMsg;
                             try
                             {
-                                encryptMsgMetadata = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
+                                encryptMsg = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
                             }
                             catch (Exception e)
                             {
-                                _logger.LogCritical(e, "An error ocurred when deserializing message from database");
+                                e.LogException(_logger.LogCritical);
                                 continue;
                             }
-                            if (encryptMsgMetadata == null)
+                            if (encryptMsg == null)
                             {
                                 _logger.LogCritical($"A message in the database incomming events can not be deserialized to encrypted message metadata");
                                 continue;
@@ -140,13 +144,13 @@ namespace Sample.Sdk.Services.Realtime
                             (bool wasSent, EncryptionDecryptionFail reason) sentResult;
                             try
                             {
-                                sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsgMetadata, token);
+                                sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsg, token).ConfigureAwait(false);
                             }
                             catch (OperationCanceledException) { throw; }
                             catch (Exception e)
                             {
-                                _logger.LogCritical(e, "An error ocurred when sending the acknowledge message to sender");
-                                await Task.Delay(1000); //adding delay in case is a glitch
+                                e.LogException(_logger.LogCritical);
+                                await Task.Delay(1000, token).ConfigureAwait(false); //adding delay in case is a glitch
                                 continue;
                             }
                             if (sentResult.wasSent)
@@ -156,9 +160,9 @@ namespace Sample.Sdk.Services.Realtime
                             }
                         }
 
-                        await Task.Delay(1000);
+                        await Task.Delay(1000, token).ConfigureAwait(false);
                     }
-                    await Task.Delay(1000);
+                    await Task.Delay(1000, token).ConfigureAwait(false);
                 }
 
             }
@@ -186,7 +190,7 @@ namespace Sample.Sdk.Services.Realtime
                                                     (incomingEvent) => !incomingEvent.IsDeleted &&
                                                                         !incomingEvent.WasAcknowledge &&
                                                                         incomingEvent.WasProcessed,
-                                                    token);
+                                                    token).ConfigureAwait(false);
                     if (messages != null)
                     {
                         foreach (var msg in messages)
@@ -222,7 +226,7 @@ namespace Sample.Sdk.Services.Realtime
                             try
                             {
                                 using var scope = _serviceProvider.CreateScope();
-                                await _computations.UpdateInComingEventEntity(scope, computedMessage, token);
+                                await _computations.UpdateInComingEventEntity(scope, computedMessage, token).ConfigureAwait(false);
                             }
                             catch (OperationCanceledException) { throw; }
                             catch (DbUpdateException) { throw; }
@@ -233,12 +237,12 @@ namespace Sample.Sdk.Services.Realtime
                             catch (Exception e)
                             {
                                 e.LogException(_logger.LogCritical);
-                                await Task.Delay(1000);
+                                await Task.Delay(1000, token).ConfigureAwait(false);
                             }
                         }
-                        await Task.Delay(TimeSpan.FromMinutes(1));
+                        await Task.Delay(TimeSpan.FromMinutes(1), token).ConfigureAwait(false);
                     }
-                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    await Task.Delay(TimeSpan.FromMinutes(1), token).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -262,12 +266,14 @@ namespace Sample.Sdk.Services.Realtime
                 {
                     while (_inComingEvents.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        await Parallel.ForEachAsync(messages, token, async (message, token) =>
+                        token.ThrowIfCancellationRequested();
+                        //await Parallel.ForEachAsync(messages, token, async (message, token) =>
+                        foreach(var message in messages)
                         {
-                            EncryptedMessage? encryptedMessageWithMetadata = null;
+                            EncryptedMessage? encryptedMessage = null;
                             try
                             {
-                                encryptedMessageWithMetadata = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
+                                encryptedMessage = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
                             }
                             catch (Exception e)
                             {
@@ -283,10 +289,10 @@ namespace Sample.Sdk.Services.Realtime
                                 return;
                             }
 
-                            (bool wasEncrypted, Dictionary<string,string> externalMsg, EncryptionDecryptionFail reason) decryptorResult;
+                            (bool wasEncrypted, List<KeyValuePair<string,string>> externalMsg, EncryptionDecryptionFail reason) decryptorResult;
                             try
                             {
-                                decryptorResult = await _cryptoService.GetDecryptedExternalMessage(encryptedMessageWithMetadata!,
+                                decryptorResult = await _cryptoService.GetDecryptedExternalMessage(encryptedMessage!,
                                                                                                     cancellationToken)
                                                                         .ConfigureAwait(false);
                             }
@@ -301,7 +307,7 @@ namespace Sample.Sdk.Services.Realtime
                                 if (decryptorResult.wasEncrypted)
                                 {
                                     using var scope = _serviceProvider.CreateScope();
-                                    await _computations.ProcessExternalMessage(scope, decryptorResult.externalMsg!, token);
+                                    await _computeExternalMessage.ProcessExternalMessage(decryptorResult.externalMsg!, token).ConfigureAwait(false);
                                     message.WasProcessed = true;
                                     _persistMessages.TryAdd(message);
                                 }
@@ -311,10 +317,10 @@ namespace Sample.Sdk.Services.Realtime
                             {
                                 e.LogException(_logger.LogCritical);
                             }
-                        });
-                        await Task.Delay(1000);
+                        };//);
+                        await Task.Delay(1000, token).ConfigureAwait(false);
                     }
-                    await Task.Delay(1000);
+                    await Task.Delay(1000, token).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -350,8 +356,8 @@ namespace Sample.Sdk.Services.Realtime
                                     (eventEntity) => !eventEntity.IsDeleted &&
                                                         !eventEntity.WasAcknowledge &&
                                                         !eventEntity.WasProcessed,
-                                    token);
-                        await Task.Delay(TimeSpan.FromMinutes(5));
+                                    token).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromMinutes(5), token).ConfigureAwait(false);
                     }
 
                 }
@@ -391,10 +397,10 @@ namespace Sample.Sdk.Services.Realtime
                                                 token,
                                                 async (inComingEvent, token) =>
                                                 {
-                                                    await _computations.SaveInComingEventEntity(scope, inComingEvent, token);
+                                                    await _computations.SaveInComingEventEntity(scope, inComingEvent, token).ConfigureAwait(false);
                                                     _inComingEvents.TryAdd(inComingEvent);//realtime message
                                                     return true;
-                                                });
+                                                }, "employeeadded").ConfigureAwait(false);
                         }
                         catch (Exception e)
                         {

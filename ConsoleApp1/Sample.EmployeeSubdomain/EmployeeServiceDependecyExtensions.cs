@@ -33,6 +33,7 @@ using Sample.Sdk;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Services.Realtime;
+using Microsoft.Extensions.Logging;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -53,9 +54,9 @@ namespace Sample.EmployeeSubdomain
             {
                 options.EnableDetailedErrors(true);
             });
-            services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
-            services.AddHostedService<MessageSenderRealtimeHostedService>();
+            
             services.AddHostedService<EmployeeGenerator>();
+            
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
             services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));

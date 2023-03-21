@@ -26,9 +26,10 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
                 throw new ArgumentNullException(nameof(msg));
             }
             token.ThrowIfCancellationRequested();
+            var plainSign = msg.GetPlainSignature();
             (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) =
                    await _asymetricCryptoProvider
-                           .CreateSignature(Encoding.UTF8.GetBytes(msg.GetPlainSignature()), token)
+                           .CreateSignature(Encoding.UTF8.GetBytes(plainSign), token)
                            .ConfigureAwait(false);
             if (!wasCreated || data == null)
             {

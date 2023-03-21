@@ -150,7 +150,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         /// <param name="token"></param>
         /// <returns>Return encrypted data</returns>
         /// <exception cref="ApplicationException">Returns application exception is certificate is invalid</exception>
-        public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> 
+        public async Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> 
             Encrypt(byte[] data, 
                     CancellationToken token)
         {
@@ -189,7 +189,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
         }
 
-        public (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) 
+        public (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) 
             Encrypt(byte[] publicKey, 
                     byte[] data, 
                     CancellationToken token)
@@ -217,10 +217,10 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             X509Certificate2 certificate = null;
             try
             {
-                var result = await _certificateProvider.DownloadCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
-                if(result.WasDownloaded.HasValue && result.WasDownloaded.Value) 
+                var result = await _certificateProvider.GetCertificate(_options.Value.KeyVaultCertificateIdentifier, token).ConfigureAwait(false);
+                if(result.WasDownloaded.HasValue && result.WasDownloaded.Value && result.CertificateWithPolicy != null) 
                 {
-                    certificate = result.Certificate!;
+                    certificate = new X509Certificate2(result.CertificateWithPolicy.Cer);
                 }
             }
             catch (Exception e)
@@ -228,14 +228,14 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
                 e.LogException(_logger.LogCritical);
                 return (false, EncryptionDecryptionFail.UnableToGetCertificate);
             }
-            if (certificate == null || !certificate.HasPrivateKey) 
+            if (certificate == null) 
             {
                 return (false, EncryptionDecryptionFail.NoPrivateKeyFound);
             }
             try
             {
-                var rsa = certificate.GetRSAPrivateKey();
-                bool? result = rsa?.VerifyHash(hashValue, baseSignature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                var rsa = certificate.GetRSAPublicKey();
+                bool? result = rsa?.VerifyData(baseSignature, hashValue, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                 return (result.HasValue ? result.Value : false, EncryptionDecryptionFail.None);
             }
             catch (Exception e)

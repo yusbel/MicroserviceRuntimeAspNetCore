@@ -101,6 +101,7 @@ namespace SampleSdkRuntime
                 serviceHostBuilder.ConfigureAppConfiguration(builder => 
                 {
                     builder.AddInMemoryCollection(serviceHostVariables);
+                    
                 });
                 serviceHostBuilder.ConfigureServices((host, services) => 
                 {

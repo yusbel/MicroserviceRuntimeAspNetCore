@@ -11,6 +11,14 @@ namespace Sample.Sdk.EntityModel
     [Table("InComingEvents")]
     public class InComingEventEntity : Entity, IMessageIdentifier
     {
+        public string CertificateLocation { get; set; } = string.Empty;
+        public string CertificateKey { get; set; } = string.Empty;
+        public string MsgQueueEndpoint { get; set; } = string.Empty;
+        public string MsgQueueName { get; set; } = string.Empty;
+        public string MsgDecryptScope { get; set; } = string.Empty;
+        public string WellknownEndpoint { get; init; } = string.Empty;
+        public string DecryptEndpoint { get; init; } = string.Empty;
+        public string AcknowledgementEndpoint { get; init; } = string.Empty;
         public string? Scheme { get; set; }
         public string Type { get; set; }
         public string Version { get; set; }
@@ -20,5 +28,6 @@ namespace Sample.Sdk.EntityModel
         public bool IsDeleted { get; set; }
         public bool WasAcknowledge { get; set; }
         public bool WasProcessed { get; set; }
+        public string ServiceInstanceId { get; set; } = string.Empty;
     }
 }

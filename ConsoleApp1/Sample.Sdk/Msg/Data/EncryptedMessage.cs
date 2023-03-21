@@ -24,30 +24,14 @@ namespace Sample.Sdk.Msg.Data
         /// point in time of creation
         /// </summary>
         public long CreatedOn { get; init; }
-        public string NonceKey { get;init; } = string.Empty;
-        public string NonceValue { get; init; } = string.Empty; 
-        public string DoubleNonceKey { get; init; } = string.Empty;
-        public string DoubleNonceValue { get;init; } = string.Empty;
-
-        public string TagKey { get; init; } = string.Empty;
-        public string TagValue { get; init; } = string.Empty;
-        public string DoubleTagKey { get;init; } = string.Empty;
-        public string DoubleTagValue { get;init; } = string.Empty;
-
-        public string CypherPropertyNameKey { get; set; } = string.Empty;
-        public string CypherPropertyValueKey { get; set; } = string.Empty;
-        public string DoubleCypherPropertyNameKey { get; set; } = string.Empty;
-        public string DoubleCypherPropertyKeyKey { get; set; } = string.Empty;
+        
+        public List<string> CypherPropertyNameKey { get; set; } = new List<string>();
+        public List<string> CypherPropertyValueKey { get; set; } = new List<string>();
 
         /// <summary>
         /// for message integrity
         /// </summary>
         public string Signature { get; set; } = string.Empty;
-        /// <summary>
-        /// cypher text
-        /// </summary>
-        public string CypherContentKey { get; init; } = string.Empty;
-        public string CypherContentValue { get; init; } = string.Empty;
-
+       
     }
 }

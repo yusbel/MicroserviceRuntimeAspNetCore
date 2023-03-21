@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core;
@@ -34,19 +35,19 @@ namespace Sample.Sdk.Persistance
         private readonly IMessageCryptoService _messageCryptoService;
         private readonly IMessageInTransitService _inTransitService;
         private readonly ILogger _logger;
+        private readonly IServiceProvider _serviceProvider;
+
         public abstract TState? GetEntity(); 
         protected abstract void AttachEntity(TState entity);
 
-        public PersistenceObject(ILogger logger
-            , IEntityContext<TContext, TState> entityContext
-            , IMessageCryptoService messageCryptoService
-            , IMessageInTransitService inTransitService)
+        public PersistenceObject(IServiceProvider serviceProvider)
         {
-            Guard.ThrowWhenNull(logger, entityContext);
-            _entityContext = entityContext;
-            _messageCryptoService = messageCryptoService;
-            _inTransitService = inTransitService;
-            _logger = logger;
+            Guard.ThrowWhenNull(serviceProvider);
+            _entityContext = serviceProvider.GetRequiredService<IEntityContext<TContext, TState>>();
+            _messageCryptoService = serviceProvider.GetRequiredService<IMessageCryptoService>();
+            _inTransitService = serviceProvider.GetRequiredService<IMessageInTransitService>();
+            _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("PersitenceObject");
+            _serviceProvider = serviceProvider;
         }
 
         /// <summary>

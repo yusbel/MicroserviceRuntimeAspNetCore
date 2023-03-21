@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
@@ -13,6 +14,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Protocol.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.Core.Security.Providers.Signature;
+using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using Sample.Sdk.Msg.Data;
 using System;
@@ -22,6 +24,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Tavis.UriTemplates;
 
 namespace Sample.Sdk.Core.Security
 {
@@ -78,93 +81,50 @@ namespace Sample.Sdk.Core.Security
         {
             var msg = ConvertExternalMessage(plainText);
             //using context keys
-            if (_msgDataProtection.TryEncrypt(_serviceContext.GetAesKeys().ToList(), msg, plainText.GetInTransitAadData(), out var msgProtectionResult)) 
-            {
-                var protectedData = new Dictionary<byte[], byte[]>();
-                var encryptionKeyDict = new List<KeyValuePair<byte[], byte[]>>();
-                var nonces = new List<KeyValuePair<byte[], byte[]>>();
-                var tags = new List<KeyValuePair<byte[], byte[]>>();
-                try
-                {
-                    msgProtectionResult.ForEach(item =>
-                    {
-                        encryptionKeyDict.Add(KeyValuePair.Create(item.Key.Key, item.Value.Key));
-                        nonces.Add(KeyValuePair.Create(item.Key.Nonce, item.Value.Nonce));
-                        protectedData.Add(item.Key.EncryptedData, item.Value.EncryptedData);
-                        tags.Add(KeyValuePair.Create(item.Key.Tag, item.Value.Tag));
-                    });
-                }
-                catch (Exception e)
-                {
-                    throw;
-                }
-                if(msg.Count != encryptionKeyDict.Count) 
-                {
-                    throw new InvalidOperationException();
-                }
+            var aad = plainText.GetInTransitAadData();
+            if (_msgDataProtection.TryEncrypt(_serviceContext.GetAesKeys().ToList(), msg, aad, out var firstEncryptionResult)) 
+            {   
                 token.ThrowIfCancellationRequested();
-
+                firstEncryptionResult = firstEncryptionResult.ConvertAll(item => 
+                                                {
+                                                    item.Key.PlainData = item.Key.EncryptedData;
+                                                    item.Value.PlainData = item.Value.EncryptedData;
+                                                    return item;
+                                                }).ToList();
                 //using random keys
-                if (_msgDataProtection.TryEncrypt(protectedData, plainText.GetInTransitAadData(), out var doubleSymetricResult)) 
+                if (_msgDataProtection.TryEncrypt(firstEncryptionResult, aad, out var doubleSymetricResult)) 
                 {
+                    List<KeyValuePair<SymetricResult, SymetricResult>> doubleEncryptionResult;
                     token.ThrowIfCancellationRequested();
-                    var doubleEncryptionKeyDict = new List<KeyValuePair<byte[], byte[]>>();
-                    var doubleNonces = new List<KeyValuePair<byte[], byte[]>>();
-                    var doubleProtectedData = new Dictionary<byte[], byte[]>();
-                    var doubleTag = new List<KeyValuePair<byte[], byte[]>>();
                     try
                     {
-                        doubleSymetricResult.ForEach(item =>
-                                    {
-                                        doubleEncryptionKeyDict.Add(KeyValuePair.Create(item.Key.Key, item.Value.Key));
-                                        doubleNonces.Add(KeyValuePair.Create(item.Key.Nonce, item.Value.Nonce));
-                                        doubleProtectedData.Add(item.Key.EncryptedData, item.Value.EncryptedData);
-                                        doubleTag.Add(KeyValuePair.Create(item.Key.Tag, item.Value.Tag));
-                                    });
+                        doubleEncryptionResult = await _msgDataProtection.EncryptMessageKeys(doubleSymetricResult, token)
+                                                                        .ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
                         throw;
                     }
-
-                    var noncesStr = nonces.ConvertToString();
-                    var tagsStr = tags.ConvertToString();
-
-                    var noncesDoubleStr = doubleNonces.ConvertToString();
-                    var dataDoubleStr = doubleProtectedData.ConvertDictionaryKeysAndValuesIntoBase64String();
-                    var tagDoubleStr = doubleTag.ConvertToString();
-
-                    //Asymetric encryption to protect Aes keys
-                    var doubleEncryptedKeys = await _msgDataProtection.EncryptMessageKeys(doubleEncryptionKeyDict, token).ConfigureAwait(false);
-                    var doubleStr = doubleEncryptedKeys.ConvertDictionaryKeysAndValuesIntoBase64String();
-
-                    var encryptedKeys = await _msgDataProtection.EncryptMessageKeys(encryptionKeyDict, token).ConfigureAwait(false);
-                    var encryptedStr = encryptedKeys.ConvertDictionaryKeysAndValuesIntoBase64String();
+                    var listKeyEncryptedContent = new List<string>();
+                    var listValueEncryptedContent = new List<string>();
+                    for (var i = 0; i < doubleEncryptionResult.Count; i++) 
+                    {
+                        listKeyEncryptedContent.Add(doubleEncryptionResult[i].Key.ConvertToBase64String());
+                        listValueEncryptedContent.Add(doubleEncryptionResult[i].Value.ConvertToBase64String());
+                    }
 
                     token.ThrowIfCancellationRequested();
 
                     var encryptedMsg = new EncryptedMessage()
                     {
-                        DoubleCypherPropertyKeyKey = doubleStr.key,
-                        DoubleCypherPropertyNameKey = doubleStr.value,
-                        CypherPropertyNameKey = encryptedStr.key,
-                        CypherPropertyValueKey = encryptedStr.value,
+                        CypherPropertyNameKey = listKeyEncryptedContent,
+                        CypherPropertyValueKey = listValueEncryptedContent,
                         CorrelationId = plainText.CorrelationId,
                         Key = plainText.EntityId,
                         CreatedOn = DateTime.Now.Ticks,
-                        WellknownEndpoint = _protocolOptions.Value.WellknownSecurityEndpoint,
-                        DecryptEndpoint = _protocolOptions.Value.DecryptEndpoint,
-                        AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint,
-                        NonceKey = noncesStr.key,
-                        NonceValue = noncesStr.value,
-                        DoubleNonceKey = noncesDoubleStr.key,
-                        DoubleNonceValue = noncesDoubleStr.value,
-                        TagKey = tagsStr.key,
-                        TagValue = tagsStr.value,
-                        DoubleTagKey = tagDoubleStr.key,
-                        DoubleTagValue= tagDoubleStr.value,
-                        CypherContentKey = dataDoubleStr.key,
-                        CypherContentValue = dataDoubleStr.value,
+                        WellknownEndpoint = plainText.WellknownEndpoint,
+                        DecryptEndpoint = plainText.DecryptEndpoint,
+                        AcknowledgementEndpoint = plainText.AcknowledgementEndpoint,
                         CertificateVaultUri = plainText.CertificateVaultUri,
                         CertificateKey = plainText.CertificateKey,
                         MsgDecryptScope = plainText.MsgDecryptScope,
@@ -188,7 +148,7 @@ namespace Sample.Sdk.Core.Security
             return (false, default);
         }
 
-        public async Task<(bool wasDecrypted, Dictionary<string,string> message, EncryptionDecryptionFail reason)>
+        public async Task<(bool wasDecrypted, List<KeyValuePair<string,string>> message, EncryptionDecryptionFail reason)>
         GetDecryptedExternalMessage(
            EncryptedMessage encryptedMessage
            , CancellationToken token)
@@ -199,16 +159,15 @@ namespace Sample.Sdk.Core.Security
                 throw new ArgumentException("Invalid Wellknown endpoint");
             if (!_endpointValidator.IsDecryptEndpointValid(encryptedMessage.DecryptEndpoint))
                 throw new ArgumentException("Invalid decrypt endpoint");
-            if (!_endpointValidator.IsAcknowledgementValid(encryptedMessage.AcknowledgementEndpoint))
-                throw new ArgumentException("Invalid acknowledgement endpoint");
-
+           
             token.ThrowIfCancellationRequested();
 
             (bool wasValid, EncryptionDecryptionFail reason) isValidSignature;
             try
             {
+                var plainSig = encryptedMessage.GetPlainSignature();
                 isValidSignature = await _asymetricCryptoProvider.VerifySignature(Convert.FromBase64String(encryptedMessage.Signature)
-                                            , Encoding.UTF8.GetBytes(encryptedMessage.GetPlainSignature())
+                                            , Encoding.UTF8.GetBytes(plainSig)
                                             , token).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -217,62 +176,53 @@ namespace Sample.Sdk.Core.Security
                 return (false, default, EncryptionDecryptionFail.Base64StringConvertionFail);
             }
 
-            //double decryption keys
-            var doubleCypherKeys = new Dictionary<byte[], byte[]>();
-            doubleCypherKeys.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.DoubleCypherPropertyKeyKey, encryptedMessage.DoubleCypherPropertyNameKey);
-            var doubleKeyDecryptionResult = await _msgDataProtection.DecryptMessageKeys(doubleCypherKeys, token).ConfigureAwait(false);
-            
-            var cypherKeys = new Dictionary<byte[], byte[]>();
-            cypherKeys.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.CypherPropertyNameKey, encryptedMessage.CypherPropertyValueKey);
-            var keyDecryptionResult = await _msgDataProtection.DecryptMessageKeys(cypherKeys, token).ConfigureAwait(false);
-
-            //double decrypting content
-            var encryptedData = new Dictionary<byte[], byte[]>();
-            encryptedData.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.CypherContentKey, encryptedMessage.CypherContentValue);  
-            var nonces = new Dictionary<byte[], byte[]>();
-            nonces.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.DoubleNonceKey, encryptedMessage.DoubleNonceValue);
-            var tags = new Dictionary<byte[], byte[]>();
-            tags.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.DoubleTagKey, encryptedMessage.DoubleTagValue);
-
-            if (_msgDataProtection.TryDecrypt(doubleKeyDecryptionResult,
-                                                encryptedData,
-                                                nonces,
-                                                tags,
-                                                encryptedMessage.GetAadData(), out var symetricDecryptResult)) 
+            var encryptedContent = new List<KeyValuePair<SymetricResult, SymetricResult>>();
+            for (var i = 0; i < encryptedMessage.CypherPropertyNameKey.Count; i++) 
             {
-                encryptedData.Clear();
-                foreach (var item in symetricDecryptResult) 
+                encryptedContent.Add(KeyValuePair.Create(encryptedMessage.CypherPropertyNameKey[i].ToSymetricResult(),
+                                                            encryptedMessage.CypherPropertyValueKey[i].ToSymetricResult()));
+            }
+            var keyDecryptionResult = await _msgDataProtection.DecryptMessageKeys(encryptedContent, token).ConfigureAwait(false);
+            var aad = encryptedMessage.GetAadData();
+            if (_msgDataProtection.TryDecrypt(keyDecryptionResult, 1, aad, out var firstDecryptionResult)) 
+            {
+                firstDecryptionResult = firstDecryptionResult.ConvertAll(kvp =>
                 {
-                    encryptedData.Add(item.Key.EncryptedData, item.Value.EncryptedData);
-                }
-                nonces.Clear();
-                nonces.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.NonceKey, encryptedMessage.NonceValue);
-                tags.Clear();
-                tags.ConvertEncryptedStringsToDictionaryByteArray(encryptedMessage.TagKey, encryptedMessage.TagValue);
-                if (_msgDataProtection.TryDecrypt(keyDecryptionResult,
-                                                encryptedData,
-                                                nonces, tags, encryptedMessage.GetAadData(), out var plainText)) 
+                    kvp.Key.EncryptedData = kvp.Key.PlainData;
+                    kvp.Value.EncryptedData = kvp.Value.PlainData;
+                    return kvp;
+                }).ToList();
+                if (_msgDataProtection.TryDecrypt(firstDecryptionResult, 0, aad, out var secondDecryptionResult)) 
                 {
-                    var msg = new Dictionary<string, string>();
-                    foreach (var item in plainText) 
+                    var plainDataResult = new List<KeyValuePair<string, string>>();
+                    for (var i = 0; i < secondDecryptionResult.Count; i++) 
                     {
-                        msg.Add(Encoding.UTF8.GetString(item.Key.PlainData), Encoding.UTF8.GetString(item.Value.PlainData));
+                        plainDataResult.Add(KeyValuePair.Create(Encoding.UTF8.GetString(secondDecryptionResult[i].Key.PlainData),
+                                                                Encoding.UTF8.GetString(secondDecryptionResult[i].Value.PlainData)));
                     }
-                    return (true, msg, EncryptionDecryptionFail.None);
+                    return (true, plainDataResult, default);
                 }
             }
             return (false, default, EncryptionDecryptionFail.DecryptionFail);
         }
 
-        private Dictionary<byte[], byte[]> ConvertExternalMessage(ExternalMessage message) 
+        private List<KeyValuePair<SymetricResult, SymetricResult>> ConvertExternalMessage(ExternalMessage message) 
         {
-            var result = new Dictionary<byte[], byte[]>();
-            var jsonStr = JsonSerializer.Serialize(message);
+            var result = new List<KeyValuePair<SymetricResult, SymetricResult>>();
+            var jsonStr = JsonConvert.SerializeObject(message);
             var jObj = JObject.Parse(jsonStr);
             var flatted = jObj.Flatten(false);
             flatted.Keys.ToList().ForEach(key => 
             {
-                result.Add(Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(flatted[key].ToString()));
+                var symetricKeyKey = new SymetricResult 
+                { 
+                    PlainData = Encoding.UTF8.GetBytes(key) 
+                };
+                var symetricValueKey = new SymetricResult
+                {
+                    PlainData = Encoding.UTF8.GetBytes(flatted[key].ToString())
+                };
+                result.Add(KeyValuePair.Create(symetricKeyKey, symetricValueKey));
             });
             return result;
         }
