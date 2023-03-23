@@ -20,7 +20,9 @@ namespace Sample.Sdk.Core.Extensions
                 $"{inTransitData.MsgDecryptScope}" +
                 $"{inTransitData.WellknownEndpoint}" +
                 $"{inTransitData.DecryptEndpoint}" +
-                $"{inTransitData.AcknowledgementEndpoint}");
+                $"{inTransitData.AcknowledgementEndpoint}" +
+                $"{inTransitData.CryptoEndpoint}" +
+                $"{inTransitData.SignDataKeyId}");
         }
     }
 }

@@ -16,5 +16,7 @@ namespace Sample.Sdk.Msg.Data
         public string WellknownEndpoint { get; set; } = string.Empty;
         public string DecryptEndpoint { get; set; } = string.Empty;
         public string AcknowledgementEndpoint { get; set; } = string.Empty;
+        public string CryptoEndpoint { get; set; } = string.Empty;
+        public string SignDataKeyId { get; set; } = string.Empty;
     }
 }

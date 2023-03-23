@@ -10,10 +10,11 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
     public class CustomProtocolOptions
     {
         public const string Identifier = "ServiceSdk:Security:CustomProtocol";
-        public string WellknownSecurityEndpoint { get; set; }
-        public string DecryptEndpoint { get; set; }
-        public string AcknowledgementEndpoint { get; set; }
+        public string WellknownSecurityEndpoint { get; set; } = string.Empty;
+        public string DecryptEndpoint { get; set; } = string.Empty;
+        public string AcknowledgementEndpoint { get; set; } = string.Empty;
         public int SessionDurationInSeconds { get; set; }
-
+        public string CryptoEndpoint { get; set; } = string.Empty;
+        public string SignDataKeyId { get; set; } = string.Empty;
     }
 }

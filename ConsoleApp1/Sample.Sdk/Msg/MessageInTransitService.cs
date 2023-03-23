@@ -31,6 +31,8 @@ namespace Sample.Sdk.Msg
 
         public ExternalMessage Bind(ExternalMessage message)
         {
+            message.SignDataKeyId = _protocolOptions.Value.SignDataKeyId;
+            message.CryptoEndpoint = _protocolOptions.Value.CryptoEndpoint;
             message.DecryptEndpoint = _protocolOptions.Value.DecryptEndpoint;
             message.AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint;
             message.WellknownEndpoint = _protocolOptions.Value.WellknownSecurityEndpoint;

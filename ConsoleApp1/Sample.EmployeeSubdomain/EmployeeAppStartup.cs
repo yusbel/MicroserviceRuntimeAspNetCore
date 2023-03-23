@@ -8,6 +8,7 @@ using Sample.EmployeeSubdomain.Middleware;
 using Sample.Sdk;
 using Sample.Sdk.AspNetCore.Middleware;
 using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Http.Middleware;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Persistance.Context;
 using System;
@@ -30,9 +31,8 @@ namespace Sample.EmployeeSubdomain
             //RegisterNotifier.Register();
         }
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            
-            //app.UseMiddleware<WellknownMiddleware>();
+        {   
+            app.UseMiddleware<CryptoMiddleware>();  
             //app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
             //app.UseMiddleware<CustomProtocolAcknowledgementMiddleware>();
 

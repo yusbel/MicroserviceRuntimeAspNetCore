@@ -19,6 +19,7 @@ using Sample.Sdk.Core.Security;
 using Sample.PayRoll.Services.Processors.Converter;
 using Sample.Sdk.Services.Interfaces;
 using Sample.PayRoll.Messages.InComming.Services;
+using Sample.Sdk;
 
 namespace Sample.PayRoll
 {
@@ -29,10 +30,6 @@ namespace Sample.PayRoll
             services.AddTransient<IMessageConverter<EmployeeDto>, EmployeeAddedConverter>();
             services.AddTransient<IPayRoll, PayRoll>();
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();
-            services.AddTransient<IMessageSender, ServiceBusMessageSender>();
-            services.AddSingleton<IMessageSender, ServiceBusMessageSender>();
-            services.AddSingleton<IMessageReceiver, ServiceBusMessageReceiver>();
-            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
             
             //Configuration Options
             services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID));
@@ -43,29 +40,10 @@ namespace Sample.PayRoll
             {
                 options.EnableDetailedErrors(true);
             });
-            services.AddAzureClients(azureClientFactoryBuilder => 
-            {
-                
-                //EmployeeAdded event
-                azureClientFactoryBuilder.AddServiceBusClient(configuration.GetValue<string>("PayRoll:AzureServiceBusInfo:DefaultConnStr"))
-                .ConfigureOptions(options => 
-                {
-                    options.Identifier = "EmployeeAddedService";
-                    options.RetryOptions = new ServiceBusRetryOptions() 
-                    {
-                        Delay = TimeSpan.FromSeconds(configuration.GetValue<int>("PayRoll:Service:Default:RetryOptions:DelayInSeconds")),
-                        MaxDelay = TimeSpan.FromSeconds(configuration.GetValue<int>("PayRoll:Service:Default:RetryOptions:MaxDelayInSeconds")),
-                        MaxRetries = configuration.GetValue<int>("PayRoll:Service:Default:RetryOptions:MaxRetries"),
-                        Mode = configuration.GetValue<string>("PayRoll:Service:Default:RetryOptions:Mode") == "Fixed" ? ServiceBusRetryMode.Fixed : ServiceBusRetryMode.Exponential
-                    };
-                });
-                //PayRollAddedEvent
-                azureClientFactoryBuilder.AddServiceBusClient(configuration.GetValue<string>("PayRoll:AzureServiceBusInfo:DefaultConnStr"))
-                .ConfigureOptions(options => 
-                {
-                    options.Identifier = "PayRollAddedService";
-                });
-            });
+            //Adding sdk dependecies
+            services.AddSampleSdk(configuration);
+            services.AddSampleSdkInMemoryServices(configuration);
+            services.AddSampleSdkDataProtection(configuration, configuration.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions"));
             return services;
         }
     }

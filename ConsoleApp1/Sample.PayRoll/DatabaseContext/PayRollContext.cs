@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Sample.PayRoll.Entities;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.EntityModel;
@@ -16,11 +18,24 @@ namespace Sample.PayRoll.DatabaseContext
     /// </summary>
     public class PayRollContext : ServiceDbContext
     {
-        public PayRollContext(DbContextOptions options) : base(options) { }
+        private readonly IOptions<DatabaseSettingOptions> _dbOptions;
+
+        public PayRollContext(DbContextOptions options,
+            ILoggerFactory loggerFactory,
+            IOptions<DatabaseSettingOptions> dbOptions) : base(options, 
+                dbOptions, 
+                loggerFactory.CreateLogger<ServiceDbContext>()) 
+        {
+            _dbOptions = dbOptions;
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=EmployeePayRollDb;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
+            optionsBuilder.UseSqlServer(_dbOptions.Value.ConnectionString, sqlOptions => 
+            {
+                sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(30), null);
+            });
+            optionsBuilder.EnableDetailedErrors();
             base.OnConfiguring(optionsBuilder);
         }
 

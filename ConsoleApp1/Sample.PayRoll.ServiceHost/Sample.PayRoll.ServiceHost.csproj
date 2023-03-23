@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Sample.PayRoll\Sample.PayRoll.csproj" />
     <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
+    <ProjectReference Include="..\SampleSdkRuntime\SampleSdkRuntime.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,6 +9,7 @@ using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Exceptions;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Certificate.Interfaces;
+using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;
@@ -29,15 +30,18 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         private readonly IOptions<List<AzureKeyVaultOptions>> _options;
         private readonly ILogger<X509CertificateServiceProviderAsymetricAlgorithm> _logger;
         private readonly ICertificateProvider _certificateProvider;
+        private readonly IOptions<CustomProtocolOptions> _protocolOptions;
 
         public X509CertificateServiceProviderAsymetricAlgorithm(
             IOptions<List<AzureKeyVaultOptions>> options
             , ILogger<X509CertificateServiceProviderAsymetricAlgorithm> logger
-            , ICertificateProvider certificateProvider)
+            , ICertificateProvider certificateProvider
+            , IOptions<CustomProtocolOptions> protocolOptions)
         {
             _options = options;
             _logger = logger;
             _certificateProvider = certificateProvider;
+            _protocolOptions = protocolOptions;
         }
 
         public async Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> 
@@ -47,14 +51,13 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             CancellationToken token)
         {
             X509Certificate2 certificate = null;
-            var azureKeyVaultOption = _options.Value.First(option => option.Type == type);
-            if (string.IsNullOrEmpty(azureKeyVaultOption.DefaultCertificateName)) 
+            if (string.IsNullOrEmpty(_protocolOptions.Value.SignDataKeyId)) 
             {
                 throw new InvalidOperationException("Default certificate name is requried when creating signature");
             }
             try
             {
-                var result = await _certificateProvider.DownloadCertificate(azureKeyVaultOption.DefaultCertificateName, type, token).ConfigureAwait(false);
+                var result = await _certificateProvider.DownloadCertificate(_protocolOptions.Value.SignDataKeyId, type, token).ConfigureAwait(false);
                 if (result.WasDownloaded.HasValue && result.WasDownloaded.Value)
                 {
                     certificate = result.Certificate!;

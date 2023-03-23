@@ -20,24 +20,14 @@ using System.Threading.Tasks;
 
 namespace Sample.PayRoll
 {
-    public class PayRoll : PersistenceObject<PayRoll, PayRollContext, PayRollEntity>, IPayRoll
+    public class PayRoll : PersistenceObject<PayRollContext, PayRollEntity>, IPayRoll
     {
-        public PayRoll(ILoggerFactory logger
-            , IEntityContext<PayRollContext, PayRollEntity> entityContext
-            , IMessageSender messageDurable
-            , IAsymetricCryptoProvider asymetricCryptoProvider
-            , ISymetricCryptoProvider cryptoProvider
-            , IOptions<CustomProtocolOptions> options) : base(logger.CreateLogger<PayRoll>()
-                , cryptoProvider
-                , asymetricCryptoProvider
-                , entityContext
-                , options
-                , messageDurable)
+        public PayRoll(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
         protected override void AttachEntity(PayRollEntity entity) => _payRollEntity = entity;
         private PayRollEntity? _payRollEntity;
-        protected override PayRollEntity? GetEntity() => _payRollEntity ?? new PayRollEntity();
+        public override PayRollEntity? GetEntity() => _payRollEntity ?? new PayRollEntity();
 
         public async Task<bool> CreatePayRoll(string employeeIdentifier, decimal monthlySalary, bool sendMail, CancellationToken token)
         {

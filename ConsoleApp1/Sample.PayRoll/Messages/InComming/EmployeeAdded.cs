@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Sample.PayRoll.Messages.InComming
 {
-    [MessageMetada("EmployeeAdded")]
+    [MessageMetada("EmployeeAdded", decryptScope:"")]
     public class EmployeeAdded : ExternalMessage
     {
     }
