@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Services.Msg
+namespace Sample.EmployeeSubdomain.Services
 {
     public class ComputeExternalMessage : IComputeExternalMessage
     {
@@ -16,10 +16,10 @@ namespace Sample.Sdk.Services.Msg
         {
             _logger = logger;
         }
-        public Task<bool> ProcessExternalMessage(List<KeyValuePair<string, string>> externalMessage, 
+        public Task<bool> ProcessExternalMessage(List<KeyValuePair<string, string>> externalMessage,
                                                     CancellationToken cancellationToken)
         {
-            foreach(var key in externalMessage) 
+            foreach (var key in externalMessage)
             {
                 _logger.LogInformation($"Key: {key.Key}   Value: {key.Value}");
             }

@@ -9,7 +9,7 @@ namespace Sample.Sdk.Core.Enums
     public class Enums
     {
         public enum StringType { WithPlainDataOnly, WithEncryptedDataOnly, WithoutPlainAndEncryptedData }
-
+        public enum AzureMessageSettingsOptionType { Sender, Receiver }
         public enum AzureKeyVaultOptionsType { Runtime, ServiceInstance }
     }
 }

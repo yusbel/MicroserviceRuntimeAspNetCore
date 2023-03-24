@@ -34,6 +34,7 @@ using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.InMemory.Interfaces;
 using Sample.Sdk.Services.Realtime;
 using Microsoft.Extensions.Logging;
+using Sample.Sdk.Services.Interfaces;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -45,8 +46,7 @@ namespace Sample.EmployeeSubdomain
 
             //Security
             services.AddTransient<IProcessAcknowledgement, MessageProcessAcknowledgement>();
-            services.AddSingleton<IInMemoryMessageBus<ShortLivedSessionState>, InMemoryMessageBus<ShortLivedSessionState>>();
-            services.AddSingleton<IInMemoryMessageBus<PointToPointSession>, InMemoryMessageBus<PointToPointSession>>();
+            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
             
             services.AddTransient<IEmployee, Employee>();
             services.AddTransient<IEntityContext<EmployeeContext, EmployeeEntity>, EntityContext<EmployeeContext, EmployeeEntity>>();
@@ -55,7 +55,7 @@ namespace Sample.EmployeeSubdomain
                 options.EnableDetailedErrors(true);
             });
             
-            //services.AddHostedService<EmployeeGenerator>();
+            services.AddHostedService<EmployeeGenerator>();
             
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));

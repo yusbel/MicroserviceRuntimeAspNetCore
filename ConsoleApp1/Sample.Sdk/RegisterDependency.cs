@@ -123,7 +123,7 @@ namespace Sample.Sdk
         {
             services.AddHostedService<MessageSenderRealtimeHostedService>();
             services.AddHostedService<MessageReceiverRealtimeHostedService>();
-            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
+
             services.AddTransient<IMessageComputation, ComputeReceivedMessage>();
             services.AddTransient<IMessageRealtimeService, MessageReceiverRealtimeService>();
             services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();

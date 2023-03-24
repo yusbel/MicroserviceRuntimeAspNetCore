@@ -90,7 +90,9 @@ namespace Sample.Sdk.Core.Security
                 CertificateKey = plainText.CertificateKey,
                 MsgDecryptScope = plainText.MsgDecryptScope,
                 MsgQueueEndpoint = plainText.MsgQueueEndpoint,
-                MsgQueueName = plainText.MsgQueueName
+                MsgQueueName = plainText.MsgQueueName, 
+                SignDataKeyId = plainText.SignDataKeyId, 
+                CryptoEndpoint = plainText.CryptoEndpoint,
             };
             try
             {

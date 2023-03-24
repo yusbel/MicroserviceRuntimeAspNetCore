@@ -105,11 +105,11 @@ namespace SampleSdkRuntime
                 });
                 serviceHostBuilder.ConfigureServices((host, services) => 
                 {
-                    services.TryAddSingleton<IServiceContext>((serviceProvider => 
+                    services.TryAddSingleton<IServiceContext>(serviceProvider => 
                     {
-                        var serviceContext = new Data.ServiceContext(setupResult.serviceReg);
+                        var serviceContext = new ServiceContext(setupResult.serviceReg);
                         return serviceContext;
-                    }));
+                    });
                     services.AddRuntimeServices(host.Configuration);
                 });
                 try 

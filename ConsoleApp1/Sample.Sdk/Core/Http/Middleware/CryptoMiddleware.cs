@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Sample.Sdk.Core.Http.Middleware.Data;
@@ -31,7 +32,7 @@ namespace Sample.Sdk.Core.Http.Middleware
         public async Task InvokeAsync(HttpContext context) 
         {
             if (!context.Request.Path.StartsWithSegments("/Crypto/PublicKey")
-                || context.Request.Method.ToLower() != "get")
+                || context.Request.Method.ToLower() != RequestMethod.Get.Method.ToLower())
             {
                 await _requestDelegate(context);
                 return;
@@ -50,8 +51,7 @@ namespace Sample.Sdk.Core.Http.Middleware
         {
             var result = await _certificateProvider.GetCertificate(keyIdentifier,
                                         Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance,
-                                        _tokenSource.Token)
-                                .ConfigureAwait(false);
+                                        _tokenSource.Token).ConfigureAwait(false);
             if (result.WasDownloaded.HasValue && result.WasDownloaded.Value && result.CertificateWithPolicy!.Cer.Length > 0) 
             {
                 var certificateBase64String = Convert.ToBase64String(result.CertificateWithPolicy.Cer);

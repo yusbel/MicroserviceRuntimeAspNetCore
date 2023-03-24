@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
@@ -11,6 +12,7 @@ using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Services.Interfaces;
 using Sample.Sdk.Services.Realtime.Interfaces;
@@ -36,6 +38,7 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IOptions<List<AzureMessageSettingsOptions>> _messagingOptions;
         private readonly IMessageReceiver _messageBusReceiver;
         private readonly ILogger<MessageReceiverRealtimeService> _logger;
         private readonly IMessageCryptoService _cryptoService;
@@ -52,7 +55,8 @@ namespace Sample.Sdk.Services.Realtime
             IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> corruptedMessages,
             IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity> ackMessages,
             IAsymetricCryptoProvider asymetricCryptoProvider,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IOptions<List<AzureMessageSettingsOptions>> messagingOptions)
         {
             _computations = computations;
             _computeExternalMessage = computeExternalMessage;
@@ -66,6 +70,7 @@ namespace Sample.Sdk.Services.Realtime
             _ackMessages = ackMessages;
             _asymetricCryptoProvider = asymetricCryptoProvider;
             _serviceProvider = serviceProvider;
+            _messagingOptions = messagingOptions;
         }
 
         public async Task Compute(CancellationToken cancellationToken)
@@ -389,15 +394,32 @@ namespace Sample.Sdk.Services.Realtime
                     {
                         try
                         {
-                            using var scope = _serviceProvider.CreateScope();
-                            await _messageBusReceiver.Receive(
-                                                token,
-                                                async (inComingEvent, token) =>
-                                                {
-                                                    await _computations.SaveInComingEventEntity(scope, inComingEvent, token).ConfigureAwait(false);
-                                                    _inComingEvents.TryAdd(inComingEvent);//realtime message
-                                                    return true;
-                                                }, "employeeadded").ConfigureAwait(false);
+                            var settings = _messagingOptions.Value.Where(item => item.ConfigType == 
+                                                                    Core.Enums.Enums.AzureMessageSettingsOptionType.Receiver)
+                                                            .ToList();
+                            foreach (var msgSettings in settings) 
+                            {
+                                var tasks = new List<Task>();
+                                foreach (var msgInTransitOptions in msgSettings.MessageInTransitOptions) 
+                                {
+                                    var task = Task.Run(async () => 
+                                    {
+                                        using var scope = _serviceProvider.CreateScope();
+                                        await _messageBusReceiver.Receive(
+                                                            token,
+                                                            async (inComingEvent, token) =>
+                                                            {
+                                                                await _computations.SaveInComingEventEntity(scope, inComingEvent, token).ConfigureAwait(false);
+                                                                _inComingEvents.TryAdd(inComingEvent);//realtime message
+                                                                return true;
+                                                            }, msgInTransitOptions.MsgQueueName.ToLower())
+                                                    .ConfigureAwait(false);
+                                    }, token);
+                                    task.ConfigureAwait(false);
+                                    tasks.Add(task);
+                                }
+                                await Task.WhenAll(tasks);
+                            }
                         }
                         catch (Exception e)
                         {

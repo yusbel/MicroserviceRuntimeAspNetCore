@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using static Sample.Sdk.Core.Enums.Enums;
 
 namespace Sample.Sdk.Msg.Data.Options
 {
@@ -6,6 +7,7 @@ namespace Sample.Sdk.Msg.Data.Options
     {
         public const string SENDER_SECTION_ID = "Service:AzureMessageSettings:Configuration:Sender";
         public const string RECEIVER_SECTION_ID = "Service:AzureMessageSettings:Configuration:Receiver";
+        public AzureMessageSettingsOptionType ConfigType { get; set; } = default;
         public string ConnStr { get; set; } = string.Empty;
         public string QueueNames { get; set; } = string.Empty;
         public string Identifier { get; set; } = string.Empty;
