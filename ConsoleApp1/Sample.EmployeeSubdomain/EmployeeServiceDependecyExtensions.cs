@@ -52,6 +52,10 @@ namespace Sample.EmployeeSubdomain
             services.AddTransient<IEntityContext<EmployeeContext, EmployeeEntity>, EntityContext<EmployeeContext, EmployeeEntity>>();
             services.AddDbContext<EmployeeContext>(options =>
             {
+                options.UseSqlServer(sqlDbOptions => 
+                {
+                    
+                });
                 options.EnableDetailedErrors(true);
             });
             

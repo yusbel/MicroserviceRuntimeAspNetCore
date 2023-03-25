@@ -18,11 +18,6 @@ namespace Sample.EmployeeSubdomain.DatabaseContext
         private readonly ILogger<EmployeeContext> _logger;
         private readonly string _connStr = string.Empty;
 
-        ////For design time
-        //public EmployeeContext(DbContextOptions options, string connStr) : base(options)
-        //{
-        //    _connStr = connStr;
-        //}
         public EmployeeContext(IOptions<DatabaseSettingOptions> dbOptions,
             ILoggerFactory loggerFactory,
             DbContextOptions option) : base(option, dbOptions, loggerFactory.CreateLogger<ServiceDbContext>())

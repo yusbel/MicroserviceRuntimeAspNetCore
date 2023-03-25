@@ -27,6 +27,7 @@ namespace Sample.PayRoll
     {
         public static IServiceCollection AddPayRollServiceDependencies(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
             services.AddTransient<IMessageConverter<EmployeeDto>, EmployeeAddedConverter>();
             services.AddTransient<IPayRoll, PayRoll>();
             services.AddTransient<IEntityContext<PayRollContext, PayRollEntity>, EntityContext<PayRollContext, PayRollEntity>>();

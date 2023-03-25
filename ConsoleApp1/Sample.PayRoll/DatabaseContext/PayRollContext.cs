@@ -40,7 +40,15 @@ namespace Sample.PayRoll.DatabaseContext
         }
 
         public DbSet<PayRollEntity> PayRolls { get; set; }
-        
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PayRollEntity>().HasKey(payRoll=> payRoll.Id).IsClustered();
+            modelBuilder.Entity<PayRollEntity>().Property("MonthlySalary").HasColumnType("decimal");
+            
+            base.OnModelCreating(modelBuilder);
+        }
+
 
     }
 }

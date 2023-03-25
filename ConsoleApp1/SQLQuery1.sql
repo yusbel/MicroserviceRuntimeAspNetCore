@@ -1,7 +1,5 @@
-﻿Delete from Employees
+﻿Select * From Employees
 
-Delete from ExternalEvents
+Select * From ExternalEvents
 
-select Count(*) from Employees
-
-select Count(IsSent) from ExternalEvents where IsSent = 1
+Select * From InComingEvents
