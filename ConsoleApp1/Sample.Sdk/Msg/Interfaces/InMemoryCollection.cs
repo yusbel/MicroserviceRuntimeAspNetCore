@@ -11,7 +11,7 @@ namespace Sample.Sdk.Msg.Interfaces
     /// Thread safe collection without cache
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class InMemoryCollection<TList, T> : IInMemoryCollection<TList, T> where T : class where TList: class
+    public class InMemoryCollection<T> : IInMemoryCollection<T> where T : class
     {
         private readonly BlockingCollection<T> _state;
         public InMemoryCollection()

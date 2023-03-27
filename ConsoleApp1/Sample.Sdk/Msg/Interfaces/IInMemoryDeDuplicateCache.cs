@@ -2,7 +2,7 @@
 
 namespace Sample.Sdk.Msg.Interfaces
 {
-    public interface IInMemoryDeDuplicateCache<TListType, T> where T : class where TListType : class
+    public interface IInMemoryDeDuplicateCache<T> where T : class
     {
         public int Count { get; }
         bool TryAdd(T item);

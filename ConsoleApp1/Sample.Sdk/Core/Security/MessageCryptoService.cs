@@ -128,11 +128,16 @@ namespace Sample.Sdk.Core.Security
             try
             {
                 var plainSig = encryptedMessage.GetPlainSignature();
-                isValidSignature = await _asymetricCryptoProvider.VerifySignature(Convert.FromBase64String(encryptedMessage.Signature)
-                                            , Encoding.UTF8.GetBytes(plainSig)
-                                            , Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance
-                                            , _keyVaultOptions.Value.Where(o=> o.Type == Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance).Select(item=> item.DefaultCertificateName).First()
-                                            , token).ConfigureAwait(false);
+                isValidSignature = await _asymetricCryptoProvider.VerifySignature(
+                                            encryptedMessage.CryptoEndpoint,
+                                            encryptedMessage.SignDataKeyId,
+                                            Convert.FromBase64String(encryptedMessage.Signature), 
+                                            Encoding.UTF8.GetBytes(plainSig), 
+                                            token).ConfigureAwait(false);
+                if (!isValidSignature.wasValid) 
+                {
+                    return (false, default!, EncryptionDecryptionFail.VerifySignatureFail);
+                }
             }
             catch (Exception e)
             {

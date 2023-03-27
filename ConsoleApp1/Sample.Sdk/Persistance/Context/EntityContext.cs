@@ -6,6 +6,7 @@ using Sample.Sdk.EntityModel;
 using Sample.Sdk.InMemory.InMemoryListMessage;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Interfaces;
+using Sample.Sdk.Persistance.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,12 +19,13 @@ namespace Sample.Sdk.Persistance.Context
     {
         private readonly ILogger _logger;
         private TC _dbContext;
-        private readonly IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> _eventToSend;
+        private readonly IInMemoryCollection<ExternalMessage> _eventToSend;
+        internal event EventHandler<ExternalMessageEventArgs> OnSave;
 
         public EntityContext(
             ILoggerFactory logger, 
             TC dbContext,
-            IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> eventToSend)
+            IInMemoryCollection<ExternalMessage> eventToSend)
         {           
             _logger = logger.CreateLogger("EntityContext");
             _dbContext = dbContext;

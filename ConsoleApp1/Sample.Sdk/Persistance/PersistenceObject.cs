@@ -18,6 +18,7 @@ using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Persistance.Context;
+using Sample.Sdk.Services.Realtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,6 +35,7 @@ namespace Sample.Sdk.Persistance
         private readonly IEntityContext<TContext, TState> _entityContext;
         private readonly IMessageCryptoService _messageCryptoService;
         private readonly IMessageInTransitService _inTransitService;
+        private readonly ISendExternalMessage _sendExternalMessage;
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
 
@@ -46,6 +48,7 @@ namespace Sample.Sdk.Persistance
             _entityContext = serviceProvider.GetRequiredService<IEntityContext<TContext, TState>>();
             _messageCryptoService = serviceProvider.GetRequiredService<IMessageCryptoService>();
             _inTransitService = serviceProvider.GetRequiredService<IMessageInTransitService>();
+            _sendExternalMessage = serviceProvider.GetRequiredService<ISendExternalMessage>();
             _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("PersitenceObject");
             _serviceProvider = serviceProvider;
         }
@@ -138,6 +141,13 @@ namespace Sample.Sdk.Persistance
             }
             try
             {
+                if (_entityContext is EntityContext<TContext, TState> entityContext) 
+                {
+                    entityContext.OnSave += (obj, eventArgs) => 
+                    {
+                        _sendExternalMessage.SendMessage(eventArgs.ExternalMessage);
+                    };
+                }
                 await _entityContext.SaveWithEvent(eventEntity, token).ConfigureAwait(false);
                 return true;
             }

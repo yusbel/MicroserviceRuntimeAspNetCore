@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.Msg.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;

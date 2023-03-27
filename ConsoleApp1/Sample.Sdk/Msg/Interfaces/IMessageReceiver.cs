@@ -14,5 +14,9 @@ namespace Sample.Sdk.Msg.Interfaces
             CancellationToken token
             , Func<InComingEventEntity, CancellationToken, Task<bool>> saveEntity
             , string queueName = "");
+
+        Task ReceiveAck(string ackQueue,
+            Func<ExternalMessage, Task<bool>> messageProcessor,
+            CancellationToken token);
     }
 }   

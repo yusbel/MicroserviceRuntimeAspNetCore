@@ -12,5 +12,6 @@ namespace Sample.Sdk.Msg.Data.Options
         public string MsgQueueName { get; set; } = string.Empty;
         public string MsgDecryptScope { get; set; } = string.Empty;
         public string MsgQueueEndpoint { get; set; } = string.Empty;
+        public string AckQueueName { get; set; } = string.Empty;
     }
 }

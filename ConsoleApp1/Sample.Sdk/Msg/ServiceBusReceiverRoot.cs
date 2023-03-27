@@ -25,17 +25,55 @@ namespace Sample.Sdk.Msg
     public class ServiceBusReceiverRoot : IAsyncDisposable
     {
         protected readonly string MsgContentType = "application/json;charset=utf8";
-        protected readonly ConcurrentDictionary<string, ServiceBusSender> serviceBusSender = new ConcurrentDictionary<string, ServiceBusSender>();
+        private readonly ConcurrentDictionary<string, ServiceBusSender> serviceBusSender = new ConcurrentDictionary<string, ServiceBusSender>();
         /// <summary>
         /// PeekLock is the default, AddReceiveAndDelete
         /// </summary>
-        protected readonly ConcurrentDictionary<string, ServiceBusReceiver> serviceBusReceiver = new ConcurrentDictionary<string, ServiceBusReceiver>();
-        
+        private readonly ConcurrentDictionary<string, ServiceBusReceiver> serviceBusReceiver = new ConcurrentDictionary<string, ServiceBusReceiver>();
+        private readonly ConcurrentDictionary<string, ServiceBusProcessor> serviceBusProcessor = new ConcurrentDictionary<string, ServiceBusProcessor>();
+        private readonly ServiceBusClient _service;
+
         public ServiceBusReceiverRoot(
             IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient service)
         {
             Initialize(serviceBusInfoOptions, service);
+            _service = service;
+        }
+
+        protected ServiceBusReceiver GetReceiver(string queueName) 
+        {
+            if (!serviceBusReceiver.Any(s => s.Key.ToLower() == queueName.ToLower()))
+            {
+                return default;
+            }
+            return serviceBusReceiver.First(s => s.Key.ToLower() == queueName.ToLower()).Value;
+        }
+
+        protected ServiceBusSender GetSender(string queueName) 
+        {
+            if (!serviceBusSender.Any(s => s.Key.ToLower() == queueName.ToLower())) 
+            {
+                return default;
+            }
+            return serviceBusSender.First(s => s.Key.ToLower() == queueName.ToLower()).Value;
+        }
+        protected ServiceBusProcessor GetServiceBusProcessor(string queueName, Func<ServiceBusProcessorOptions> options = null) 
+        {
+            if (serviceBusProcessor.TryGetValue(queueName, out var processor)) 
+            {
+                return processor;
+            }
+
+            processor = options != null ? _service.CreateProcessor(queueName, options.Invoke()) 
+                                        : _service.CreateProcessor(queueName);
+
+            if (serviceBusProcessor.TryAdd(queueName, processor)) 
+            {
+                return processor;
+                
+            };
+            return default;
         }
 
         private void Initialize(IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions, ServiceBusClient service)
@@ -76,14 +114,21 @@ namespace Sample.Sdk.Msg
             {
                 if(sender.Value != null) 
                 {
-                    await sender.Value.CloseAsync();
+                    await sender.Value.CloseAsync().ConfigureAwait(false);
                 }
             }
             foreach(var receiver in serviceBusReceiver) 
             {
                 if(receiver.Value != null) 
                 {
-                    await receiver.Value.CloseAsync();
+                    await receiver.Value.CloseAsync().ConfigureAwait(false);
+                }
+            }
+            foreach (var processor in serviceBusProcessor) 
+            {
+                if (processor.Value != null) 
+                {
+                    await processor.Value.CloseAsync().ConfigureAwait(false);
                 }
             }
         }

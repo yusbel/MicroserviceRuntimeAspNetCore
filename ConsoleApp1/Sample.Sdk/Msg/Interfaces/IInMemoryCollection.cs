@@ -1,6 +1,6 @@
 ﻿namespace Sample.Sdk.Msg.Interfaces
 {
-    public interface IInMemoryCollection<TList, T> where T : class where TList : class
+    public interface IInMemoryCollection<T> where T : class 
     {
         void Add(T item);
         T Take();

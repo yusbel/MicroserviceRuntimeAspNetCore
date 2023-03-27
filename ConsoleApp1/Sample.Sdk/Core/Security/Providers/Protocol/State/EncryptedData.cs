@@ -20,7 +20,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol.State
         EncryptFail,
         DecryptionFail,
         SignatureCreationFail,
-        VerifySignature,
+        VerifySignatureFail,
         InValidKeys,
         InValidPublicKey,
         Base64StringConvertionFail,

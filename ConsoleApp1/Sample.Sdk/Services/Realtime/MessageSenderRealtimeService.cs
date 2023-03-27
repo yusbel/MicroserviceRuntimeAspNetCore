@@ -16,34 +16,53 @@ using System.Collections.Generic;
 using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Migrations.Model;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using static Sample.Sdk.EntityModel.MessageHandlingReason;
 
 namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageSenderRealtimeService : IMessageRealtimeService
+    public class MessageSenderRealtimeService : IMessageRealtimeService, ISendExternalMessage
     {
         private readonly ILogger<MessageSenderRealtimeService> _logger;
-        private readonly IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> _eventListToSend;
-        private readonly IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> _eventListSent;
-        private readonly IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> _failedEventList;
+        
+        private static Lazy<IInMemoryCollection<ExternalMessage>> eventListToSend = new Lazy<IInMemoryCollection<ExternalMessage>>(
+            () => 
+            {
+                return new InMemoryCollection<ExternalMessage>();
+            }, true);
+        
+        private static Lazy<IInMemoryCollection<string>> eventListSent = new Lazy<IInMemoryCollection<string>>(
+            () => 
+            {
+                return new InMemoryCollection<string>();
+            }, true);
+        
+        private static Lazy<IInMemoryCollection<MessageFailed>> failedMessage = new Lazy<IInMemoryCollection<MessageFailed>>(
+            () => 
+            {
+                return new InMemoryCollection<MessageFailed>();
+            }, true);
+
+        private readonly IInMemoryCollection<ExternalMessage> _eventListToSend = eventListToSend.Value;
+        private readonly IInMemoryCollection<string> _eventListSent = eventListSent.Value;
+        private readonly IInMemoryCollection<MessageFailed> _failedEventList = failedMessage.Value;
         private readonly IMessageSender _messageSender;
         private readonly IOutgoingMessageProvider _outgoingMessageProvider;
 
         public MessageSenderRealtimeService(ILogger<MessageSenderRealtimeService> logger,
-            IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage> eventListToSend,
-            IInMemoryCollection<ExternalMessageSentIdInMemoryList, string> eventListSent,
-            IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed> failedEventList,
             IMessageSender messageSender,
             IOutgoingMessageProvider outgoingMessageProvider)
         {
             _logger = logger;
-            _eventListToSend = eventListToSend;
-            _eventListSent = eventListSent;
-            _failedEventList = failedEventList;
             _messageSender = messageSender;
             _outgoingMessageProvider = outgoingMessageProvider;
+        }
+
+        public void SendMessage(ExternalMessage externalMessage) 
+        {
+            _eventListToSend.Add(externalMessage);
         }
 
         /// <summary>

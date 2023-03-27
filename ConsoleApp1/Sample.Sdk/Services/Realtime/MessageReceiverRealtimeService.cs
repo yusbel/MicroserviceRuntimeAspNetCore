@@ -1,7 +1,9 @@
 ﻿using Microsoft.Azure.Amqp.Framing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 using Sample.Sdk.Core.EntityDatabaseContext;
@@ -10,7 +12,9 @@ using Sample.Sdk.Core.Security.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
 using Sample.Sdk.EntityModel;
+using Sample.Sdk.InMemory;
 using Sample.Sdk.InMemory.InMemoryListMessage;
+using Sample.Sdk.Msg;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Data.Options;
 using Sample.Sdk.Msg.Interfaces;
@@ -29,13 +33,50 @@ namespace Sample.Sdk.Services.Realtime
 {
     public class MessageReceiverRealtimeService : IMessageRealtimeService
     {
+        private static Lazy<IInMemoryDeDuplicateCache<InComingEventEntity>> inComingEventEntity = new(
+            () => 
+            {
+                return new InMemoryDeDuplicateCache<InComingEventEntity>(
+                    MemoryCacheState<string, string>.Instance(),
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InComingEventEntity>>());
+            }, true);
+        private static Lazy<IInMemoryDeDuplicateCache<InCompatibleMessage>> inCompatibleMessage = new(
+            () => 
+            {
+                return new InMemoryDeDuplicateCache<InCompatibleMessage>(
+                    MemoryCacheState<string, string>.Instance(),
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InCompatibleMessage>>());
+            }, true);
+        private static Lazy<IInMemoryDeDuplicateCache<CorruptedMessage>> corruptedMessages = new(
+            () => 
+            {
+                return new InMemoryDeDuplicateCache<CorruptedMessage>(
+                    MemoryCacheState<string,string>.Instance(),
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<CorruptedMessage>>());
+            }, true);
+        private static Lazy<IInMemoryDeDuplicateCache<InComingEventEntity>> ackMessages = new(
+            () => 
+            {
+                return new InMemoryDeDuplicateCache<InComingEventEntity>(
+                    MemoryCacheState<string,string>.Instance(),
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InComingEventEntity>>());
+            }, true);
+        private static Lazy<IInMemoryDeDuplicateCache<InComingEventEntity>> persistMessages = new(
+            () => 
+            {
+                return new InMemoryDeDuplicateCache<InComingEventEntity>(
+                    MemoryCacheState<string,string>.Instance(),
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InComingEventEntity>>());
+            }, true);
+
         private readonly IMessageComputation _computations;
         private readonly IComputeExternalMessage _computeExternalMessage;
-        private readonly IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> _inComingEvents;
-        private readonly IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> _incompatibleMessages;
-        private readonly IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> _corruptedMessages;
-        private readonly IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity> _ackMessages;
-        private readonly IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> _persistMessages;
+        private readonly IInMemoryDeDuplicateCache<InComingEventEntity> _inComingEvents = inComingEventEntity.Value;
+        private readonly IInMemoryDeDuplicateCache<InCompatibleMessage> _incompatibleMessages = inCompatibleMessage.Value;
+        private readonly IInMemoryDeDuplicateCache<CorruptedMessage> _corruptedMessages = corruptedMessages.Value;
+        private readonly IInMemoryDeDuplicateCache<InComingEventEntity> _ackMessages = ackMessages.Value;
+        private readonly IInMemoryDeDuplicateCache<InComingEventEntity> _persistMessages = persistMessages.Value;
+
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly IServiceProvider _serviceProvider;
         private readonly IOptions<List<AzureMessageSettingsOptions>> _messagingOptions;
@@ -49,25 +90,15 @@ namespace Sample.Sdk.Services.Realtime
             IMessageReceiver messageBusReceiver,
             ILogger<MessageReceiverRealtimeService> logger,
             IMessageCryptoService cryptoService,
-            IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity> persistMessages,
-            IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity> inComingEvents,
-            IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage> incompatibleMessages,
-            IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage> corruptedMessages,
-            IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity> ackMessages,
             IAsymetricCryptoProvider asymetricCryptoProvider,
             IServiceProvider serviceProvider,
             IOptions<List<AzureMessageSettingsOptions>> messagingOptions)
         {
             _computations = computations;
             _computeExternalMessage = computeExternalMessage;
-            _inComingEvents = inComingEvents;
             _messageBusReceiver = messageBusReceiver;
             _logger = logger;
             _cryptoService = cryptoService;
-            _persistMessages = persistMessages;
-            _incompatibleMessages = incompatibleMessages;
-            _corruptedMessages = corruptedMessages;
-            _ackMessages = ackMessages;
             _asymetricCryptoProvider = asymetricCryptoProvider;
             _serviceProvider = serviceProvider;
             _messagingOptions = messagingOptions;
@@ -78,7 +109,7 @@ namespace Sample.Sdk.Services.Realtime
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
             var tasks = new List<Task>();
-            var retrievalTask = RunRealtimeMessageRetrieval(token);
+            var retrievalTask = ReceiveMessages(token);
             _ = retrievalTask.ConfigureAwait(false);
             tasks.Add(retrievalTask);
             var taskFromDb = RetrieveInComingEventEntityFromDatabase(token);
@@ -382,7 +413,7 @@ namespace Sample.Sdk.Services.Realtime
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        private Task RunRealtimeMessageRetrieval(CancellationToken cancellationToken)
+        private Task ReceiveMessages(CancellationToken cancellationToken)
         {
             CancellationTokenSource tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;

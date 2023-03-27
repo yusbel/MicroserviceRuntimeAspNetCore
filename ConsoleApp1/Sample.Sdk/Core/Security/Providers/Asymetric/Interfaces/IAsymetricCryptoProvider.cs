@@ -24,6 +24,15 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces
             Enums.Enums.AzureKeyVaultOptionsType keyVaultType, 
             string certificateName,
             CancellationToken token);
-        (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, byte[] data, CancellationToken token);
+        (bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason) Encrypt(byte[] publicKey, 
+            byte[] data, 
+            CancellationToken token);
+
+        Task<(bool wasValid, EncryptionDecryptionFail reason)>
+            VerifySignature(string publicKeyUri,
+                            string certificateKey,
+                            byte[] hashValue,
+                            byte[] baseSignature,
+                            CancellationToken token);
     }
 }

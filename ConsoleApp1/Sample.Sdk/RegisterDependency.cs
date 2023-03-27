@@ -57,6 +57,7 @@ using Microsoft.AspNetCore.DataProtection.Repositories;
 using System.Xml.Linq;
 using Sample.Sdk.Services.Msg;
 using Sample.Sdk.Core.Enums;
+using Sample.Sdk.Core.Security.Providers;
 
 namespace Sample.Sdk
 {
@@ -71,7 +72,18 @@ namespace Sample.Sdk
             services.Configure<DatabaseSettingOptions>(configuration.GetSection(DatabaseSettingOptions.DatabaseSetting));
             services.Configure<MessageSettingsConfigurationOptions>(configuration.GetSection(MessageSettingsConfigurationOptions.SECTION_ID));
             services.Configure<AzureKeyVaultOptions>(configuration.GetSection(AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION));
-            
+
+            services.AddSingleton(serviceProvider => 
+            {
+                return new HttpClient();
+            });
+
+            services.AddTransient<IPublicKeyProvider>(serviceProvider => 
+            {
+                return new PublicKeyProvider(serviceProvider.GetRequiredService<HttpClient>());
+            });
+
+            services.AddTransient<ISendExternalMessage, MessageSenderRealtimeService>();
             //services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
@@ -135,34 +147,6 @@ namespace Sample.Sdk
             services.AddTransient<IMemoryCacheState<string, string>, MemoryCacheState<string, string>>();
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
-
-            services.AddSingleton<IInMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>
-                , InMemoryCollection<MessageSentFailedIdInMemmoryList, MessageFailed>>();
-
-            services.AddSingleton<IInMemoryCollection<ExternalMessageSentIdInMemoryList, string>
-                , InMemoryCollection<ExternalMessageSentIdInMemoryList, string>>();
-
-            services.AddSingleton<IInMemoryCollection<ExternalMessageInMemoryList, ExternalMessage>
-                , InMemoryCollection<ExternalMessageInMemoryList, ExternalMessage>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>
-                , InMemoryDeDuplicateCache<CompletedMessageInMemoryList, InComingEventEntity>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity>
-                , InMemoryDeDuplicateCache<InComingEventEntityInMemoryList, InComingEventEntity>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity>
-                , InMemoryDeDuplicateCache<ComputedMessageInMemoryList, InComingEventEntity>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage>
-                , InMemoryDeDuplicateCache<InCompatibleMessageInMemoryList, InCompatibleMessage>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage>
-                , InMemoryDeDuplicateCache<CorruptedMessageInMemoryList, CorruptedMessage>>();
-
-            services.AddSingleton<IInMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity>
-                , InMemoryDeDuplicateCache<AcknowledgementMessageInMemoryList, InComingEventEntity>>();
-
             return services;
         }
 

@@ -1,4 +1,6 @@
-﻿using Azure.Messaging.ServiceBus;
+﻿using Azure;
+using Azure.Core.Serialization;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,17 +43,55 @@ namespace Sample.Sdk.Msg
             _logger = loggerFactory.CreateLogger<ServiceBusMessageReceiver>();
         }
 
+        /// <summary>
+        /// Retrieve message from the acknowledgement queue
+        /// </summary>
+        /// <param name="ackQueue">Acknowsledgement queue name</param>
+        /// <param name="messageProcessor">Process acknowledgement message</param>
+        /// <param name="token">Cancel operation</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        public async Task ReceiveAck(string ackQueue, 
+            Func<ExternalMessage, Task<bool>> messageProcessor, 
+            CancellationToken token) 
+        {
+            token.ThrowIfCancellationRequested();
+            var serviceProcessor = GetServiceBusProcessor(ackQueue, () => 
+                                                                    {
+                                                                        return new ServiceBusProcessorOptions()
+                                                                        {
+                                                                            AutoCompleteMessages = true,
+                                                                            ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete, 
+                                                                            MaxConcurrentCalls = Environment.ProcessorCount
+                                                                        };
+                                                                    });
+            serviceProcessor.ProcessMessageAsync += async (args) => 
+            {
+                var externalMsg = JsonSerializer.Deserialize<ExternalMessage>(Encoding.UTF8.GetString(args.Message.Body.ToArray()));
+                if(externalMsg != null)
+                    await messageProcessor.Invoke(externalMsg);
+            };
+            await serviceProcessor.StartProcessingAsync(token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="saveEntity"></param>
+        /// <param name="queueName"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        /// <exception cref="ApplicationException"></exception>
         public async Task<ExternalMessage> Receive(CancellationToken token
             , Func<InComingEventEntity,CancellationToken, Task<bool>> saveEntity
             , string queueName = "employeeadded")
         {
-            //queueName = "employeeadded";
-            if (!serviceBusReceiver.Any(s=> s.Key.ToLower() == queueName.ToLower())) 
-            {
-                throw new ApplicationException("No receiver registered for this queue");
-            }
-            var receiver = serviceBusReceiver.First(s=> s.Key.ToLower() == queueName.ToLower()).Value;
-            
+            var receiver = GetReceiver(queueName);
+            if (receiver == null)
+                throw new InvalidOperationException("Receiver not found");
+
             token.ThrowIfCancellationRequested();
 
             var message = await receiver.ReceiveMessageAsync(null, token);

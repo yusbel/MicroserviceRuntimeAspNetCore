@@ -44,5 +44,7 @@ namespace Sample.Sdk.Msg.Data
         {
             get;set;
         } = string.Empty;
+
+        public string AckQueueName { get; set; } = string.Empty;
     }
 }

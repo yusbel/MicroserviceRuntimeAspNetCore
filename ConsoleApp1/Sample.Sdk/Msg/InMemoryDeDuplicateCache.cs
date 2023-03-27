@@ -21,17 +21,17 @@ namespace Sample.Sdk.Msg
     /// Use memory cache to keep track of item taked to avoid duplicate for 10 minutes
     /// </summary>
     /// <typeparam name="T">Is a class</typeparam>
-    public class InMemoryDeDuplicateCache<TList, T> : IInMemoryDeDuplicateCache<TList, T> where T : class, IMessageIdentifier where TList : class
+    public class InMemoryDeDuplicateCache<T> : IInMemoryDeDuplicateCache<T> where T : class, IMessageIdentifier
     {
         private readonly BlockingCollection<T> _state = new BlockingCollection<T>();
         private readonly IMemoryCacheState<string, string> _identifiersCache;
-        private readonly ILogger<InMemoryDeDuplicateCache<TList, T>> _logger;
+        private readonly ILogger<InMemoryDeDuplicateCache<T>> _logger;
 
         public int Count => _state.Count;
 
         public InMemoryDeDuplicateCache(
             IMemoryCacheState<string, string> identifiersCache,
-            ILogger<InMemoryDeDuplicateCache<TList, T>> logger)
+            ILogger<InMemoryDeDuplicateCache<T>> logger)
         {
             _identifiersCache = identifiersCache;
             _logger = logger;

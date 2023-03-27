@@ -87,7 +87,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
 
             if (!isValidResponse.wasValid) 
             {
-                return (false, default, EncryptionDecryptionFail.VerifySignature);
+                return (false, default, EncryptionDecryptionFail.VerifySignatureFail);
             }
             (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainData = 
                 await cryptoProvider.Decrypt(Convert.FromBase64String(result.data.Encrypted), 

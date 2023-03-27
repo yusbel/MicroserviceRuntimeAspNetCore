@@ -19,6 +19,11 @@ namespace Sample.Sdk.InMemory
             _memoryCache = memoryCache;
         }
 
+        public static IMemoryCacheState<TKey, T> Instance() 
+        {
+            return new MemoryCacheState<TKey, T>(new MemoryCache(new MemoryCacheOptions()));
+        }
+
         public IMemoryCache Cache => _memoryCache;
     }
 }

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core.Security.Providers
 {
-    internal interface IPublicKeyProvider
+    public interface IPublicKeyProvider
     {
-        Task<byte[]> GetPublicKey(Uri endpoint, string publicKeyId);
+        Task<byte[]> GetPublicKey(string uri, string keyId, CancellationToken token);
     }
 }
