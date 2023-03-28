@@ -48,6 +48,10 @@ namespace Sample.PayRoll.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("AckQueueName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("AcknowledgementEndpoint")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -66,6 +70,10 @@ namespace Sample.PayRoll.Migrations
 
                     b.Property<long>("CreationTime")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("CryptoEndpoint")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DecryptEndpoint")
                         .IsRequired()
@@ -97,6 +105,10 @@ namespace Sample.PayRoll.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SignDataKeyId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -125,6 +137,10 @@ namespace Sample.PayRoll.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("AckQueueName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -139,6 +155,10 @@ namespace Sample.PayRoll.Migrations
 
                     b.Property<long>("CreationTime")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("CryptoEndpoint")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -173,6 +193,10 @@ namespace Sample.PayRoll.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ServiceInstanceId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SingDataKey")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 using Sample.Sdk.Core.EntityDatabaseContext;
 using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.Core.Security.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
 using Sample.Sdk.Core.Security.Providers.Protocol.State;
@@ -24,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Entity.Validation;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json;
@@ -31,8 +33,15 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageReceiverRealtimeService : IMessageRealtimeService
+    public class MessageReceiverService : IMessageRealtimeService
     {
+        private class ComputedMessage : IMessageIdentifier
+        {
+            public InComingEventEntity EventEntity { get; init; }
+            public Expression<Func<InComingEventEntity, bool>> PropertyToUpdate { get; init; } = default;
+            public string Id { get => EventEntity.Id; set => throw new NotImplementedException(); }
+        }
+
         private static Lazy<IInMemoryDeDuplicateCache<InComingEventEntity>> inComingEventEntity = new(
             () => 
             {
@@ -61,12 +70,12 @@ namespace Sample.Sdk.Services.Realtime
                     MemoryCacheState<string,string>.Instance(),
                     NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InComingEventEntity>>());
             }, true);
-        private static Lazy<IInMemoryDeDuplicateCache<InComingEventEntity>> persistMessages = new(
+        private static Lazy<IInMemoryDeDuplicateCache<ComputedMessage>> persistMessages = new(
             () => 
             {
-                return new InMemoryDeDuplicateCache<InComingEventEntity>(
+                return new InMemoryDeDuplicateCache<ComputedMessage>(
                     MemoryCacheState<string,string>.Instance(),
-                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<InComingEventEntity>>());
+                    NullLoggerFactory.Instance.CreateLogger<InMemoryDeDuplicateCache<ComputedMessage>>());
             }, true);
 
         private readonly IMessageComputation _computations;
@@ -75,24 +84,26 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IInMemoryDeDuplicateCache<InCompatibleMessage> _incompatibleMessages = inCompatibleMessage.Value;
         private readonly IInMemoryDeDuplicateCache<CorruptedMessage> _corruptedMessages = corruptedMessages.Value;
         private readonly IInMemoryDeDuplicateCache<InComingEventEntity> _ackMessages = ackMessages.Value;
-        private readonly IInMemoryDeDuplicateCache<InComingEventEntity> _persistMessages = persistMessages.Value;
+        private readonly IInMemoryDeDuplicateCache<ComputedMessage> _persistMessages = persistMessages.Value;
 
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
         private readonly IServiceProvider _serviceProvider;
         private readonly IOptions<List<AzureMessageSettingsOptions>> _messagingOptions;
+        private readonly IMessageSender _messageSender;
         private readonly IMessageReceiver _messageBusReceiver;
-        private readonly ILogger<MessageReceiverRealtimeService> _logger;
+        private readonly ILogger<MessageReceiverService> _logger;
         private readonly IMessageCryptoService _cryptoService;
         private CancellationTokenSource? _cancellationTokenSource;
-        public MessageReceiverRealtimeService(
+        public MessageReceiverService(
             IMessageComputation computations,
             IComputeExternalMessage computeExternalMessage,
             IMessageReceiver messageBusReceiver,
-            ILogger<MessageReceiverRealtimeService> logger,
+            ILogger<MessageReceiverService> logger,
             IMessageCryptoService cryptoService,
             IAsymetricCryptoProvider asymetricCryptoProvider,
             IServiceProvider serviceProvider,
-            IOptions<List<AzureMessageSettingsOptions>> messagingOptions)
+            IOptions<List<AzureMessageSettingsOptions>> messagingOptions, 
+            IMessageSender messageSender)
         {
             _computations = computations;
             _computeExternalMessage = computeExternalMessage;
@@ -102,6 +113,7 @@ namespace Sample.Sdk.Services.Realtime
             _asymetricCryptoProvider = asymetricCryptoProvider;
             _serviceProvider = serviceProvider;
             _messagingOptions = messagingOptions;
+            _messageSender = messageSender;
         }
 
         public async Task Compute(CancellationToken cancellationToken)
@@ -115,16 +127,15 @@ namespace Sample.Sdk.Services.Realtime
             var taskFromDb = RetrieveInComingEventEntityFromDatabase(token);
             _ = taskFromDb.ConfigureAwait(false);
             tasks.Add(taskFromDb);
-            var taskCompute = ComputeInRealtime(token);
+            var taskCompute = ComputeReceivedMessage(token);
             _ = taskCompute.ConfigureAwait(false);
             tasks.Add(taskCompute);
-            var taskUpdate = UpdateInComingEventEntity(token);
+            var taskUpdate = UpdateEventStatus(token);
             _ = taskUpdate.ConfigureAwait(false);
             tasks.Add(taskUpdate);
-
             var taskRetrieveAck = RetrieveAcknowledgementMessage(token);
             _ = taskRetrieveAck.ConfigureAwait(false);
-            //tasks.Add(taskRetrieveAck);
+            tasks.Add(taskRetrieveAck);
             var taskSentAck = SendAckMessages(token);
             _ = taskSentAck.ConfigureAwait(false);
             //tasks.Add(taskSentAck);
@@ -157,41 +168,24 @@ namespace Sample.Sdk.Services.Realtime
                 {
                     while (_ackMessages.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        foreach (var message in messages)
+                        var msgToSend = messages.ToList().ConvertAll(msg => { return msg.ConvertToExternalMessage(); });
+
+                        await _messageSender.SendMessages((msg)=> msg.AckQueueName, msgToSend, msgs =>
                         {
-                            EncryptedMessage encryptMsg;
-                            try
+                            msgs.ToList().ForEach(msg => 
                             {
-                                encryptMsg = JsonSerializer.Deserialize<EncryptedMessage>(message.Body);
-                            }
-                            catch (Exception e)
-                            {
-                                e.LogException(_logger.LogCritical);
-                                continue;
-                            }
-                            if (encryptMsg == null)
-                            {
-                                _logger.LogCritical($"A message in the database incomming events can not be deserialized to encrypted message metadata");
-                                continue;
-                            }
-                            (bool wasSent, EncryptionDecryptionFail reason) sentResult;
-                            try
-                            {
-                                //sentResult = await _acknowledgementService.SendAcknowledgement(message.Body, encryptMsg, token).ConfigureAwait(false);
-                            }
-                            catch (OperationCanceledException) { throw; }
-                            catch (Exception e)
-                            {
-                                e.LogException(_logger.LogCritical);
-                                await Task.Delay(1000, token).ConfigureAwait(false); //adding delay in case is a glitch
-                                continue;
-                            }
-                            //if (sentResult.wasSent)
-                            //{
-                            //    message.WasAcknowledge = true;
-                            //    _persistMessages.TryAdd(message);
-                            //}
-                        }
+                                var computedMessage = new ComputedMessage() 
+                                { 
+                                    EventEntity = msg.ConvertToInComingEventEntity(), 
+                                    PropertyToUpdate = (message) => message.WasAcknowledge 
+                                };
+                                computedMessage.EventEntity.WasAcknowledge = true;
+                                _persistMessages.TryAdd(computedMessage);
+                            });
+
+                        }, (msgs, exception) => 
+                        {   
+                        }, token).ConfigureAwait(false);
 
                         await Task.Delay(1000, token).ConfigureAwait(false);
                     }
@@ -244,7 +238,7 @@ namespace Sample.Sdk.Services.Realtime
             }
         }
 
-        private async Task UpdateInComingEventEntity(CancellationToken cancellationToken)
+        private async Task UpdateEventStatus(CancellationToken cancellationToken)
         {
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellationTokenSource.Token;
@@ -259,7 +253,11 @@ namespace Sample.Sdk.Services.Realtime
                             try
                             {
                                 using var scope = _serviceProvider.CreateScope();
-                                await _computations.UpdateInComingEventEntity(scope, computedMessage, token).ConfigureAwait(false);
+                                await _computations.UpdateEventStatus(scope, 
+                                                            computedMessage.EventEntity,
+                                                            computedMessage.PropertyToUpdate,
+                                                            token)
+                                    .ConfigureAwait(false);
                             }
                             catch (OperationCanceledException) { throw; }
                             catch (DbUpdateException) { throw; }
@@ -288,7 +286,7 @@ namespace Sample.Sdk.Services.Realtime
             }
         }
 
-        private async Task ComputeInRealtime(CancellationToken cancellationToken)
+        private async Task ComputeReceivedMessage(CancellationToken cancellationToken)
         {
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellationTokenSource.Token;
@@ -342,7 +340,9 @@ namespace Sample.Sdk.Services.Realtime
                                     using var scope = _serviceProvider.CreateScope();
                                     await _computeExternalMessage.ProcessExternalMessage(decryptorResult.externalMsg!, token).ConfigureAwait(false);
                                     message.WasProcessed = true;
-                                    _persistMessages.TryAdd(message);
+                                    var computedMessage = new ComputedMessage() { EventEntity = message, PropertyToUpdate = (msg) => msg.WasProcessed };
+                                    _persistMessages.TryAdd(computedMessage);
+                                    _ackMessages.TryAdd(message);
                                 }
                             }
                             catch (OperationCanceledException) { throw; }

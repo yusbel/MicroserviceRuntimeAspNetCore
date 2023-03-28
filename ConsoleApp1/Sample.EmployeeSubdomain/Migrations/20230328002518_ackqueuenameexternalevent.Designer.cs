@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Sample.EmployeeSubdomain.DatabaseContext;
 
@@ -10,9 +11,10 @@ using Sample.EmployeeSubdomain.DatabaseContext;
 namespace Sample.EmployeeSubdomain.Migrations
 {
     [DbContext(typeof(EmployeeContext))]
-    partial class EmployeeContextModelSnapshot : ModelSnapshot
+    [Migration("20230328002518_ackqueuenameexternalevent")]
+    partial class ackqueuenameexternalevent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -152,10 +154,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                     b.Property<long>("CreationTime")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("CryptoEndpoint")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -189,10 +187,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ServiceInstanceId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SingDataKey")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -28,7 +28,8 @@ namespace Sample.Sdk.Core.Extensions
                 MsgDecryptScope = message.MsgDecryptScope,
                 MsgQueueEndpoint = message.MsgQueueEndpoint, 
                 CertificateKey = message.CertificateKey, 
-                CertificateLocation = message.CertificateVaultUri
+                CertificateLocation = message.CertificateVaultUri, 
+                AckQueueName = message.AckQueueName
             };
         }
 
@@ -49,10 +50,8 @@ namespace Sample.Sdk.Core.Extensions
                 MsgDecryptScope= message.MsgDecryptScope, 
                 MsgQueueEndpoint= message.MsgQueueEndpoint, 
                 MsgQueueName= message.MsgQueueName, 
-                AcknowledgementEndpoint = message.AcknowledgementEndpoint, 
-                DecryptEndpoint = message.DecryptEndpoint, 
-                WellknownEndpoint= message.WellknownEndpoint, 
                 WasProcessed = false, 
+                AckQueueName = message.AckQueueName,
                 ServiceInstanceId = Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID)!
             };
         }

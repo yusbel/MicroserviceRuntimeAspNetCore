@@ -1,5 +1,5 @@
 ﻿Select * From Employees
 
-Select * From ExternalEvents
+Delete From ExternalEvents
 
-Select * From InComingEvents
+Delete From InComingEvents

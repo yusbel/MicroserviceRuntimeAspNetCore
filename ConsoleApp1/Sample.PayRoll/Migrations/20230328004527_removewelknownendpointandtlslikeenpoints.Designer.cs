@@ -2,17 +2,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Sample.EmployeeSubdomain.DatabaseContext;
+using Sample.PayRoll.DatabaseContext;
 
 #nullable disable
 
-namespace Sample.EmployeeSubdomain.Migrations
+namespace Sample.PayRoll.Migrations
 {
-    [DbContext(typeof(EmployeeContext))]
-    partial class EmployeeContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(PayRollContext))]
+    [Migration("20230328004527_removewelknownendpointandtlslikeenpoints")]
+    partial class removewelknownendpointandtlslikeenpoints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,22 +23,26 @@ namespace Sample.EmployeeSubdomain.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("Sample.EmployeeSubdomain.Entities.EmployeeEntity", b =>
+            modelBuilder.Entity("Sample.PayRoll.Entities.PayRollEntity", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("EmployeeIdentifier")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("MailPaperRecord")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MonthlySalary")
+                        .HasColumnType("decimal");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Employees");
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"));
+
+                    b.ToTable("PayRoll");
                 });
 
             modelBuilder.Entity("Sample.Sdk.EntityModel.InComingEventEntity", b =>

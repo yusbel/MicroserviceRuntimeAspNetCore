@@ -19,17 +19,14 @@ namespace Sample.Sdk.Persistance.Context
     {
         private readonly ILogger _logger;
         private TC _dbContext;
-        private readonly IInMemoryCollection<ExternalMessage> _eventToSend;
         internal event EventHandler<ExternalMessageEventArgs> OnSave;
 
         public EntityContext(
             ILoggerFactory logger, 
-            TC dbContext,
-            IInMemoryCollection<ExternalMessage> eventToSend)
+            TC dbContext)
         {           
             _logger = logger.CreateLogger("EntityContext");
             _dbContext = dbContext;
-            _eventToSend = eventToSend;
         }
 
         public void Add(T add)
@@ -116,7 +113,13 @@ namespace Sample.Sdk.Persistance.Context
                     }).ConfigureAwait(false);
 
             _dbContext.ChangeTracker.AcceptAllChanges();
-            _eventToSend.Add(eventEntity.ConvertToExternalMessage()!);
+            if (OnSave != null) 
+            {
+                OnSave(this, new ExternalMessageEventArgs() 
+                { 
+                    ExternalMessage = eventEntity!.ConvertToExternalMessage() 
+                });
+            }
             return true;
             }
 

@@ -33,15 +33,18 @@ namespace Sample.Sdk.Msg
         {
             message.SignDataKeyId = _protocolOptions.Value.SignDataKeyId;
             message.CryptoEndpoint = _protocolOptions.Value.CryptoEndpoint;
-            message.DecryptEndpoint = _protocolOptions.Value.DecryptEndpoint;
-            message.AcknowledgementEndpoint = _protocolOptions.Value.AcknowledgementEndpoint;
-            message.WellknownEndpoint = _protocolOptions.Value.WellknownSecurityEndpoint;
             message.CertificateVaultUri = _keyVaultOptions.Value.VaultUri;
             message.CertificateKey = _keyVaultOptions.Value.DefaultCertificateName;
+            message.SignDataKeyId = _protocolOptions.Value.SignDataKeyId;
+            message.CryptoEndpoint = _protocolOptions.Value.CryptoEndpoint;
             var msgAttr = message.GetType().GetCustomAttribute(typeof(MessageMetadaAttribute));
             if (msgAttr is MessageMetadaAttribute msgAttribute && !string.IsNullOrEmpty(msgAttribute.QueueName))
             {
                 message.MsgQueueName = msgAttribute.QueueName;
+                message.AckQueueName = _msgConfigOptions.Value.Sender
+                                    .SelectMany(sender => sender.MessageInTransitOptions)
+                                    .FirstOrDefault(option => option.MsgQueueName.ToLower() == msgAttribute.QueueName.ToLower())?.AckQueueName
+                                    ?? string.Empty;
                 message.MsgDecryptScope = msgAttribute.DecryptScope;
                 message.MsgQueueEndpoint = _msgConfigOptions.Value.Sender
                                     .SelectMany(sender=> sender.MessageInTransitOptions)

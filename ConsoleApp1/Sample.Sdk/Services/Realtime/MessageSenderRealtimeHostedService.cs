@@ -22,7 +22,7 @@ namespace Sample.Sdk.Services.Realtime
             ILogger<MessageSenderRealtimeHostedService> logger) 
         {
             _messageRealtimeService = realtimeServices
-                                        .Where(service => service is MessageSenderRealtimeService)
+                                        .Where(service => service is MessageSenderService)
                                         .FirstOrDefault() 
                                         ?? throw new ArgumentNullException("Message sender realtime was not registered");
             _logger = logger;

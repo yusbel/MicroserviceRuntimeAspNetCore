@@ -23,6 +23,9 @@ namespace Sample.Sdk.EntityModel
         public int RetryCount { get; set; } = 0;
         public string ServiceInstanceId { get; set; } = string.Empty;
         public bool WasAcknowledge { get; set; }
+        public string CryptoEndpoint { get; set; } = string.Empty;
+        public string SingDataKey { get; set; } = string.Empty;
+        public string AckQueueName { get; set; } = string.Empty;
 
         
     }

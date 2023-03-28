@@ -15,5 +15,11 @@ namespace Sample.Sdk.Msg.Interfaces
                     ExternalMessage msg,
                     Action<ExternalMessage> onSent,
                     Action<ExternalMessage, SendFailedReason?, Exception?> onError);
+
+        Task<bool> SendMessages(Func<ExternalMessage, string> getQueue,
+            IEnumerable<ExternalMessage> messages,
+            Action<IEnumerable<ExternalMessage>> onSent,
+            Action<IEnumerable<ExternalMessage>, Exception> onError,
+            CancellationToken token);
     }
 }

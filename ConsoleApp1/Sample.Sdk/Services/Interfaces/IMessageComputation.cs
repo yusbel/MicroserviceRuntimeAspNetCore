@@ -25,11 +25,12 @@ namespace Sample.Sdk.Services.Interfaces
                                             IServiceScope serviceScope,
                                             Expression<Func<InComingEventEntity, bool>> condition,
                                             CancellationToken cancellationToken);
-        
-        Task<bool> UpdateInComingEventEntity(
-                        IServiceScope serviceScope, 
-                        InComingEventEntity eventEntity, 
-                        CancellationToken cancellationToken);
+
+        Task<bool> UpdateEventStatus(
+            IServiceScope serviceScope,
+            InComingEventEntity eventEntity,
+            Expression<Func<InComingEventEntity, bool>> propertyToUpdate,
+            CancellationToken cancellationToken);
 
     }
 }

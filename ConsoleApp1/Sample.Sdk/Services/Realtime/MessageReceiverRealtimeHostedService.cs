@@ -27,7 +27,7 @@ namespace Sample.Sdk.Services.Realtime
         {
             _logger = serviceProvider.GetRequiredService<ILogger<MessageReceiverRealtimeHostedService>>();
             var realtimeServices = serviceProvider.GetRequiredService<IEnumerable<IMessageRealtimeService>>();
-            _messageRealtimeService = realtimeServices.Where(service => service is MessageReceiverRealtimeService).FirstOrDefault()!;
+            _messageRealtimeService = realtimeServices.Where(service => service is MessageReceiverService).FirstOrDefault()!;
         }
 
         /// <summary>

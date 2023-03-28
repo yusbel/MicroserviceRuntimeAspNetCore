@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Sample.EmployeeSubdomain.DatabaseContext;
 
@@ -10,9 +11,10 @@ using Sample.EmployeeSubdomain.DatabaseContext;
 namespace Sample.EmployeeSubdomain.Migrations
 {
     [DbContext(typeof(EmployeeContext))]
-    partial class EmployeeContextModelSnapshot : ModelSnapshot
+    [Migration("20230327204816_addackqueuename")]
+    partial class addackqueuename
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,10 +135,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("AckQueueName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -151,10 +149,6 @@ namespace Sample.EmployeeSubdomain.Migrations
 
                     b.Property<long>("CreationTime")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("CryptoEndpoint")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -189,10 +183,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ServiceInstanceId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SingDataKey")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

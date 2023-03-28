@@ -9,7 +9,6 @@ namespace Sample.Sdk.Msg.Data.Options
         public const string RECEIVER_SECTION_ID = "Service:AzureMessageSettings:Configuration:Receiver";
         public AzureMessageSettingsOptionType ConfigType { get; set; } = default;
         public string ConnStr { get; set; } = string.Empty;
-        public string QueueNames { get; set; } = string.Empty;
         public string Identifier { get; set; } = string.Empty;
         public List<MessageInTransitOptions> MessageInTransitOptions { get; set; } = new List<MessageInTransitOptions>();
     }

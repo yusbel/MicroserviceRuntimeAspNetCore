@@ -61,7 +61,7 @@ namespace Sample.EmployeeSubdomain
             
             services.AddHostedService<EmployeeGenerator>();
             
-            services.AddSingleton<IMessageSenderService, MessageSenderService>();
+            services.AddSingleton<IMessageSenderService, Services.MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
             services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));
             services.Configure<WebHookRetryOptions>(configuration.GetSection(WebHookRetryOptions.SERVICE_WEBHOOK_RETRY_OPTIONS_SECTION_ID));

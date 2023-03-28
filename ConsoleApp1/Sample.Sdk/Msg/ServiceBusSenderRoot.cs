@@ -54,31 +54,26 @@ namespace Sample.Sdk.Msg
             }
             serviceBusInfoOptions.Value.ForEach(option =>
             {
-                if (string.IsNullOrEmpty(option.QueueNames))
-                {
-                    throw new ApplicationException("Add queue to azure service bus info");
-                }
                 if (string.IsNullOrEmpty(option.Identifier))
                 {
                     throw new ApplicationException("Add identifier to azure service bus info");
                 }
-
-                option.QueueNames.Split(',').ToList().ForEach(q =>
+                option.MessageInTransitOptions.ForEach(queue => 
                 {
-                    var serviceSender = service.CreateSender(q);
-                    serviceBusSender?.TryAdd(q, serviceSender);
+                    if (!string.IsNullOrEmpty(queue.MsgQueueName))
+                        serviceBusSender?.TryAdd(queue.MsgQueueName, service.CreateSender(queue.MsgQueueName));
                 });
             });
         }
 
-        protected ServiceBusSender? GetSender(ExternalMessage externalMsg)
+        protected ServiceBusSender? GetSender(string queueName, string queueEndpoint)
         {
-            if(!serviceBusSender.Any(sender=> sender.Key.ToLower() == externalMsg.MsgQueueName.ToLower())) 
+            if(!serviceBusSender.Any(sender=> sender.Key.ToLower() == queueName.ToLower())) 
             { 
                 return default; 
             }
-            var sender = serviceBusSender.FirstOrDefault(s => s.Key.ToLower() == externalMsg.MsgQueueName.ToLower()).Value;
-            return sender != null && sender.FullyQualifiedNamespace.Contains(externalMsg.MsgQueueEndpoint) 
+            var sender = serviceBusSender.FirstOrDefault(s => s.Key.ToLower() == queueName.ToLower()).Value;
+            return sender != null && sender.FullyQualifiedNamespace.Contains(queueEndpoint) 
                                     ? sender 
                                     : default;
         }

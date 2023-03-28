@@ -83,9 +83,6 @@ namespace Sample.Sdk.Core.Security
                 CorrelationId = plainText.CorrelationId,
                 Key = plainText.EntityId,
                 CreatedOn = DateTime.Now.Ticks,
-                WellknownEndpoint = plainText.WellknownEndpoint,
-                DecryptEndpoint = plainText.DecryptEndpoint,
-                AcknowledgementEndpoint = plainText.AcknowledgementEndpoint,
                 CertificateVaultUri = plainText.CertificateVaultUri,
                 CertificateKey = plainText.CertificateKey,
                 MsgDecryptScope = plainText.MsgDecryptScope,
@@ -117,11 +114,7 @@ namespace Sample.Sdk.Core.Security
         {
             if (encryptedMessage == null)
                 throw new ArgumentNullException(nameof(encryptedMessage));
-            if (!_endpointValidator.IsWellKnownEndpointValid(encryptedMessage.WellknownEndpoint))
-                throw new ArgumentException("Invalid Wellknown endpoint");
-            if (!_endpointValidator.IsDecryptEndpointValid(encryptedMessage.DecryptEndpoint))
-                throw new ArgumentException("Invalid decrypt endpoint");
-           
+            
             token.ThrowIfCancellationRequested();
 
             (bool wasValid, EncryptionDecryptionFail reason) isValidSignature;

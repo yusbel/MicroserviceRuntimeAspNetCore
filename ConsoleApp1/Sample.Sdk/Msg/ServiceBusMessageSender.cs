@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using static Sample.Sdk.EntityModel.MessageHandlingReason;
@@ -28,6 +29,11 @@ namespace Sample.Sdk.Msg
     /// </summary>
     public partial class ServiceBusMessageSender : ServiceBusSenderRoot, IMessageSender
     {
+        private class Message 
+        {
+            public string EndpointAndQueue { get; init; } = string.Empty;
+            public List<ExternalMessage> ExternalMessages { get; init; } = new List<ExternalMessage>();
+        }
         private ILogger<ServiceBusMessageSender> _logger;
         public ServiceBusMessageSender(ILoggerFactory loggerFactory
             , IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
@@ -53,7 +59,7 @@ namespace Sample.Sdk.Msg
                     Action<ExternalMessage> onSent,
                     Action<ExternalMessage, SendFailedReason?, Exception?> onError)
         {
-            var sender = GetSender(msg);
+            var sender = GetSender(msg.MsgQueueName, msg.MsgQueueEndpoint);
             if (sender == null)
             {
                 onError?.Invoke(msg, SendFailedReason.InValidSenderEndpoint | SendFailedReason.InValidQueueName, null);
@@ -78,6 +84,79 @@ namespace Sample.Sdk.Msg
                 e.LogException(_logger.LogCritical);
             }
             return (true, default);
+        }
+
+        /// <summary>
+        /// Send messages. All messages would be send to the same queue.
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="onSent"></param>
+        /// <param name="onError"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<bool> SendMessages(Func<ExternalMessage, string> getQueue,
+            IEnumerable<ExternalMessage> messages, 
+            Action<IEnumerable<ExternalMessage>> onSent,
+            Action<IEnumerable<ExternalMessage>, Exception> onError,
+            CancellationToken token) 
+        {
+            var queueGrouped = from message in messages
+                               let queueName = $"{message.MsgQueueEndpoint}{message.MsgQueueName}"
+                               group message by queueName into groupedMessages
+                               select new Message() 
+                               { 
+                                   EndpointAndQueue = groupedMessages.Key, 
+                                   ExternalMessages = groupedMessages.ToList() 
+                               };
+
+            foreach (var message in queueGrouped) 
+            {
+                if (!message.ExternalMessages.Any())
+                    continue;
+                do
+                {
+                    var counter = 0;
+                    var toSend = message.ExternalMessages.TakeWhile(msg =>
+                    {
+                        if (counter >= 100)
+                            return false;
+                        counter++;
+                        return true;
+                    });
+                    var sender = GetSender(getQueue(toSend.First()), toSend.First().MsgQueueEndpoint);
+                    if (sender == null)
+                        throw new InvalidOperationException($"Sender not found for queue {getQueue(toSend.First())}");
+                    var msgBatch = await sender!.CreateMessageBatchAsync(token).ConfigureAwait(false);
+                    toSend.ToList().ForEach(msg => 
+                    {
+                        msgBatch.TryAddMessage(new ServiceBusMessage()
+                        {
+                            CorrelationId = msg.CorrelationId,
+                            MessageId = msg.Id,
+                            Body = new BinaryData(JsonSerializer.Serialize(msg))
+                        });
+                    });
+                    try
+                    {
+                        await sender.SendMessagesAsync(msgBatch, token).ConfigureAwait(false);
+                    }
+                    catch (Exception exception)
+                    {
+                        onError(toSend, exception);
+                    }
+                    try
+                    {
+                        onSent(toSend);
+                    }
+                    catch (Exception exception)
+                    {
+                        exception.LogException(_logger.LogCritical);
+                    }
+                    message.ExternalMessages.RemoveRange(0, toSend.Count());
+                }
+                while (message.ExternalMessages.Any());
+            }
+            return true;
         }
     }
 }

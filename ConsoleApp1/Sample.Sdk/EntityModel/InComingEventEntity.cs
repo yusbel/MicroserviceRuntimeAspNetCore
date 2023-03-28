@@ -29,5 +29,8 @@ namespace Sample.Sdk.EntityModel
         public bool WasAcknowledge { get; set; }
         public bool WasProcessed { get; set; }
         public string ServiceInstanceId { get; set; } = string.Empty;
+        public string AckQueueName { get; set; } = string.Empty;
+        public string CryptoEndpoint { get; set; } = string.Empty;
+        public string SignDataKeyId { get; set; } = string.Empty;
     }
 }

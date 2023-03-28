@@ -88,21 +88,18 @@ namespace Sample.Sdk.Msg
             }
             serviceBusInfoOptions.Value.ForEach(option =>
             {
-                if (string.IsNullOrEmpty(option.QueueNames))
-                {
-                    throw new ApplicationException("Add queue to azure service bus info");
-                }
                 if (string.IsNullOrEmpty(option.Identifier))
                 {
                     throw new ApplicationException("Add identifier to azure service bus info");
                 }
 
-                option.QueueNames.Split(',').ToList().ForEach(q =>
+                option.MessageInTransitOptions.ForEach(queue => 
                 {
-                    var serviceSender = service.CreateSender(q);
-                    var serviceReceiver = service.CreateReceiver(q);
-                    serviceBusSender?.TryAdd(q, serviceSender);
-                    serviceBusReceiver?.TryAdd(q, serviceReceiver);
+                    if(!string.IsNullOrEmpty(queue.AckQueueName))
+                        serviceBusSender?.TryAdd(queue.AckQueueName, service.CreateSender(queue.AckQueueName));
+                    if (!string.IsNullOrEmpty(queue.MsgQueueName))
+                        serviceBusReceiver?.TryAdd(queue.MsgQueueName, service.CreateReceiver(queue.MsgQueueName));
+
                 });
             });
         }

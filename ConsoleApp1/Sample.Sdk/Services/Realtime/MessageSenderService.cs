@@ -23,9 +23,9 @@ using static Sample.Sdk.EntityModel.MessageHandlingReason;
 
 namespace Sample.Sdk.Services.Realtime
 {
-    public class MessageSenderRealtimeService : IMessageRealtimeService, ISendExternalMessage
+    public class MessageSenderService : IMessageRealtimeService, ISendExternalMessage
     {
-        private readonly ILogger<MessageSenderRealtimeService> _logger;
+        private readonly ILogger<MessageSenderService> _logger;
         
         private static Lazy<IInMemoryCollection<ExternalMessage>> eventListToSend = new Lazy<IInMemoryCollection<ExternalMessage>>(
             () => 
@@ -51,7 +51,7 @@ namespace Sample.Sdk.Services.Realtime
         private readonly IMessageSender _messageSender;
         private readonly IOutgoingMessageProvider _outgoingMessageProvider;
 
-        public MessageSenderRealtimeService(ILogger<MessageSenderRealtimeService> logger,
+        public MessageSenderService(ILogger<MessageSenderService> logger,
             IMessageSender messageSender,
             IOutgoingMessageProvider outgoingMessageProvider)
         {

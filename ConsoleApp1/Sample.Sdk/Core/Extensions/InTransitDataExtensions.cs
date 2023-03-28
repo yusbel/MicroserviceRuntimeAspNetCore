@@ -18,9 +18,6 @@ namespace Sample.Sdk.Core.Extensions
                 $"{inTransitData.CertificateVaultUri}" +
                 $"{inTransitData.CertificateKey}" +
                 $"{inTransitData.MsgDecryptScope}" +
-                $"{inTransitData.WellknownEndpoint}" +
-                $"{inTransitData.DecryptEndpoint}" +
-                $"{inTransitData.AcknowledgementEndpoint}" +
                 $"{inTransitData.CryptoEndpoint}" +
                 $"{inTransitData.SignDataKeyId}");
         }

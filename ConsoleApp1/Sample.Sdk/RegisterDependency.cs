@@ -83,7 +83,7 @@ namespace Sample.Sdk
                 return new PublicKeyProvider(serviceProvider.GetRequiredService<HttpClient>());
             });
 
-            services.AddTransient<ISendExternalMessage, MessageSenderRealtimeService>();
+            services.AddTransient<ISendExternalMessage, MessageSenderService>();
             //services.AddTransient<IHttpClientResponseConverter, HttpClientResponseConverter>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
@@ -137,8 +137,8 @@ namespace Sample.Sdk
             services.AddHostedService<MessageReceiverRealtimeHostedService>();
 
             services.AddTransient<IMessageComputation, ComputeReceivedMessage>();
-            services.AddTransient<IMessageRealtimeService, MessageReceiverRealtimeService>();
-            services.AddTransient<IMessageRealtimeService, MessageSenderRealtimeService>();
+            services.AddTransient<IMessageRealtimeService, MessageReceiverService>();
+            services.AddTransient<IMessageRealtimeService, MessageSenderService>();
             services.AddTransient<IMessageSender, ServiceBusMessageSender>();
             services.AddTransient<IMessageReceiver, ServiceBusMessageReceiver>();
 

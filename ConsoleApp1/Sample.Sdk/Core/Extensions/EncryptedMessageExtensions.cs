@@ -13,9 +13,6 @@ namespace Sample.Sdk.Core.Extensions
         {
             return $"{message.MsgQueueEndpoint}" +
                 $"{message.MsgQueueName}" +
-                $"{message.AcknowledgementEndpoint}" +
-                $"{message.DecryptEndpoint}" +
-                $"{message.WellknownEndpoint}" +
                 $"{string.Join(",", message.CypherPropertyNameKey)}" +
                 $"{string.Join(",", message.CypherPropertyValueKey)}" +
                 $"{message.CreatedOn}";

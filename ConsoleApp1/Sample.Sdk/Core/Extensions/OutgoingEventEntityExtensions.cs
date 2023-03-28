@@ -23,7 +23,12 @@ namespace Sample.Sdk.Core.Extensions
                 EntityId = encryptedMsg.Key,
                 MsgDecryptScope = encryptedMsg.MsgDecryptScope,
                 MsgQueueEndpoint = encryptedMsg.MsgQueueEndpoint,
-                MsgQueueName = encryptedMsg.MsgQueueName
+                MsgQueueName = encryptedMsg.MsgQueueName, 
+                AckQueueName = eventEntity.AckQueueName, 
+                CertificateKey = eventEntity.CertificateKey, 
+                CertificateVaultUri = eventEntity.CertificateLocation, 
+                CryptoEndpoint = eventEntity.CryptoEndpoint, 
+                SignDataKeyId = eventEntity.SingDataKey
             };
         }
 

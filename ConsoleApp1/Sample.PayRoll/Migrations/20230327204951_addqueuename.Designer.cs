@@ -2,17 +2,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Sample.EmployeeSubdomain.DatabaseContext;
+using Sample.PayRoll.DatabaseContext;
 
 #nullable disable
 
-namespace Sample.EmployeeSubdomain.Migrations
+namespace Sample.PayRoll.Migrations
 {
-    [DbContext(typeof(EmployeeContext))]
-    partial class EmployeeContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(PayRollContext))]
+    [Migration("20230327204951_addqueuename")]
+    partial class addqueuename
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,22 +23,26 @@ namespace Sample.EmployeeSubdomain.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("Sample.EmployeeSubdomain.Entities.EmployeeEntity", b =>
+            modelBuilder.Entity("Sample.PayRoll.Entities.PayRollEntity", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("EmployeeIdentifier")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("MailPaperRecord")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MonthlySalary")
+                        .HasColumnType("decimal");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Employees");
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"));
+
+                    b.ToTable("PayRoll");
                 });
 
             modelBuilder.Entity("Sample.Sdk.EntityModel.InComingEventEntity", b =>
@@ -133,10 +139,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("AckQueueName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -151,10 +153,6 @@ namespace Sample.EmployeeSubdomain.Migrations
 
                     b.Property<long>("CreationTime")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("CryptoEndpoint")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -189,10 +187,6 @@ namespace Sample.EmployeeSubdomain.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ServiceInstanceId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SingDataKey")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
