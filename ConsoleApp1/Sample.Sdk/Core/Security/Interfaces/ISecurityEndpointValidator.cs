@@ -6,5 +6,6 @@
         bool IsWellKnownEndpointValid(string endpoint);
 
         bool IsAcknowledgementValid(string endpoint);
+        bool IsMessageEndpointValid(string messageEndpoint, string connectionEndpoint);
     }
 }

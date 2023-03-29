@@ -2,6 +2,7 @@
 using Azure.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -54,6 +55,7 @@ namespace SampleSdkRuntime
         public static async Task RunAsync(string[] args, IHostBuilder serviceHostBuilder = null)
         {
             Environment.SetEnvironmentVariable(AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
+            Environment.SetEnvironmentVariable("NETCORE_ENVIRONMENT", "Development");
             //Environment.SetEnvironmentVariable(AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
             //Environment.SetEnvironmentVariable(AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
 
@@ -98,10 +100,15 @@ namespace SampleSdkRuntime
                     { SERVICE_INSTANCE_ID, setupResult.serviceReg.ServiceInstanceId },
                     { IS_RUNTIME, "false" }
                 };
-                serviceHostBuilder.ConfigureAppConfiguration(builder => 
+                serviceHostBuilder.ConfigureAppConfiguration((host, builder) => 
                 {
-                    builder.AddInMemoryCollection(serviceHostVariables);
-                    
+                    builder.AddInMemoryCollection(serviceHostVariables)
+                    .AddAzureAppConfiguration(appConfig =>
+                                                {
+                                                    appConfig.Connect("Endpoint=https://learningappconfig.azconfig.io;Id=pIlK-ll-s0:SMHTAi4UoZxaK1C0ADZg;Secret=5cx53U0WM7bLwCcoJ2nM0oit+B1MK7UUsbWA9p6z3KY=");
+                                                    appConfig.Select(KeyFilter.Any, LabelFilter.Null);
+                                                    appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT"));
+                                                });
                 });
                 serviceHostBuilder.ConfigureServices((host, services) => 
                 {
@@ -167,6 +174,12 @@ namespace SampleSdkRuntime
                 .ConfigureAppConfiguration(configBuilder => 
                 {
                     configBuilder.AddInMemoryCollection(keyValuePair);
+                    configBuilder.AddAzureAppConfiguration(appConfig => 
+                    {
+                        appConfig.Connect("Endpoint=https://learningappconfig.azconfig.io;Id=pIlK-ll-s0:SMHTAi4UoZxaK1C0ADZg;Secret=5cx53U0WM7bLwCcoJ2nM0oit+B1MK7UUsbWA9p6z3KY=");
+                        appConfig.Select(KeyFilter.Any, LabelFilter.Null);
+                        appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT"));
+                    });
                 })
                 .ConfigureServices((host, services) =>
                 {

@@ -17,6 +17,7 @@ using Sample.Sdk.Core.Azure;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
 using Sample.Sdk.InMemory.Interfaces;
+using Sample.Sdk.Core.Security;
 
 namespace Sample.Sdk.Tests.Security
 {

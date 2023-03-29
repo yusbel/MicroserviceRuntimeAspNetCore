@@ -10,9 +10,8 @@ namespace Sample.Sdk.Core.Azure
 {
     public class AzureKeyVaultOptions
     {
-        public const string SERVICE_SECURITY_KEYVAULT_SECTION = "ServiceSdk:Security:AzureKeyVaultOptions";
-        public const string RUNTIME_KEYVAULT_SECTION = "ServiceRuntime:AzureKeyVaultOptions";
-
+        public const string SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG = "ServiceSdk:Security:AzureKeyVaultOptions";
+        public const string RUNTIME_KEYVAULT_SECTION_APP_CONFIG = "ServiceRuntime:AzureKeyVaultOptions";
         public AzureKeyVaultOptionsType Type { get; set; }
         public string VaultUri { get; set; } = string.Empty;
         public string DefaultCertificateName { get; set; } = string.Empty;

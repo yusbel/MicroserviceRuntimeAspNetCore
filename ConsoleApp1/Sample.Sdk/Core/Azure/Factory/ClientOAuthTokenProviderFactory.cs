@@ -35,10 +35,6 @@ namespace Sample.Sdk.Core.Azure.Factory
         }
         public bool TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out ClientSecretCredential secretCredential)
         {
-            var credentialOption = new TokenCredentialOptions()
-            {
-                AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
-            };
             (string TenantId, string ClientId, string ClientSecret) = _configuration.GetValue<bool>(ConfigurationVariableConstant.IS_RUNTIME)
                                                                         ? GetAzureRuntimeServiceCredential()
                                                                         : GetAzureServiceInstanceCredential();

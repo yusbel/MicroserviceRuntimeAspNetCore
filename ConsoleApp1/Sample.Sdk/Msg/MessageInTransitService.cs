@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Attributes;
 using Sample.Sdk.Core.Azure;
-using Sample.Sdk.Core.Security.Providers.Protocol;
+using Sample.Sdk.Core.Security;
 using Sample.Sdk.Msg.Data;
 using Sample.Sdk.Msg.Data.Options;
 using System;

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sample.Sdk.Core.Security.Providers.Protocol
+namespace Sample.Sdk.Core.Security
 {
     public class CustomProtocolOptions
     {

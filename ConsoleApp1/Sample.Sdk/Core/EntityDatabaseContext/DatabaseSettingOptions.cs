@@ -8,7 +8,7 @@ namespace Sample.Sdk.Core.EntityDatabaseContext
 {
     public class DatabaseSettingOptions
     {
-        public const string DatabaseSetting = "Service:Database";
+        public const string DatabaseSetting = "DbConnectionString";
         public string ConnectionString { get; set; }
     }
 }

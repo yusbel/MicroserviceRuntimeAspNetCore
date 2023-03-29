@@ -23,28 +23,25 @@ using System.Threading.Tasks;
 
 namespace Sample.Sdk.Msg
 {
-    public class ServiceBusSenderRoot : IAsyncDisposable
+    public class ServiceBusSenderRoot : IDisposable
     {
         protected readonly string MsgContentType = "application/json;charset=utf8";
         protected readonly ConcurrentDictionary<string, ServiceBusSender> serviceBusSender = new ConcurrentDictionary<string, ServiceBusSender>();
        
-        //protected readonly ConcurrentDictionary<string, ServiceBusReceiver> serviceBusReceiver = new ConcurrentDictionary<string, ServiceBusReceiver>();
         private readonly ILogger<ServiceBusSenderRoot> _logger;
-
-        //protected readonly IAsymetricCryptoProvider _asymCryptoProvider;
 
         public ServiceBusSenderRoot(
             IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient service
             , ILogger<ServiceBusSenderRoot> logger)
         {
-            Initialize(serviceBusInfoOptions, service);
+            Initialize(serviceBusInfoOptions.Value.Where(s=> s.ConfigType == Core.Enums.Enums.AzureMessageSettingsOptionType.Sender).ToList(), service);
             _logger = logger;
         }
 
-        private void Initialize(IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions, ServiceBusClient service)
+        private void Initialize(List<AzureMessageSettingsOptions> serviceBusInfoOptions, ServiceBusClient service)
         {
-            if (serviceBusInfoOptions == null || serviceBusInfoOptions.Value == null || serviceBusInfoOptions.Value.Count == 0)
+            if (serviceBusInfoOptions == null || serviceBusInfoOptions == null || serviceBusInfoOptions.Count == 0)
             {
                 throw new ApplicationException("Service bus info options are required");
             }
@@ -52,7 +49,7 @@ namespace Sample.Sdk.Msg
             {
                 throw new ApplicationException("Service bus client must be registered as a services");
             }
-            serviceBusInfoOptions.Value.ForEach(option =>
+            serviceBusInfoOptions.ForEach(option =>
             {
                 if (string.IsNullOrEmpty(option.Identifier))
                 {
@@ -89,6 +86,18 @@ namespace Sample.Sdk.Msg
             }
         }
 
-       
+        public void Dispose()
+        {
+            Task.Run(async () => 
+            {
+                foreach (var sender in serviceBusSender)
+                {
+                    if (sender.Value != null)
+                    {
+                        await sender.Value.CloseAsync().ConfigureAwait(false);
+                    }
+                }
+            }).Wait();
+        }
     }
 }

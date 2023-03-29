@@ -37,7 +37,9 @@ namespace Sample.Sdk.Msg
             IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient service)
         {
-            Initialize(serviceBusInfoOptions, service);
+            Initialize(
+                serviceBusInfoOptions.Value.Where(s=> s.ConfigType == Core.Enums.Enums.AzureMessageSettingsOptionType.Receiver).ToList(), 
+                service);
             _service = service;
         }
 
@@ -76,9 +78,9 @@ namespace Sample.Sdk.Msg
             return default;
         }
 
-        private void Initialize(IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions, ServiceBusClient service)
+        private void Initialize(List<AzureMessageSettingsOptions> serviceBusInfoOptions, ServiceBusClient service)
         {
-            if (serviceBusInfoOptions == null || serviceBusInfoOptions.Value == null || serviceBusInfoOptions.Value.Count == 0)
+            if (serviceBusInfoOptions == null || serviceBusInfoOptions == null || serviceBusInfoOptions.Count == 0)
             {
                 throw new ApplicationException("Service bus info options are required");
             }
@@ -86,7 +88,7 @@ namespace Sample.Sdk.Msg
             {
                 throw new ApplicationException("Service bus client must be registered as a services");
             }
-            serviceBusInfoOptions.Value.ForEach(option =>
+            serviceBusInfoOptions.ForEach(option =>
             {
                 if (string.IsNullOrEmpty(option.Identifier))
                 {
