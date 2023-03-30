@@ -1,7 +1,7 @@
 ﻿using Microsoft.Graph;
 using Microsoft.Graph.Models;
 
-namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
+namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
 {
     internal interface IApplicationRegistration
     {

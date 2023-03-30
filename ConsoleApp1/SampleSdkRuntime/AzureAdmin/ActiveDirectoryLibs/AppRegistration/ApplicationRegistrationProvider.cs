@@ -2,6 +2,7 @@
 using Azure.Core;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
@@ -10,8 +11,8 @@ using Microsoft.Graph.Models;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Azure.Factory.Interfaces;
 using Sample.Sdk.Core.Exceptions;
-using SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount;
-using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
+using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount;
+using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.Exceptions;
 using System;
 using System.CodeDom;
@@ -20,8 +21,9 @@ using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Sample.Sdk.Core.Enums.Enums;
 
-namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
+namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
 {
     /// <summary>
     /// Service runtime use credentials with permission to create an service identity with permission to create applications 
@@ -42,20 +44,20 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
         public ApplicationRegistrationProvider(
                     IClientOAuthTokenProviderFactory clientSecretCredFactory,
                     IGraphServiceClientFactory graphServiceClientFactory,
-                    SecretClient secretClient,
+                    IAzureClientFactory<SecretClient> secretClientFactory,
                     IOptions<AzureKeyVaultOptions> azureKeyVaultOptions,
                     ILogger<ApplicationRegistrationProvider> logger,
                     IServicePrincipalProvider servicePrincipalProvider,
-                    IKeyVaultProvider keyVaultProvider, 
-                    KeyClient keyClient)
+                    IKeyVaultProvider keyVaultProvider,
+                    IAzureClientFactory<KeyClient> keyClient)
         {
             _clientSecretCredFactory = clientSecretCredFactory;
             _graphServiceClientFactory = graphServiceClientFactory;
-            _secretClient = secretClient;
+            _secretClient = secretClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
             _logger = logger;
             _servicePrincipalProvider = servicePrincipalProvider;
             _keyVaultProvider = keyVaultProvider;
-            _keyClient = keyClient;
+            _keyClient = keyClient.CreateClient(HostTypeOptions.ServiceInstance.ToString());
             _azureKeyVaultOptions = azureKeyVaultOptions;
         }
         /// <summary>
@@ -74,7 +76,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             ApplicationCollectionResponse? applications = null;
             try
             {
-                applications = await graphClient.Applications.GetAsync(requestConfig => 
+                applications = await graphClient.Applications.GetAsync(requestConfig =>
                                             {
                                                 requestConfig.QueryParameters.Filter = $"DisplayName eq '{appIdentifier}'";
                                             }, cancellationToken)
@@ -173,7 +175,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             ServicePrincipal? servicePrincipal = null;
             try
             {
-                applications = await graphClient!.Applications.GetAsync(reqConf => 
+                applications = await graphClient!.Applications.GetAsync(reqConf =>
                                             {
                                                 reqConf.QueryParameters.Filter = $"DisplayName eq '{appIdentifier}'";
                                             }, cancellationToken).ConfigureAwait(false);
@@ -220,7 +222,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
         /// <param name="prefix"></param>
         /// <returns></returns>
         public async Task<AppRegistrationSetup>
-            DeleteAndCreate(string appIdentifier, 
+            DeleteAndCreate(string appIdentifier,
                             CancellationToken token)
         {
             var result = await DeleteAll(appIdentifier, token);
@@ -230,10 +232,10 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             try
             {
                 app = await graphClient!.Applications.PostAsync(new Application()
-                                                        {
-                                                            DisplayName = GetAppDisplayName(appIdentifier),
-                                                            SignInAudience = "AzureADMyOrg"
-                                                        }, null, token);
+                {
+                    DisplayName = GetAppDisplayName(appIdentifier),
+                    SignInAudience = "AzureADMyOrg"
+                }, null, token);
 
                 principal = await _servicePrincipalProvider.Create(app!.AppId!, token);
                 if (app == null || principal == null)
@@ -251,7 +253,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
 
                 return AppRegistrationSetup.Create(true,
                                             app,
-                                            principal, 
+                                            principal,
                                             appPass!.SecretText!);
             }
             catch (Exception e)
@@ -287,14 +289,14 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             }
         }
 
-        Action<string, ApplicationRegistrationProvider, CancellationToken> 
-            OnErrorAppRegistration = async (id, appReg, token) => 
+        Action<string, ApplicationRegistrationProvider, CancellationToken>
+            OnErrorAppRegistration = async (id, appReg, token) =>
         {
-            try 
+            try
             {
                 await appReg.DeleteAll(id, token).ConfigureAwait(false);
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
                 e.LogException(appReg._logger.LogCritical);
             }
@@ -305,24 +307,24 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             return appIdentifier.Replace("-", "");
         }
 
-        public async Task<AppRegistrationSetup> 
-            GetApplicationDetails(string appId, 
+        public async Task<AppRegistrationSetup>
+            GetApplicationDetails(string appId,
                     CancellationToken token)
         {
             var graphClient = _graphServiceClientFactory.Create();
             Application? app = null;
             try
             {
-                var apps = await graphClient!.Applications.GetAsync(reqConfig => 
+                var apps = await graphClient!.Applications.GetAsync(reqConfig =>
                                 {
                                     reqConfig.QueryParameters.Filter = $"DisplayName eq '{GetAppDisplayName(appId)}'";
                                 }, token).ConfigureAwait(false);
-                if (apps == null || apps.Value.Count == 0) 
+                if (apps == null || apps.Value.Count == 0)
                 {
                     return null;
                 }
                 app = apps?.Value?.FirstOrDefault();
-                
+
                 var servicePrincipal = await _servicePrincipalProvider.GetServicePrincipal(app.AppId, token);
 
                 if (app != null && servicePrincipal != null)

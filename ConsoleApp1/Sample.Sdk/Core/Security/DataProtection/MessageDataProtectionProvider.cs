@@ -31,13 +31,13 @@ namespace Sample.Sdk.Core.Security.DataProtection
         private readonly ISymetricCryptoProvider _symetricCryptoProvider;
         private readonly ILogger<MessageDataProtectionProvider> _logger;
         private readonly IAsymetricCryptoProvider _asymetricCryptoProvider;
-        private readonly IOptions<List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>>> _certificateOptions;
+        private readonly IOptions<List<KeyValuePair<Enums.Enums.HostTypeOptions, CertificateClient>>> _certificateOptions;
         
         public MessageDataProtectionProvider(IServiceContext serviceContext,
             ISymetricCryptoProvider symetricCryptoProvider,
             ILogger<MessageDataProtectionProvider> logger,
             IAsymetricCryptoProvider asymetricCryptoProvider,
-            IOptions<List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>>> certificateOptions)
+            IOptions<List<KeyValuePair<Enums.Enums.HostTypeOptions, CertificateClient>>> certificateOptions)
         {
             _serviceContext = serviceContext;
             _symetricCryptoProvider = symetricCryptoProvider;
@@ -117,12 +117,12 @@ namespace Sample.Sdk.Core.Security.DataProtection
                 for (var i = 0; i < symetricResult.Key.Key.Count; i++)
                 {
                     var keyDecryptResult = await _asymetricCryptoProvider.Decrypt(symetricResult.Key.Key[i], 
-                            Enums.Enums.AzureKeyVaultOptionsType.Runtime,
+                            Enums.Enums.HostTypeOptions.Runtime,
                             certificateName,
                             token)
                         .ConfigureAwait(false);
                     var valueDecryptResult = await _asymetricCryptoProvider.Decrypt(symetricResult.Value.Key[i], 
-                            Enums.Enums.AzureKeyVaultOptionsType.Runtime,
+                            Enums.Enums.HostTypeOptions.Runtime,
                             certificateName,
                             token)
                         .ConfigureAwait(false);
@@ -208,7 +208,7 @@ namespace Sample.Sdk.Core.Security.DataProtection
                     try
                     {
                         firstKeyEncryptionResult = await EncryptMessageKeys(doubleSymetricResult,
-                                Enums.Enums.AzureKeyVaultOptionsType.Runtime,
+                                Enums.Enums.HostTypeOptions.Runtime,
                                 FirstEncryptionMsgKey,
                                 token)
                             .ConfigureAwait(false);
@@ -351,7 +351,7 @@ namespace Sample.Sdk.Core.Security.DataProtection
 
         private async Task<List<KeyValuePair<SymetricResult, SymetricResult>>> 
             EncryptMessageKeys(List<KeyValuePair<SymetricResult, SymetricResult>> keys,
-                                Enums.Enums.AzureKeyVaultOptionsType keyVaultType,
+                                Enums.Enums.HostTypeOptions keyVaultType,
                                 string certificateName,
                                CancellationToken token)
         {

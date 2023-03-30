@@ -33,6 +33,19 @@ namespace Sample.Sdk.Core.Azure.Factory
             });
             return credential;
         }
+
+        public ClientSecretCredential GetClientSecretCredential() 
+        {
+            var clientSecretCredentialOptions = new ClientSecretCredentialOptions() 
+            {
+                 AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
+            };
+            return new ClientSecretCredential(
+                Environment.GetEnvironmentVariable(ConfigurationVariableConstant.AZURE_TENANT_ID),
+                Environment.GetEnvironmentVariable(ConfigurationVariableConstant.AZURE_CLIENT_ID),
+                Environment.GetEnvironmentVariable(ConfigurationVariableConstant.AZURE_CLIENT_SECRET),
+                clientSecretCredentialOptions);
+        }
         public bool TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out ClientSecretCredential secretCredential)
         {
             (string TenantId, string ClientId, string ClientSecret) = _configuration.GetValue<bool>(ConfigurationVariableConstant.IS_RUNTIME)
@@ -78,9 +91,15 @@ namespace Sample.Sdk.Core.Azure.Factory
         public (string TenantId, string ClientId, string ClientSecret)
             GetAzureRuntimeServiceCredential()
         {
-            return (_configuration.GetValue<string>(ConfigurationVariableConstant.RUNTIME_AZURE_TENANT_ID),
+            if (!string.IsNullOrEmpty(_configuration.GetValue<string>(ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_ID))) 
+            {
+                return (_configuration.GetValue<string>(ConfigurationVariableConstant.RUNTIME_AZURE_TENANT_ID),
                             _configuration.GetValue<string>(ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_ID),
                             _configuration.GetValue<string>(ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_SECRET));
+            }
+            return (Environment.GetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_AZURE_TENANT_ID)!,
+                            Environment.GetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_ID)!,
+                            Environment.GetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_SECRET)!);
         }
     }
 }

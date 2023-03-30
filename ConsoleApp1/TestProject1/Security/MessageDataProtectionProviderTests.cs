@@ -12,6 +12,7 @@ using Sample.Sdk.Core.Security.Providers.Symetric;
 using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
 using SampleSdkRuntime;
 using SampleSdkRuntime.Data;
+using SampleSdkRuntime.Sdk;
 using System;
 using System.Collections.Generic;
 using System.Linq;

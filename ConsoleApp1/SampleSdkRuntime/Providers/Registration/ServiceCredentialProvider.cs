@@ -1,5 +1,5 @@
 ﻿using Microsoft.Graph.Education.Classes.Item.Assignments.Item.Submissions.Item.Return;
-using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
+using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.Data;
 using System;
 using System.Collections.Generic;

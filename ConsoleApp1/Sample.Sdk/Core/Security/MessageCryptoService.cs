@@ -94,7 +94,7 @@ namespace Sample.Sdk.Core.Security
             try
             {
                 await _signatureCryptoProvider.CreateSignature(encryptedMsg, 
-                    Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance, 
+                    Enums.Enums.HostTypeOptions.ServiceInstance, 
                     token)
                     .ConfigureAwait(false);
                 return (true, encryptedMsg);

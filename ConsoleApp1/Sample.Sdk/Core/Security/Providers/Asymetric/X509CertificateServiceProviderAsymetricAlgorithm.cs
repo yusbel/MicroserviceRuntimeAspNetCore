@@ -49,7 +49,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         public async Task<(bool wasCreated, byte[]? data, EncryptionDecryptionFail reason)> 
             CreateSignature(
             byte[] baseString, 
-            Enums.Enums.AzureKeyVaultOptionsType type,
+            Enums.Enums.HostTypeOptions type,
             CancellationToken token)
         {
             X509Certificate2 certificate = null;
@@ -99,7 +99,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         public async Task<(bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason)> 
             Decrypt(
             byte[] data, 
-            Enums.Enums.AzureKeyVaultOptionsType keyVaultType,
+            Enums.Enums.HostTypeOptions keyVaultType,
             string certificateName,
             CancellationToken token)
         {
@@ -170,7 +170,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
         /// <exception cref="ApplicationException">Returns application exception is certificate is invalid</exception>
         public async Task<(bool wasEncrypted, byte[]? data, EncryptionDecryptionFail reason)> 
             Encrypt(byte[] data, 
-                    Enums.Enums.AzureKeyVaultOptionsType keyVaultType,
+                    Enums.Enums.HostTypeOptions keyVaultType,
                     string certificateName,
                     CancellationToken token)
         {
@@ -261,7 +261,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             VerifySignature(
                 byte[] hashValue, 
                 byte[] baseSignature, 
-                Enums.Enums.AzureKeyVaultOptionsType keyVaultOptionsType,
+                Enums.Enums.HostTypeOptions keyVaultOptionsType,
                 string certificateName,
                 CancellationToken token)
         {
@@ -293,7 +293,7 @@ namespace Sample.Sdk.Core.Security.Providers.Asymetric
             }
         }
 
-        private async Task<X509Certificate2> GetCertificate(Enums.Enums.AzureKeyVaultOptionsType keyVaultOptionsType, string certificateName, CancellationToken token)
+        private async Task<X509Certificate2> GetCertificate(Enums.Enums.HostTypeOptions keyVaultOptionsType, string certificateName, CancellationToken token)
         {
             X509Certificate2 certificate = null;
             var certName = _options.Value.Where(o => o.Type == keyVaultOptionsType)

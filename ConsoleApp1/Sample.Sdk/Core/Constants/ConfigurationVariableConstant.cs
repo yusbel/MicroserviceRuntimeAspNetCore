@@ -19,5 +19,13 @@ namespace Sample.Sdk.Core.Constants
 
         public const string SERVICE_INSTANCE_ID = "SERVICE_INSTANCE_ID";
         public const string RUNTIME_SETUP_INFO = "SetupInfo";
+
+        public const string ENVIRONMENT_VAR = "NETCORE_ENVIRONMENT";
+
+        public const string APP_CONFIG_CONN_STR = "APP_CONFIG_CONN_STR";
+
+        public const string SERVICE_DATA_BLOB_CONTAINER_NAME = "SERVICE_DATA_BLOB_CONTAINER_NAME";
+
+        public const string SERVICE_BLOB_CONN_STR_APP_CONFIG_KEY = "SERVICE_BLOB_CONN_STR_APP_CONFIG_KEY";
     }
 }

@@ -20,7 +20,7 @@ namespace Sample.Sdk.Core.Security.Providers.Signature
             _asymetricCryptoProvider = asymetricCryptoProvider;
         }
         public async Task CreateSignature(EncryptedMessage msg, 
-            Enums.Enums.AzureKeyVaultOptionsType keyVaultType, 
+            Enums.Enums.HostTypeOptions keyVaultType, 
             CancellationToken token)
         {
             if (msg == null)

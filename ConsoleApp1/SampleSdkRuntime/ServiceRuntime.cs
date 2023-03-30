@@ -1,5 +1,7 @@
 ﻿using Azure.Core;
+using Azure.Data.AppConfiguration;
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
@@ -7,12 +9,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sample.Sdk;
+using Microsoft.Graph.Models;
 using Sample.Sdk.Core;
+using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Azure.Factory;
+using Sample.Sdk.Core.Constants;
 using Sample.Sdk.Core.Exceptions;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.Exceptions;
 using SampleSdkRuntime.HostedServices;
+using SampleSdkRuntime.Sdk;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -23,18 +29,6 @@ namespace SampleSdkRuntime
 {
     public class ServiceRuntime
     {
-        public const string IS_RUNTIME = "IsRuntime";
-        public const string AZURE_TENANT_ID = "AZURE_TENANT_ID";
-        public const string AZURE_CLIENT_ID = "AZURE_CLIENT_ID";
-        public const string AZURE_CLIENT_SECRET = "AZURE_CLIENT_SECRET";
-
-        public const string RUNTIME_AZURE_TENANT_ID = "RUNTIME:AZURE_TENANT_ID";
-        public const string RUNTIME_AZURE_CLIENT_ID = "RUNTIME:AZURE_CLIENT_ID";
-        public const string RUNTIME_AZURE_CLIENT_SECRET = "RUNTIME:AZURE_CLIENT_SECRET";
-
-        public const string SERVICE_INSTANCE_ID = "SERVICE_INSTANCE_ID";
-        public const string RUNTIME_SETUP_INFO = "SetupInfo";
-
         /// <summary>
         /// ServiceRuntime-ServiceBusClient: 8d69558c-fc01-407c-becc-e561358afafb
         /// TenantId: c8656f45-daf5-42c1-9b29-ac27d3e63bf3
@@ -54,28 +48,29 @@ namespace SampleSdkRuntime
         /// <returns></returns>
         public static async Task RunAsync(string[] args, IHostBuilder serviceHostBuilder = null)
         {
-            Environment.SetEnvironmentVariable(AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
-            Environment.SetEnvironmentVariable("NETCORE_ENVIRONMENT", "Development");
-            //Environment.SetEnvironmentVariable(AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
-            //Environment.SetEnvironmentVariable(AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
-
-            //Environment.SetEnvironmentVariable(RUNTIME_AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
-            //Environment.SetEnvironmentVariable(RUNTIME_AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
-            //Environment.SetEnvironmentVariable(RUNTIME_AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
-
             if (args.Count() < 2)
                 throw new RuntimeStartException("Service runtime must receive a value setting as an argument with the service instance identifier");
+
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.ENVIRONMENT_VAR, "Development");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.APP_CONFIG_CONN_STR, "Endpoint=https://learningappconfig.azconfig.io;Id=pIlK-ll-s0:SMHTAi4UoZxaK1C0ADZg;Secret=5cx53U0WM7bLwCcoJ2nM0oit+B1MK7UUsbWA9p6z3KY=");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_DATA_BLOB_CONTAINER_NAME, "servicedata");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_BLOB_CONN_STR_APP_CONFIG_KEY, "MessageSignatureBlobConnSt");
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID, $"{args[0]}-{args[1]}");
+            
             ILogger<ServiceRuntime> logger = GetLogger();
 
             var runtimeTokenSource = new CancellationTokenSource();
             var runtimeToken = runtimeTokenSource.Token;
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            (bool isValid, ServiceRegistration? serviceReg, FaultyType? reason, IHost host) setupResult;
+            ServiceRegistration? serviceReg = null;
             try
             {
-                setupResult = await RunSetupAsync(args, sw, runtimeToken).ConfigureAwait(false);
-                if (!setupResult.isValid)
+                serviceReg = await RunSetupAsync(args, sw, runtimeToken).ConfigureAwait(false);
+                if (serviceReg != null)
                 {
                     sw.Stop();
                     logger.LogCritical("Setup fail, service won't start");
@@ -89,35 +84,53 @@ namespace SampleSdkRuntime
                 sw.Stop();
                 return;
             }
-
-            if (serviceHostBuilder != null && setupResult.isValid && setupResult.serviceReg != null)
+            //Running the service host after runtime setup the service
+            if (serviceHostBuilder != null && serviceReg != null)
             {
                 var serviceHostVariables = new Dictionary<string, string>
                 {
-                    { AZURE_TENANT_ID, Environment.GetEnvironmentVariable(AZURE_TENANT_ID) },
-                    { AZURE_CLIENT_ID, setupResult.serviceReg.Credentials.First().ClientId },
-                    { AZURE_CLIENT_SECRET, setupResult.serviceReg.Credentials.First().ServiceSecretText },
-                    { SERVICE_INSTANCE_ID, setupResult.serviceReg.ServiceInstanceId },
-                    { IS_RUNTIME, "false" }
+                    { ConfigurationVariableConstant.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ConfigurationVariableConstant.AZURE_TENANT_ID)! },
+                    { ConfigurationVariableConstant.AZURE_CLIENT_ID, serviceReg.Credentials.First().ClientId },
+                    { ConfigurationVariableConstant.AZURE_CLIENT_SECRET, serviceReg.Credentials.First().ServiceSecretText },
+                    { ConfigurationVariableConstant.SERVICE_INSTANCE_ID, serviceReg.ServiceInstanceId },
+                    { ConfigurationVariableConstant.IS_RUNTIME, "false" }
                 };
                 serviceHostBuilder.ConfigureAppConfiguration((host, builder) => 
                 {
                     builder.AddInMemoryCollection(serviceHostVariables)
                     .AddAzureAppConfiguration(appConfig =>
                                                 {
-                                                    appConfig.Connect("Endpoint=https://learningappconfig.azconfig.io;Id=pIlK-ll-s0:SMHTAi4UoZxaK1C0ADZg;Secret=5cx53U0WM7bLwCcoJ2nM0oit+B1MK7UUsbWA9p6z3KY=");
+                                                    appConfig.Connect(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.APP_CONFIG_CONN_STR));
                                                     appConfig.Select(KeyFilter.Any, LabelFilter.Null);
-                                                    appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT"));
+                                                    appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable(ConfigurationVariableConstant.ENVIRONMENT_VAR));
+                                                    appConfig.ConfigureKeyVault(configureKeyVault => 
+                                                    {
+                                                        var serviceVaultUri = ServiceConfiguration.Create(host.Configuration)
+                                                                                .GetKeyVaultUri(Sample.Sdk.Core.Enums.Enums.HostTypeOptions.ServiceInstance);
+                                                        var tokenClientFactory = new ClientOAuthTokenProviderFactory(host.Configuration);
+                                                        tokenClientFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var tokenClient);
+                                                        var secretClient = new SecretClient(new Uri(serviceVaultUri), tokenClient);
+                                                        configureKeyVault.Register(secretClient);
+                                                        configureKeyVault.SetSecretResolver(async keyVaultUri => 
+                                                        {
+                                                            var serviceContext = new ServiceContext(ServiceRegistration.DefaultInstance(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID)!));
+                                                            var secretResult = await secretClient.GetSecretAsync($"{serviceContext.ServiceInstanceName()}{serviceContext.GetServiceBlobConnStrKey()}");
+                                                            return secretResult.Value.Value;                                                        
+                                                        });
+                                                    });
                                                 });
                 });
                 serviceHostBuilder.ConfigureServices((host, services) => 
                 {
                     services.TryAddSingleton<IServiceContext>(serviceProvider => 
                     {
-                        var serviceContext = new ServiceContext(setupResult.serviceReg);
+                        var serviceContext = new ServiceContext(serviceReg);
                         return serviceContext;
                     });
-                    services.AddRuntimeServices(host.Configuration);
+                    services.AddRuntimeServices(host.Configuration, new ServiceContext(serviceReg));
+                    services.AddSampleSdk(host.Configuration);
+                    services.AddSampleSdkInMemoryServices(host.Configuration);
+                    services.AddSampleSdkDataProtection(host.Configuration);
                 });
                 try 
                 {
@@ -155,38 +168,65 @@ namespace SampleSdkRuntime
         /// <param name="cancellationToken">runtime token to stop the setup hosted service</param>
         /// <returns>valid when the service computed as expected. faulty if the service dependencies were not configured prperly</returns>
         /// <exception cref="RuntimeStartException">Throw the exception if the runtime is unable to setup the service</exception>
-        private static async Task<(bool isValid, ServiceRegistration? setupInfo, FaultyType? reason, IHost? host)> 
+        private static async Task<ServiceRegistration?> 
             RunSetupAsync(string[] args, 
                             Stopwatch sw, 
                             CancellationToken cancellationToken) 
         {
+            var serviceInstance = $"{args[0]}-{args[1]}";
             var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var setupToken = tokenSource.Token;
             var keyValuePair = new Dictionary<string, string>() 
             {
-                { RUNTIME_AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3" },
-                { RUNTIME_AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16" },
-                { RUNTIME_AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x" },
-                { IS_RUNTIME, "true" },
-                { SERVICE_INSTANCE_ID, $"{args[0]}-{args[1]}" }
+                { ConfigurationVariableConstant.RUNTIME_AZURE_TENANT_ID, "c8656f45-daf5-42c1-9b29-ac27d3e63bf3" },
+                { ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_ID, "0f691c02-1c41-4783-b54c-22d921db4e16" },
+                { ConfigurationVariableConstant.RUNTIME_AZURE_CLIENT_SECRET, "HuU8Q~UGJXdLK3b4hyM1XFnQaP6BVeOLVIJOia_x" },
+                { ConfigurationVariableConstant.IS_RUNTIME, "true" },
+                { ConfigurationVariableConstant.SERVICE_INSTANCE_ID, serviceInstance }
             };
             IHost hostRuntimeSetup = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration(configBuilder => 
+                .ConfigureAppConfiguration((host,configBuilder) => 
                 {
                     configBuilder.AddInMemoryCollection(keyValuePair);
-                    configBuilder.AddAzureAppConfiguration(appConfig => 
+                    configBuilder.AddAzureAppConfiguration(appConfig =>
                     {
-                        appConfig.Connect("Endpoint=https://learningappconfig.azconfig.io;Id=pIlK-ll-s0:SMHTAi4UoZxaK1C0ADZg;Secret=5cx53U0WM7bLwCcoJ2nM0oit+B1MK7UUsbWA9p6z3KY=");
+                        appConfig.Connect(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.APP_CONFIG_CONN_STR));
                         appConfig.Select(KeyFilter.Any, LabelFilter.Null);
-                        appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT"));
+                        appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable(ConfigurationVariableConstant.ENVIRONMENT_VAR));
+                        appConfig.ConfigureKeyVault(configureKeyVault =>
+                        {
+                            var appConfigClient = new ConfigurationClient(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.APP_CONFIG_CONN_STR));
+                            var keyVaultConfigAppKey = $"{args[0]}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}";
+                            var serviceVaultUri = appConfigClient.GetConfigurationSetting(
+                                keyVaultConfigAppKey, 
+                                Environment.GetEnvironmentVariable(ConfigurationVariableConstant.ENVIRONMENT_VAR));
+
+                            var keyVaultOptions = JsonSerializer.Deserialize<AzureKeyVaultOptions>(serviceVaultUri.Value.Value);
+
+                            var tokenClientFactory = new ClientOAuthTokenProviderFactory(host.Configuration);
+                            var clientSecretCredential = tokenClientFactory.GetClientSecretCredential();
+                            var secretClient = new SecretClient(new Uri(keyVaultOptions!.VaultUri), clientSecretCredential);
+                            configureKeyVault.Register(secretClient);
+                            //configureKeyVault.SetSecretResolver(async keyVaultUri =>
+                            //{
+                            //    var serviceContext = new ServiceContext(ServiceRegistration.DefaultInstance(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID)!));
+                            //    var secretResult = await secretClient.GetSecretAsync($"{serviceContext.ServiceInstance}{serviceContext.GetServiceBlobConnStrKey()}");
+                            //    return secretResult.Value.Value;
+                            //});
+                        });
                     });
                 })
                 .ConfigureServices((host, services) =>
                 {
+                    ServiceConfiguration.Create(host.Configuration).AddRuntimeAzureKeyVaultOptions(services);
                     services.AddSampleSdkTokenCredentials(host.Configuration);
-                    services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(host.Configuration);
                     services.AddSampleSdkCryptographic();
-                    services.AddRuntimeServices(host.Configuration);
+                    services.AddAzureKeyVaultClients(host.Configuration);
+                    services.AddRuntimeServices(host.Configuration, new ServiceContext(ServiceRegistration.DefaultInstance(serviceInstance)));
+                    services.AddTransient<IServiceContext>(sp => 
+                    {
+                        return new ServiceContext(ServiceRegistration.DefaultInstance(serviceInstance));
+                    });
                     services.AddHostedService<RuntimeSetupHostedAppService>();
                 }).Build();
             var configuration = hostRuntimeSetup.Services.GetRequiredService<IConfiguration>();
@@ -230,10 +270,7 @@ namespace SampleSdkRuntime
                     tokenSource.Dispose();
                     throw new RuntimeStartException("Time out was reached");
                 }
-                return (checkRuntimeResult.isValid, 
-                        checkRuntimeResult.serviceReg, 
-                        checkRuntimeResult.reason, 
-                        !checkRuntimeResult.isValid ? default : hostRuntimeSetup);
+                return checkRuntimeResult.serviceReg;
             }
             catch (Exception e)
             {
@@ -255,12 +292,12 @@ namespace SampleSdkRuntime
             IConfiguration configuration,
             ILogger logger) where T : IRuntimeServiceInfo, new()
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(RUNTIME_SETUP_INFO))) 
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_SETUP_INFO))) 
             {
                 T? info;
                 try
                 {
-                    info = JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(Environment.GetEnvironmentVariable(RUNTIME_SETUP_INFO))));
+                    info = JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_SETUP_INFO)!)));
                 }
                 catch (Exception e)
                 {

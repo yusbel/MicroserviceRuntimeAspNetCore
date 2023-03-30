@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
+namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount
 {
     public class ServicePrincipalProvider : IServicePrincipalProvider
     {
@@ -48,10 +48,10 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
             try
             {
                 principal = await graph.ServicePrincipals.PostAsync(new ServicePrincipal()
-                                                                    {
-                                                                        AppId = identifier,
-                                                                        AppRoleAssignmentRequired = true
-                                                                    },null, cancellationToken);
+                {
+                    AppId = identifier,
+                    AppRoleAssignmentRequired = true
+                }, null, cancellationToken);
             }
             catch (Exception)
             {
@@ -74,11 +74,11 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.ServiceAccount
             ServicePrincipalCollectionResponse? servicePrincipals = null;
             try
             {
-                servicePrincipals = await graph!.ServicePrincipals.GetAsync(reqConfig => 
+                servicePrincipals = await graph!.ServicePrincipals.GetAsync(reqConfig =>
                                                 {
                                                     reqConfig.QueryParameters.Filter = $"appid eq '{identifier}'";
                                                 }, cancellationToken).ConfigureAwait(false);
-                    
+
                 if (servicePrincipals == null || servicePrincipals?.Value?.Count == 0)
                 {
                     return default;

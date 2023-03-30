@@ -13,11 +13,11 @@ using Sample.Sdk.Core;
 using Microsoft.Graph;
 using Sample.Sdk.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
 using Sample.Sdk.Core.Azure.Factory.Interfaces;
 using Microsoft.Graph.Models;
+using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 
-namespace SampleSdkRuntime.Azure.KeyVaultLibs
+namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs
 {
     public class KeyVaultPolicyProvider : IKeyVaultPolicyProvider
     {

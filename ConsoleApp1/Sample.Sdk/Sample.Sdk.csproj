@@ -35,5 +35,6 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="Sample.Sdk.Tests" />
 		<InternalsVisibleTo Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<InternalsVisibleTo Include="SampleSdkRuntime"/>
 	</ItemGroup>
 </Project>

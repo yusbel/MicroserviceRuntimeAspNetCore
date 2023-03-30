@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
+namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
 {
     internal class AppRegistrationSetup
     {
@@ -19,7 +19,7 @@ namespace SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration
             ServicePrincipal? servicePrincipal,
             string clientSecret)
         {
-            if (app == null || servicePrincipal == null) 
+            if (app == null || servicePrincipal == null)
             {
                 throw new ArgumentNullException(nameof(app));
             }

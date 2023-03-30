@@ -3,11 +3,11 @@ using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Graph.Models;
 
-namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
+namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces
 {
     public interface IKeyVaultProvider : IKeyVaultPolicyProvider
     {
-        Task<(bool wasSaved, KeyVaultKey keyVaultKey)>  
+        Task<(bool wasSaved, KeyVaultKey keyVaultKey)>
             CreateOrDeleteKeyInKeyVaultWithRetry(string keyName,
                                     KeyType keyType,
                                     CreateKeyOptions keyOptions,

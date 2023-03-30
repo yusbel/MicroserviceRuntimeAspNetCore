@@ -19,5 +19,7 @@ namespace Sample.Sdk.Core.Azure.Factory.Interfaces
 
         (string TenantId, string ClientId, string ClientSecret)
             GetAzureTokenCredentials();
+
+        ClientSecretCredential GetClientSecretCredential();
     }
 }

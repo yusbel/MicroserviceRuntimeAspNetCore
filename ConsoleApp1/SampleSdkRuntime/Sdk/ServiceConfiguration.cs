@@ -1,5 +1,6 @@
 ﻿using Azure.Data.AppConfiguration;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +17,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Sample.Sdk.Core.Enums.Enums;
 
-namespace Sample.Sdk.Configurations
+namespace SampleSdkRuntime.Sdk
 {
     internal class ServiceConfiguration
     {
@@ -26,30 +28,34 @@ namespace Sample.Sdk.Configurations
         /// <summary>
         /// Connection string will be on the service context created by the service runtime
         /// </summary>
-        internal static ServiceConfiguration Create(IConfiguration configuration) 
+        internal static ServiceConfiguration Create(IConfiguration configuration)
         {
-            var id = configuration.GetValue<string>(ConfigurationVariableConstant.SERVICE_INSTANCE_ID);
+            var id = Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID);
             return new ServiceConfiguration()
             {
                 config = configuration,
                 identifier = id.Substring(0, id.IndexOf("-"))
             };
         }
-
-        internal void AddAzureKeyVaultOptions(IServiceCollection services) 
+        internal void AddRuntimeAzureKeyVaultOptions(IServiceCollection services) 
         {
-            services.Configure<List<AzureKeyVaultOptions>>(option => 
+            services.Configure<AzureKeyVaultOptions>(config.GetSection(AzureKeyVaultOptions.RUNTIME_KEYVAULT_SECTION_APP_CONFIG));
+        }
+
+        internal void AddAzureKeyVaultOptions(IServiceCollection services)
+        {
+            services.Configure<List<AzureKeyVaultOptions>>(option =>
             {
                 option.AddRange(GetAzureKeyVaultOptions());
             });
         }
 
-        internal void AddCustomProtocolOptions(IServiceCollection services) 
+        internal void AddCustomProtocolOptions(IServiceCollection services)
         {
             services.Configure<CustomProtocolOptions>(config.GetSection($"{identifier}:{CustomProtocolOptions.Identifier}"));
         }
 
-        internal void AddAzureServiceBusOptions(IServiceCollection services) 
+        internal void AddAzureServiceBusOptions(IServiceCollection services)
         {
             services.Configure<List<AzureMessageSettingsOptions>>(options =>
             {
@@ -58,16 +64,38 @@ namespace Sample.Sdk.Configurations
             });
         }
 
-        internal (string senderConnStr, string receiverConnStr) GetServiceBusConnStr() 
+        internal (string senderConnStr, string receiverConnStr) GetServiceBusConnStr()
         {
             return (GetServiceBusSenderOptions().First().ConnStr, GetServiceBusReceiverOptions().First().ConnStr);
         }
 
-        internal void AddDatabaseSettingsOptions(IServiceCollection services) 
+        internal ValueTask AddBlobStorageOptions(IServiceCollection services, CancellationToken token)
+        {
+            services.AddOptions<BlobStorageOptions>()
+                .Configure<IAzureClientFactory<SecretClient>>(async (blobOptions, secretClientFactory) =>
+                {
+                    var secretCient = secretClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
+                    config.GetSection(BlobStorageOptions.Identifier).Bind(blobOptions);
+                    var blobConnStr = await secretCient.GetSecretAsync(blobOptions.EmployeeServiceMsgSignatureSecret, null, token).ConfigureAwait(false);
+                    blobOptions.BlobConnStr = blobConnStr.Value.Value;
+                });
+
+            return ValueTask.CompletedTask;
+        }
+
+        internal BlobStorageOptions GetBlobSecretKeyOptions()
+        {
+            var blobSecretOption = new BlobStorageOptions();
+            config.GetSection(BlobStorageOptions.Identifier).Bind(blobSecretOption);
+            return blobSecretOption;
+        }
+
+        internal void AddDatabaseSettingsOptions(IServiceCollection services)
         {
             services.AddOptions<DatabaseSettingOptions>()
-                .Configure<SecretClient>((dbSettings, secretClient) => 
+                .Configure<IAzureClientFactory<SecretClient>>((dbSettings, secretClientFactory) =>
                 {
+                    var secretClient = secretClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
                     dbSettings.ConnectionString = secretClient.GetSecret(DatabaseSettingOptions.DatabaseSetting).Value.Value;
                 });
         }
@@ -78,7 +106,7 @@ namespace Sample.Sdk.Configurations
                 config.GetSection($"{identifier}:{ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID}"));
         }
 
-        internal string GetKeyVaultUri(Enums.AzureKeyVaultOptionsType keyVaultOptionsType) 
+        internal string GetKeyVaultUri(Enums.HostTypeOptions keyVaultOptionsType)
         {
             var options = GetAzureKeyVaultOptions();
             return options.First(o => o.Type == keyVaultOptionsType).VaultUri;
@@ -90,13 +118,13 @@ namespace Sample.Sdk.Configurations
         {
             var options = new List<AzureKeyVaultOptions>
             {
-                new AzureKeyVaultOptions{ Type = Enums.AzureKeyVaultOptionsType.Runtime },
-                new AzureKeyVaultOptions{ Type = Enums.AzureKeyVaultOptionsType.ServiceInstance }
+                new AzureKeyVaultOptions{ Type = Enums.HostTypeOptions.Runtime },
+                new AzureKeyVaultOptions{ Type = Enums.HostTypeOptions.ServiceInstance }
             };
             config.GetSection($"{identifier}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}")
-                    .Bind(options.First(option => option.Type == Enums.AzureKeyVaultOptionsType.ServiceInstance));
+                    .Bind(options.First(option => option.Type == Enums.HostTypeOptions.ServiceInstance));
             config.GetSection(AzureKeyVaultOptions.RUNTIME_KEYVAULT_SECTION_APP_CONFIG)
-                    .Bind(options.First(option => option.Type == Enums.AzureKeyVaultOptionsType.Runtime));
+                    .Bind(options.First(option => option.Type == Enums.HostTypeOptions.Runtime));
             return options;
         }
 

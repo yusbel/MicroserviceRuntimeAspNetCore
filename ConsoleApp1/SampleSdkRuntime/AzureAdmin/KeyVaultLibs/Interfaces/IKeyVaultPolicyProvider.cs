@@ -2,7 +2,7 @@
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 
-namespace SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces
+namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces
 {
     public interface IKeyVaultPolicyProvider
     {

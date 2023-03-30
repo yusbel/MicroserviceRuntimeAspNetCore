@@ -1,8 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Graph;
-using Microsoft.Graph.Models;
-using Sample.Sdk.Core.Azure;
-using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
+using Sample.Sdk.Core.Constants;
 using SampleSdkRuntime.Data;
 using System.Text;
 using System.Text.Json;
@@ -57,8 +54,8 @@ namespace SampleSdkRuntime.HostedServices
             //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID)); ;
             //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_ID, GetServiceReg().Credentials.First().ClientId);
             //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_SECRET, GetServiceReg().Credentials.First().ServiceSecretText);
-            Environment.SetEnvironmentVariable(ServiceRuntime.SERVICE_INSTANCE_ID, serviceReg.ServiceInstanceId);
-            Environment.SetEnvironmentVariable(ServiceRuntime.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(serviceReg))));
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID, serviceReg.ServiceInstanceId);
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(serviceReg))));
         }
 
         public void Dispose()

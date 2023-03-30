@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SampleSdkRuntime.Azure.Verifiers
+namespace SampleSdkRuntime.AzureAdmin
 {
-    internal class ServiceBusVerified
+    internal class AzureSdkClientFactory
     {
+
     }
 }

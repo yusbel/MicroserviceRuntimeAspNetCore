@@ -58,10 +58,12 @@ using System.Xml.Linq;
 using Sample.Sdk.Services.Msg;
 using Sample.Sdk.Core.Enums;
 using Sample.Sdk.Core.Security.Providers;
-using Sample.Sdk.Configurations;
 using Microsoft.Extensions.Options;
+using Azure.Security.KeyVault.Keys;
+using Azure.Security.KeyVault.Secrets;
+using static Sample.Sdk.Core.Enums.Enums;
 
-namespace Sample.Sdk
+namespace SampleSdkRuntime.Sdk
 {
     public static class SdkRegisterDependencies
     {
@@ -69,30 +71,50 @@ namespace Sample.Sdk
 
         public static IServiceCollection AddSampleSdk(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddDbContext<ServiceDbContext>();
             ServiceConfiguration.Create(configuration).AddDatabaseSettingsOptions(services);
+            ServiceConfiguration.Create(configuration).AddCustomProtocolOptions(services);
             services.Configure<MessageSettingsConfigurationOptions>(configuration.GetSection(MessageSettingsConfigurationOptions.SECTION_ID));
-            services.AddSingleton(serviceProvider => 
+            services.AddDbContext<ServiceDbContext>();
+            services.AddSingleton(serviceProvider =>
             {
                 return new HttpClient();
             });
-            services.AddTransient<IPublicKeyProvider>(serviceProvider => 
+            services.AddTransient<IPublicKeyProvider>(serviceProvider =>
             {
                 return new PublicKeyProvider(serviceProvider.GetRequiredService<HttpClient>());
             });
             services.AddTransient<ISendExternalMessage, MessageSenderService>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
             services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
-            ServiceConfiguration.Create(configuration).AddCustomProtocolOptions(services);
             services.AddSampleSdkTokenCredentials(configuration);
-            services.AddSampleSdkAzureKeyVaultCertificateAndSecretClient(configuration);
             services.AddSampleSdkServiceBus(configuration);
             services.AddSampleSdkCryptographic();
+            services.AddAzureKeyVaultClients(configuration);
 
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkCryptographic(this IServiceCollection services) 
+        internal static IServiceCollection AddAzureKeyVaultClients(this IServiceCollection services, IConfiguration config)
+        {
+            var runtimeKeyVaultUri = ServiceConfiguration.Create(config).GetKeyVaultUri(HostTypeOptions.Runtime);
+            var serviceKeyVaultUri = ServiceConfiguration.Create(config).GetKeyVaultUri(HostTypeOptions.ServiceInstance);
+
+            services.AddAzureClients(factory => 
+            {
+                var runtime = HostTypeOptions.Runtime.ToString();
+                factory.AddKeyClient(new Uri(runtimeKeyVaultUri)).WithName(HostTypeOptions.Runtime.ToString());
+                factory.AddCertificateClient(new Uri(runtimeKeyVaultUri)).WithName(HostTypeOptions.Runtime.ToString());
+                factory.AddSecretClient(new Uri(runtimeKeyVaultUri)).WithName(HostTypeOptions.Runtime.ToString());
+                factory.AddKeyClient(new Uri(serviceKeyVaultUri)).WithName(HostTypeOptions.ServiceInstance.ToString());
+                factory.AddCertificateClient(new Uri(serviceKeyVaultUri)).WithName(HostTypeOptions.ServiceInstance.ToString());
+                factory.AddSecretClient(new Uri(serviceKeyVaultUri)).WithName(HostTypeOptions.ServiceInstance.ToString());
+
+            });
+
+            return services;
+        }
+
+        public static IServiceCollection AddSampleSdkCryptographic(this IServiceCollection services)
         {
             services.AddSingleton<IMemoryCacheState<string, X509Certificate2>, MemoryCacheState<string, X509Certificate2>>();
             services.AddSingleton<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>, MemoryCacheState<string, KeyVaultCertificateWithPolicy>>();
@@ -104,23 +126,23 @@ namespace Sample.Sdk
             services.AddTransient<IAesKeyRandom, AesSymetricCryptoProvider>();
             services.AddTransient<IAsymetricCryptoProvider, X509CertificateServiceProviderAsymetricAlgorithm>();
             services.AddTransient<ICertificateProvider, AzureKeyVaultCertificateProvider>();
-            
+
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkTokenCredentials(this IServiceCollection services, IConfiguration configuration) 
+        public static IServiceCollection AddSampleSdkTokenCredentials(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddTransient<IClientOAuthTokenProviderFactory, ClientOAuthTokenProviderFactory>();
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkDataProtection(this IServiceCollection services, IConfiguration configuration, string keyIdentifier)
+        public static IServiceCollection AddSampleSdkDataProtection(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddTransient<IMessageDataProtectionProvider, MessageDataProtectionProvider>();
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkInMemoryServices(this IServiceCollection services, IConfiguration config) 
+        public static IServiceCollection AddSampleSdkInMemoryServices(this IServiceCollection services, IConfiguration config)
         {
             services.AddHostedService<MessageSenderRealtimeHostedService>();
             services.AddHostedService<MessageReceiverRealtimeHostedService>();
@@ -134,44 +156,7 @@ namespace Sample.Sdk
             return services;
         }
 
-        public static IServiceCollection AddSampleSdkAzureKeyVaultCertificateAndSecretClient(this IServiceCollection services, IConfiguration config) 
-        {
-            ServiceConfiguration.Create(config).AddAzureKeyVaultOptions(services);
-            //list of client certificates
-            services.AddTransient(serviceProvider => 
-            {
-                var keyVaultOptions = serviceProvider.GetRequiredService<IOptions<List<AzureKeyVaultOptions>>>();
-                var clientTokenFactory = serviceProvider.GetRequiredService<IClientOAuthTokenProviderFactory>();
-                if (clientTokenFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential)) 
-                {
-                    var certificateClients = new List<KeyValuePair<Enums.AzureKeyVaultOptionsType, CertificateClient>>();
-                    foreach (var option in keyVaultOptions.Value)
-                    {
-                        certificateClients.Add(KeyValuePair.Create(option.Type, 
-                            new CertificateClient(new Uri(option.VaultUri), clientSecretCredential)));
-                    }
-                    return certificateClients;
-                }
-                throw new InvalidOperationException("Unable to create client secret credential");
-            });
-
-            services.AddAzureClients((azureClientBuilder) =>
-            {
-                var keyVaultUri = ServiceConfiguration.Create(config).GetKeyVaultUri(Enums.AzureKeyVaultOptionsType.ServiceInstance);
-                
-                azureClientBuilder.AddSecretClient(new Uri(keyVaultUri));
-                azureClientBuilder.AddKeyClient(new Uri(keyVaultUri));
-                azureClientBuilder.UseCredential(serviceProvider => 
-                {
-                    var clientCredentialFactory = serviceProvider.GetRequiredService<IClientOAuthTokenProviderFactory>();
-                    clientCredentialFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
-                    return clientSecretCredential;
-                });
-            });
-            return services;
-        }
-
-        public static IServiceCollection AddSampleSdkServiceBus(this IServiceCollection services, IConfiguration configuration) 
+        public static IServiceCollection AddSampleSdkServiceBus(this IServiceCollection services, IConfiguration configuration)
         {
             ServiceConfiguration.Create(configuration).AddAzureServiceBusOptions(services);
             services.AddAzureClients(azureClientFactory =>

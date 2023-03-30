@@ -2,20 +2,22 @@
 using Azure.ResourceManager.KeyVault.Models;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
 using Sample.Sdk.Core.Exceptions;
-using SampleSdkRuntime.Azure.KeyVaultLibs.Interfaces;
+using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Sample.Sdk.Core.Enums.Enums;
 
-namespace SampleSdkRuntime.Azure.KeyVaultLibs
+namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs
 {
     public class KeyVaultProvider : IKeyVaultProvider
     {
@@ -27,15 +29,15 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
 
         public KeyVaultProvider(IConfiguration configuration,
             ILogger<KeyVaultProvider> logger,
-            SecretClient secretClient,
+            IAzureClientFactory<SecretClient> secretClientFactory,
             IKeyVaultPolicyProvider keyVaultPolicyProvider,
-            KeyClient keyClient)
+            IAzureClientFactory<KeyClient> keyClientFactory)
         {
             _configuration = configuration;
             _logger = logger;
-            _secretClient = secretClient;
+            _secretClient = secretClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
             _keyVaultPolicyProvider = keyVaultPolicyProvider;
-            _keyClient = keyClient;
+            _keyClient = keyClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
         }
 
         /// <summary>
@@ -48,11 +50,11 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
 
-        public async Task<(bool wasCreated, KeyVaultAccessPolicyParameters? keyVaultAccessPolicyParameters)> 
-            CreatePolicy(string tenantId, 
-            string resourceId, 
-            Application application, 
-            ServicePrincipal servicePrincipal, 
+        public async Task<(bool wasCreated, KeyVaultAccessPolicyParameters? keyVaultAccessPolicyParameters)>
+            CreatePolicy(string tenantId,
+            string resourceId,
+            Application application,
+            ServicePrincipal servicePrincipal,
             CancellationToken cancellationToken)
         {
             return await _keyVaultPolicyProvider.CreatePolicy(tenantId, resourceId, application, servicePrincipal, cancellationToken).ConfigureAwait(false);
@@ -67,9 +69,9 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
         /// <param name="resourceIdentifier">use the resource identifier that include the subscrition id and the resource group</param>
         /// <param name="cancellationToken">to can cel operation</param>
         /// <returns></returns>
-        public async Task<bool> DeleteAccessPolicy(string tenantId, 
-            Guid appId, 
-            Guid servicePrincipalId, 
+        public async Task<bool> DeleteAccessPolicy(string tenantId,
+            Guid appId,
+            Guid servicePrincipalId,
             string resourceIdentifier,
             CancellationToken cancellationToken)
         {
@@ -114,7 +116,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
                     throw;
                 }
             }
-            if (counter == maxRetry) 
+            if (counter == maxRetry)
             {
                 return (false, default);
             }
@@ -141,7 +143,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
         /// <param name="counter"></param>
         /// <returns></returns>
         /// <exception cref="RequestFailedException">raised when maxretry is reached</exception>
-        public async Task<(bool wasSaved, KeyVaultKey keyVaultKey)> 
+        public async Task<(bool wasSaved, KeyVaultKey keyVaultKey)>
             CreateOrDeleteKeyInKeyVaultWithRetry(string keyName,
                                     KeyType keyType,
                                     CreateKeyOptions keyOptions,
@@ -162,7 +164,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
                 {
                     await _keyClient.PurgeDeletedKeyAsync(keyName, token).ConfigureAwait(false);
                 }
-                catch (Exception) 
+                catch (Exception)
                 {
                     throw;
                 }
@@ -182,7 +184,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
                                 keyOptions,
                                 token,
                                 createOrDeleteKey,
-                                counter, 
+                                counter,
                                 maxRetry)
                                 .ConfigureAwait(false);
         }
@@ -198,7 +200,7 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
         /// <param name="cancellationToken">cancel the operation</param>
         /// <exception cref="RequestFailedException">throw when max of retry is reached without success</exception> 
         /// <returns></returns>
-        public async Task<(bool WasSaved, KeyVaultSecret? Secret)> 
+        public async Task<(bool WasSaved, KeyVaultSecret? Secret)>
             SaveOrDeleteSecretInKeyVaultWithRetry(string secretKey,
                             string secretText,
                             Func<string, string, Task<KeyVaultSecret>> saveOrDeleteSecret,
@@ -224,17 +226,17 @@ namespace SampleSdkRuntime.Azure.KeyVaultLibs
             {
                 throw;
             }
-            if (counter == maxRetry) 
+            if (counter == maxRetry)
             {
                 return (false, default);
             }
             counter++;
             await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
             return await SaveOrDeleteSecretInKeyVaultWithRetry(secretKey,
-                secretText, 
+                secretText,
                 saveOrDeleteSecret,
                 cancellationToken,
-                counter, 
+                counter,
                 maxRetry).ConfigureAwait(false);
         }
 

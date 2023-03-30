@@ -66,10 +66,7 @@ namespace Sample.EmployeeSubdomain
             services.Configure<WebHookConfigurationOptions>(configuration.GetSection(WebHookConfigurationOptions.SERVICE_WEBHOOK_CONFIG_OPTIONS_SECTION_ID));
             services.Configure<WebHookRetryOptions>(configuration.GetSection(WebHookRetryOptions.SERVICE_WEBHOOK_RETRY_OPTIONS_SECTION_ID));
             
-            //Adding sdk dependecies
-            services.AddSampleSdk(configuration);
-            services.AddSampleSdkInMemoryServices(configuration);
-            services.AddSampleSdkDataProtection(configuration, configuration.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions"));
+            
             return services;
         }
     }

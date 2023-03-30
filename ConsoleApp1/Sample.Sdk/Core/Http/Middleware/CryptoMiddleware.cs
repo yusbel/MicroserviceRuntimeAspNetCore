@@ -50,7 +50,7 @@ namespace Sample.Sdk.Core.Http.Middleware
         private async Task RetrievePublicKey(string keyIdentifier, HttpContext context)
         {
             var result = await _certificateProvider.GetCertificate(keyIdentifier,
-                                        Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance,
+                                        Enums.Enums.HostTypeOptions.ServiceInstance,
                                         _tokenSource.Token).ConfigureAwait(false);
             if (result.WasDownloaded.HasValue && result.WasDownloaded.Value && result.CertificateWithPolicy!.Cer.Length > 0) 
             {

@@ -1,5 +1,6 @@
 ﻿using Azure;
 using Azure.Security.KeyVault.Certificates;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Sample.Sdk.Core.Azure;
@@ -23,16 +24,17 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
     public class AzureKeyVaultCertificateProvider : ICertificateProvider
     {
         private readonly IMemoryCacheState<string, X509Certificate2> _certificates;
-        private readonly List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>> _certificateClients;
+        private readonly IAzureClientFactory<CertificateClient> _certificateFactoryClient;
         private readonly IMemoryCacheState<string, KeyVaultCertificateWithPolicy> _certificatesWithPolicy;
 
         public AzureKeyVaultCertificateProvider(IMemoryCacheState<string, X509Certificate2> certificates,
-            List<KeyValuePair<Enums.Enums.AzureKeyVaultOptionsType, CertificateClient>> certificateClients,
+            List<KeyValuePair<Enums.Enums.HostTypeOptions, CertificateClient>> certificateClients,
+            IAzureClientFactory<CertificateClient> certificateFactoryClient,
             IMemoryCacheState<string, KeyVaultCertificateWithPolicy> certificatesWithPolicy)
         {
             Guard.ThrowWhenNull(certificates, certificateClients);
             _certificates = certificates;
-            _certificateClients = certificateClients;
+            _certificateFactoryClient = certificateFactoryClient;
             _certificatesWithPolicy = certificatesWithPolicy;
         }
 
@@ -49,7 +51,7 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
         /// <exception cref="PlatformNotSupportedException">Can not create this certificate</exception>
         /// <exception cref="RequestFailedException">See error code</exception>
         public async Task<(bool? WasDownloaded, X509Certificate2? Certificate)>
-            DownloadCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token, string? version = null)
+            DownloadCertificate(string certificateName, Enums.Enums.HostTypeOptions keyVaultType, CancellationToken token, string? version = null)
         {
             if (string.IsNullOrEmpty(certificateName))
             {
@@ -84,7 +86,7 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
         /// <returns><see cref="KeyVaultCertificateWithPolicy"/></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public async Task<(bool? WasDownloaded, KeyVaultCertificateWithPolicy? CertificateWithPolicy)> 
-            GetCertificate(string certificateName, Enums.Enums.AzureKeyVaultOptionsType keyVaultType, CancellationToken token)
+            GetCertificate(string certificateName, Enums.Enums.HostTypeOptions keyVaultType, CancellationToken token)
         {
             if (string.IsNullOrEmpty(certificateName)) 
             {
@@ -112,16 +114,14 @@ namespace Sample.Sdk.Core.Security.Providers.Certificate
             catch (Exception) { throw; }
         }
 
-        private string GetCertificateId(string certificateName, Enums.Enums.AzureKeyVaultOptionsType azureKeyVaultType) 
+        private string GetCertificateId(string certificateName, Enums.Enums.HostTypeOptions azureKeyVaultType) 
         {
             return $"{certificateName}{azureKeyVaultType}";
         }
 
-        private CertificateClient GetCertificateClient(Enums.Enums.AzureKeyVaultOptionsType azureKeyVaultOptionsType) 
+        private CertificateClient GetCertificateClient(Enums.Enums.HostTypeOptions azureKeyVaultOptionsType) 
         {
-            return _certificateClients.Where(client => client.Key == azureKeyVaultOptionsType)
-                                        .Select(item => item.Value)
-                                        .First();
+            return _certificateFactoryClient.CreateClient(azureKeyVaultOptionsType.ToString());
         }
     }
 }

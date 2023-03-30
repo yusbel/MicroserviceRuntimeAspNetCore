@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Graph;
-using Microsoft.Graph.Models;
-using SampleSdkRuntime.Azure.ActiveDirectoryLibs.AppRegistration;
+using Sample.Sdk.Core.Constants;
+using SampleSdkRuntime.AzureAdmin.BlobStorageLibs;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.Extensions;
 using SampleSdkRuntime.HostedServices.Interfaces;
@@ -25,15 +24,18 @@ namespace SampleSdkRuntime.HostedServices
         private readonly IConfiguration? _configuration;
         private readonly IRuntimeVerificationService _runtimeVerificationService;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IBlobProvider _blobProvider;
         private CancellationTokenSource? tokenSource;
 
         public RuntimeSetupHostedAppService(IConfiguration configuration,
             IRuntimeVerificationService runtimeVerificationService,
-            IServiceProvider serviceProvider) : base(configuration)
+            IServiceProvider serviceProvider,
+            IBlobProvider blobProvider) : base(configuration)
         {
             _configuration = configuration;
             _runtimeVerificationService = runtimeVerificationService;
             _serviceProvider = serviceProvider;
+            _blobProvider = blobProvider;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -48,8 +50,8 @@ namespace SampleSdkRuntime.HostedServices
 
         private async Task CreateSetup(CancellationToken token)
         {
-            Environment.SetEnvironmentVariable(ServiceRuntime.RUNTIME_SETUP_INFO, string.Empty);
-            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ServiceRuntime.SERVICE_INSTANCE_ID);
+            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_SETUP_INFO, string.Empty);
+            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ConfigurationVariableConstant.SERVICE_INSTANCE_ID);
             
             //Create application service, service principel, add service pricipal password to key vault and add policy to query for secret
             var serviceRegProvider = _serviceProvider.GetRequiredService<IServiceRegistrationProvider>();
@@ -61,6 +63,14 @@ namespace SampleSdkRuntime.HostedServices
                                     .ConfigureServiceCredential(ServiceInstanceIdentifier, token)
                                     .ConfigureServiceCryptoSecret(token)
                                     .Build();
+            }
+            try
+            {
+                await _blobProvider.UploadPublicKey("ServiceRuntime:SignatureCertificateName", token).ConfigureAwait(false);
+            }
+            catch (Exception e) 
+            {
+                throw;
             }
             CreateSetupInfo(serviceReg!);
             return;

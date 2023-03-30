@@ -54,7 +54,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             var baseSignature = $"{Convert.ToBase64String(_sessionState.SessionIdentifierEncrypted)}:{createdOn}:{Convert.ToBase64String(encryptedData)}";
             (bool wasCreated, byte[]? data, EncryptionDecryptionFail reason) signature = 
-                await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature), Enums.Enums.AzureKeyVaultOptionsType.ServiceInstance, token);
+                await cryptoProvider.CreateSignature(Encoding.UTF8.GetBytes(baseSignature), Enums.Enums.HostTypeOptions.ServiceInstance, token);
             if(!signature.wasCreated || signature.data == null) 
             {
                 return (false, default, default);
@@ -91,7 +91,7 @@ namespace Sample.Sdk.Core.Security.Providers.Protocol
             }
             (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainData = 
                 await cryptoProvider.Decrypt(Convert.FromBase64String(result.data.Encrypted), 
-                Enums.Enums.AzureKeyVaultOptionsType.Runtime, 
+                Enums.Enums.HostTypeOptions.Runtime, 
                 "",
                 CancellationToken.None);
             if (!plainData.wasDecrypted || plainData.data == null) 

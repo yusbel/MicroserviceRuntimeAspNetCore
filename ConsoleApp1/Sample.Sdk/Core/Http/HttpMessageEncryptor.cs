@@ -58,7 +58,7 @@ namespace Sample.Sdk.Core.Http
             if (request.Content != null) 
             {
                 (bool wasDecrypted, byte[]? data, EncryptionDecryptionFail reason) plainContent = 
-                    await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), Enums.Enums.AzureKeyVaultOptionsType.Runtime, "", token);
+                    await _cryptoProvider.Decrypt(await request.Content.ReadAsByteArrayAsync(), Enums.Enums.HostTypeOptions.Runtime, "", token);
                 if (!plainContent.wasDecrypted || plainContent.data == null) 
                 {
                     return request;
@@ -74,7 +74,7 @@ namespace Sample.Sdk.Core.Http
                     {
                         var encryptedStr = string.Join(",", header.Value);
                         (bool wasDecrypt, byte[]? data, EncryptionDecryptionFail reason) plainStr = 
-                            await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), Enums.Enums.AzureKeyVaultOptionsType.Runtime, "",  token);
+                            await _cryptoProvider.Decrypt(Encoding.UTF8.GetBytes(encryptedStr), Enums.Enums.HostTypeOptions.Runtime, "",  token);
                         if(plainStr.wasDecrypt && plainStr.data != null) 
                         {
                             header.Value.ToList().RemoveAll(h => h.Length > 0);
