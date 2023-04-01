@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sample.Sdk.Core.Constants;
-using SampleSdkRuntime.AzureAdmin.BlobStorageLibs;
+using Sample.Sdk.Data.Constants;
+using SampleSdkRuntime.AzureAdmin.BlobLibs;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.Extensions;
 using SampleSdkRuntime.HostedServices.Interfaces;
@@ -50,29 +50,15 @@ namespace SampleSdkRuntime.HostedServices
 
         private async Task CreateSetup(CancellationToken token)
         {
-            Environment.SetEnvironmentVariable(ConfigurationVariableConstant.RUNTIME_SETUP_INFO, string.Empty);
-            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ConfigurationVariableConstant.SERVICE_INSTANCE_ID);
+            Environment.SetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO, string.Empty);
+            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ConfigVarConst.SERVICE_INSTANCE_NAME_ID);
+            var serviceReg = await ServiceRegistrationProvider.Create(_serviceProvider, ServiceInstanceIdentifier)
+                                .ConfigureServiceCredential(token)
+                                .ConfigureServiceCryptoSecret(token)
+                                .Build(token)
+                                .ConfigureAwait(false);
             
-            //Create application service, service principel, add service pricipal password to key vault and add policy to query for secret
-            var serviceRegProvider = _serviceProvider.GetRequiredService<IServiceRegistrationProvider>();
-            var serviceReg = await serviceRegProvider.GetServiceRegistration(ServiceInstanceIdentifier, token)
-                                                        .ConfigureAwait(false);
-            if (serviceReg == null || !serviceReg.WasSuccessful)
-            {
-                serviceReg = ServiceRegistrationProvider.Create(_serviceProvider)
-                                    .ConfigureServiceCredential(ServiceInstanceIdentifier, token)
-                                    .ConfigureServiceCryptoSecret(token)
-                                    .Build();
-            }
-            try
-            {
-                await _blobProvider.UploadPublicKey("ServiceRuntime:SignatureCertificateName", token).ConfigureAwait(false);
-            }
-            catch (Exception e) 
-            {
-                throw;
-            }
-            CreateSetupInfo(serviceReg!);
+            CreateSetupInfo(serviceReg);
             return;
         }
 

@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk;
+using Sample.Sdk.Core;
 using Sample.Sdk.Msg;
 using System;
 using System.Collections.Generic;

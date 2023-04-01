@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Sample.Sdk.Core.Http.Middleware;
 using System.Net;
 
 namespace Sample.PayRoll.Host
@@ -16,7 +15,7 @@ namespace Sample.PayRoll.Host
 
         public void Configure(IApplicationBuilder appBuilder, IWebHostEnvironment environment) 
         {
-            appBuilder.UseMiddleware<CryptoMiddleware>();
+            //appBuilder.UseMiddleware<CryptoMiddleware>();
 
             appBuilder.Run(async (ctx) => 
             {

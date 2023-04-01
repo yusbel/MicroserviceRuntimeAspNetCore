@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -7,17 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="C:\Users\YusbelAdmin\.nuget\packages\microsoft.azure.cosmos\3.32.2\contentFiles\any\netstandard2.0\ThirdPartyNotice.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Core" Version="1.30.0" />
     <PackageReference Include="Azure.Data.AppConfiguration" Version="1.2.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.12.0" />
     <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.1.0" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.15.1" />
-    <PackageReference Include="Microsoft.Azure.Management.KeyVault.Fluent" Version="1.38.1" />
-    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.6.0" />
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.32.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Microsoft.Graph" Version="5.0.0" />
   </ItemGroup>
 
@@ -31,6 +33,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="Sample.Sdk.Tests" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Http\Middleware\Data\" />
 	</ItemGroup>
 
 </Project>

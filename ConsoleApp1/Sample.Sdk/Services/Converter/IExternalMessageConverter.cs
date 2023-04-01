@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Msg.Data;
+﻿using Sample.Sdk.Data.Msg;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -4,7 +4,6 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Google.Protobuf.Reflection;
 using Microsoft.Extensions.Options;
-using Sample.Sdk.Core.Security.Providers.Protocol;
 using Sample.Sdk.InMemory;
 using System;
 using System.Collections.Generic;
@@ -13,11 +12,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using Moq;
-using Sample.Sdk.Core.Azure;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
 using Sample.Sdk.InMemory.Interfaces;
-using Sample.Sdk.Core.Security;
+using Sample.Sdk.Azure;
+using Sample.Sdk.Security.Providers.Protocol;
+using Sample.Sdk.Data.Options;
 
 namespace Sample.Sdk.Tests.Security
 {

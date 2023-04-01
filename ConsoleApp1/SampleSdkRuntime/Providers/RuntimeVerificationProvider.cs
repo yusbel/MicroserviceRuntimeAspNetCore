@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Exceptions;
 using SampleSdkRuntime.Providers.Data;
 using SampleSdkRuntime.Providers.Interfaces;
 using System;

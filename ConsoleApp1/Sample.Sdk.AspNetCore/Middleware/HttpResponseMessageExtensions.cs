@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Sample.Sdk.Core.Http.Data;
-using Sample.Sdk.Core.Security.Providers.Protocol.Http;
-using Sample.Sdk.Core.Security.Providers.Protocol.State;
+using Sample.Sdk.Security.Providers.Protocol.Http;
+using Sample.Sdk.Security.Providers.Protocol.State;
 using System;
 using System.Collections.Generic;
 using System.Linq;

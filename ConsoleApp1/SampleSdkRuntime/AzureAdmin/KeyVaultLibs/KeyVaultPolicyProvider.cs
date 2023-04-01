@@ -11,11 +11,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Sample.Sdk.Core;
 using Microsoft.Graph;
-using Sample.Sdk.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Sample.Sdk.Core.Azure.Factory.Interfaces;
 using Microsoft.Graph.Models;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
+using Sample.Sdk.Exceptions;
+using Sample.Sdk.Interface.Azure.Factory;
 
 namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs
 {

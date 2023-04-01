@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.PayRoll.Entities;
-using Sample.Sdk.Core.EntityDatabaseContext;
+using Sample.Sdk.Data.Options;
 using Sample.Sdk.EntityModel;
 using System;
 using System.Collections.Generic;

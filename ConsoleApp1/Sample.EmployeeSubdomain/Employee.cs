@@ -1,26 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.Entities;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Messages;
-using Sample.Sdk;
-using Sample.Sdk.Core;
-using Sample.Sdk.Core.Exceptions;
-using Sample.Sdk.Core.Security.Interfaces;
-using Sample.Sdk.Core.Security.Providers.Asymetric.Interfaces;
-using Sample.Sdk.Core.Security.Providers.Protocol;
-using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
-using Sample.Sdk.Msg;
-using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Persistance;
-using Sample.Sdk.Persistance.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.EmployeeSubdomain
 {

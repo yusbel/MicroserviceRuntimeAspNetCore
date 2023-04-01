@@ -1,10 +1,5 @@
-﻿using Sample.Sdk.EntityModel;
-using System;
-using System.Collections.Generic;
+﻿using Sample.Sdk.Data.Entities;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.EmployeeSubdomain.Entities
 {

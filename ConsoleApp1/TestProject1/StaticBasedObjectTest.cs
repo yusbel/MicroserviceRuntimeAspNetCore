@@ -1,6 +1,6 @@
 
 using Sample.EmployeeSubdomain.Messages;
-using Sample.Sdk.Core;
+using Sample.Sdk;
 
 namespace TestProject1
 {

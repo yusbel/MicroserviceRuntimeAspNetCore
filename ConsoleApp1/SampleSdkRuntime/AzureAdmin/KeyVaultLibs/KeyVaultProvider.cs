@@ -8,14 +8,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
-using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Exceptions;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Sample.Sdk.Core.Enums.Enums;
+using static Sample.Sdk.Data.Enums.Enums;
 
 namespace SampleSdkRuntime.AzureAdmin.KeyVaultLibs
 {

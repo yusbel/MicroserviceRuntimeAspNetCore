@@ -1,4 +1,5 @@
-﻿using Sample.Sdk.EntityModel;
+﻿using Sample.Sdk.Data.Entities;
+using Sample.Sdk.EntityModel;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

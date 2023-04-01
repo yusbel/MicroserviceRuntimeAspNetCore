@@ -5,19 +5,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Sample.Sdk.Core.Azure;
-using Sample.Sdk.Core.Constants;
-using Sample.Sdk.Core.EntityDatabaseContext;
-using Sample.Sdk.Core.Enums;
-using Sample.Sdk.Core.Security;
-using Sample.Sdk.Msg.Data.Options;
+using Sample.Sdk.Data.Constants;
+using Sample.Sdk.Data.Options;
 using Sample.Sdk.Msg.Providers.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Sample.Sdk.Core.Enums.Enums;
+using static Sample.Sdk.Data.Enums.Enums;
 
 namespace SampleSdkRuntime.Sdk
 {
@@ -30,7 +26,7 @@ namespace SampleSdkRuntime.Sdk
         /// </summary>
         internal static ServiceConfiguration Create(IConfiguration configuration)
         {
-            var id = Environment.GetEnvironmentVariable(ConfigurationVariableConstant.SERVICE_INSTANCE_ID);
+            var id = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID);
             return new ServiceConfiguration()
             {
                 config = configuration,
@@ -106,7 +102,7 @@ namespace SampleSdkRuntime.Sdk
                 config.GetSection($"{identifier}:{ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID}"));
         }
 
-        internal string GetKeyVaultUri(Enums.HostTypeOptions keyVaultOptionsType)
+        internal string GetKeyVaultUri(HostTypeOptions keyVaultOptionsType)
         {
             var options = GetAzureKeyVaultOptions();
             return options.First(o => o.Type == keyVaultOptionsType).VaultUri;
@@ -118,13 +114,13 @@ namespace SampleSdkRuntime.Sdk
         {
             var options = new List<AzureKeyVaultOptions>
             {
-                new AzureKeyVaultOptions{ Type = Enums.HostTypeOptions.Runtime },
-                new AzureKeyVaultOptions{ Type = Enums.HostTypeOptions.ServiceInstance }
+                new AzureKeyVaultOptions{ Type = HostTypeOptions.Runtime },
+                new AzureKeyVaultOptions{ Type = HostTypeOptions.ServiceInstance }
             };
             config.GetSection($"{identifier}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}")
-                    .Bind(options.First(option => option.Type == Enums.HostTypeOptions.ServiceInstance));
+                    .Bind(options.First(option => option.Type == HostTypeOptions.ServiceInstance));
             config.GetSection(AzureKeyVaultOptions.RUNTIME_KEYVAULT_SECTION_APP_CONFIG)
-                    .Bind(options.First(option => option.Type == Enums.HostTypeOptions.Runtime));
+                    .Bind(options.First(option => option.Type == HostTypeOptions.Runtime));
             return options;
         }
 

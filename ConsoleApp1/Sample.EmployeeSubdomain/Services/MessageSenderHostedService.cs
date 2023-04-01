@@ -1,16 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Services.Interfaces;
-using Sample.Sdk;
-using Sample.Sdk.Core.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Sample.Sdk.Core;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace Sample.EmployeeSubdomain.Services
 {

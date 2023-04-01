@@ -2,9 +2,10 @@
 using AutoFixture.AutoMoq;
 using Microsoft.Extensions.Options;
 using Moq;
+using Sample.Sdk.Azure;
 using Sample.Sdk.Core;
-using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Http;
+using Sample.Sdk.Data.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;

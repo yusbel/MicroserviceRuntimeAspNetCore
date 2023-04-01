@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Sample.Messaging.WebHooks;
 using Sample.Messaging.WebHooks.Data;
-using Sample.Sdk;
+using Sample.Sdk.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;

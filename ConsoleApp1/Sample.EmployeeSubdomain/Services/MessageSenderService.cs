@@ -1,21 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Sample.EmployeeSubdomain.DatabaseContext;
 using Sample.EmployeeSubdomain.Interfaces;
 using Sample.EmployeeSubdomain.Services.Interfaces;
-using Sample.Sdk.Core.Exceptions;
-using Sample.Sdk.EntityModel;
-using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Msg.Interfaces;
-using Sample.Sdk.Msg.Providers.Interfaces;
-using System;
+using Sample.Sdk.Data.Msg;
+using Sample.Sdk.Interface.Msg;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+using static Sample.Sdk.Data.Enums.Enums;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace Sample.EmployeeSubdomain.Services
 {
@@ -57,7 +48,7 @@ namespace Sample.EmployeeSubdomain.Services
             {
                 var externalMsgs = await _outgoingMessageProvider.GetMessages(token, (outgoingEvent => !outgoingEvent.IsDeleted && !outgoingEvent.IsSent)).ConfigureAwait(false);
                 var sentMsgs = new ConcurrentBag<ExternalMessage>();
-                var failMsgs = new ConcurrentBag<(ExternalMessage msg, MessageHandlingReason.SendFailedReason? reason, Exception exception)>();
+                var failMsgs = new ConcurrentBag<(ExternalMessage msg, SendFailedReason? reason, Exception exception)>();
                 try
                 {
                     await Parallel.ForEachAsync(externalMsgs, async (msg, token) =>

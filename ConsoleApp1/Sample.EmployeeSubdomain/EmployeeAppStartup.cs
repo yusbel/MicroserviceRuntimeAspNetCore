@@ -4,19 +4,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sample.EmployeeSubdomain.Middleware;
-using Sample.Sdk;
-using Sample.Sdk.AspNetCore.Middleware;
-using Sample.Sdk.Core.Azure;
-using Sample.Sdk.Core.Http.Middleware;
-using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Persistance.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.EmployeeSubdomain
 {
@@ -32,7 +21,7 @@ namespace Sample.EmployeeSubdomain
         }
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {   
-            app.UseMiddleware<CryptoMiddleware>();  
+            //app.UseMiddleware<CryptoMiddleware>();  
             //app.UseMiddleware<CustomSecureTransparentEncryptionMiddleware>();
             //app.UseMiddleware<CustomProtocolAcknowledgementMiddleware>();
 

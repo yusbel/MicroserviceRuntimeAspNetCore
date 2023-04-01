@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk.Core.Exceptions;
-using Sample.Sdk.Core.Extensions;
-using Sample.Sdk.EntityModel;
-using Sample.Sdk.Msg.Data;
-using System.Text.Json;
+using Sample.Sdk.Data.Entities;
+using Sample.Sdk.Data.Msg;
+using static Sample.Sdk.Core.Extensions.OutgoingEventEntityExtensions;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace Sample.Sdk.Msg.Providers
 {

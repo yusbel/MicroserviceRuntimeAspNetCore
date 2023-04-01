@@ -4,6 +4,6 @@ namespace SampleSdkRuntime.Providers.Registration
 {
     internal interface IServiceCredentialProvider
     {
-        Task<IEnumerable<ServiceCredential>> CreateOrGetCredentials(string appId, CancellationToken token);
+        Task<IEnumerable<ServiceCredential>> CreateCredentials(string appId, CancellationToken token);
     }
 }

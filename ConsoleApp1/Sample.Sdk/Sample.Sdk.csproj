@@ -15,26 +15,34 @@
     <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.4.0" />
     <PackageReference Include="Azure.Security.KeyVault.Keys" Version="4.4.0" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.15.1" />
     <PackageReference Include="EntityFramework" Version="6.4.4" />
     <PackageReference Include="JsonFlatten" Version="1.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.KeyVault.Cryptography" Version="3.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.6.0" />
+    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.6.3" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="5.2.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageReference Include="Microsoft.Graph" Version="5.0.0" />
   </ItemGroup>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="Sample.Sdk.Tests" />
 		<InternalsVisibleTo Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-		<InternalsVisibleTo Include="SampleSdkRuntime"/>
+		<InternalsVisibleTo Include="SampleSdkRuntime" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Sample.Sdk.Core\Sample.Sdk.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="InMemory\Data\" />
+	  <Folder Include="Msg\Providers\Interfaces\" />
+	  <Folder Include="Security\DataProtection\" />
+	  <Folder Include="Security\Providers\" />
 	</ItemGroup>
 </Project>

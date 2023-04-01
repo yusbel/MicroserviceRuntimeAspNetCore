@@ -4,6 +4,6 @@ namespace SampleSdkRuntime.Providers.Registration
 {
     internal interface IServiceRegistrationProvider
     {
-        Task<ServiceRegistration> GetServiceRegistration(string appId, CancellationToken token);
+        Task<(bool isValid, ServiceRegistration reg)> GetServiceRegistration(string appId, CancellationToken token);
     }
 }

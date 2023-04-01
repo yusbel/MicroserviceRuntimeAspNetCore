@@ -2,20 +2,21 @@
 using Azure.Security.KeyVault.Certificates;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Sample.Sdk;
-using Sample.Sdk.Core;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Azure.Factory;
-using Sample.Sdk.Core.Azure.Factory.Interfaces;
-using Sample.Sdk.Core.Constants;
+using Sample.Sdk.Data.Constants;
+using Sample.Sdk.Interface.Azure.Factory;
+using Sample.Sdk.Interface.Database;
 using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration;
 using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount;
-using SampleSdkRuntime.AzureAdmin.BlobStorageLibs;
+using SampleSdkRuntime.AzureAdmin.BlobLibs;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.HostedServices;
@@ -31,7 +32,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Sample.Sdk.Core.Enums.Enums;
+using static Sample.Sdk.Data.Enums.Enums;
 using static System.Net.WebRequestMethods;
 
 namespace SampleSdkRuntime
@@ -63,6 +64,14 @@ namespace SampleSdkRuntime
             services.AddTransient<IKeyVaultProvider, KeyVaultProvider>();
             services.AddTransient<IRuntimeVerificationService, RuntimeVerificationService>();
             services.AddTransient<IBlobProvider, BlobProvider>();
+            services.AddSingleton(sp => 
+            {
+                var tokenClientFactory = sp.GetRequiredService<IClientOAuthTokenProviderFactory>();
+                var clientSecretCredential = tokenClientFactory.GetClientSecretCredential();
+                var cosmosDbClient = new CosmosClient("https://microservice-service-runtime.documents.azure.com:443", clientSecretCredential);
+                
+                return cosmosDbClient;
+            });
 
             return services;
         }
@@ -70,25 +79,22 @@ namespace SampleSdkRuntime
         
         private static IServiceCollection AddRuntimeServiceAzureClients(this IServiceCollection services, IConfiguration config, IServiceContext serviceContext)
         {
-            services.AddAzureClients(azureClientBuilder =>
+            services.AddAzureClients(clientBuilder =>
             {
-                //var keyVaultService = ServiceConfiguration.Create(config).GetKeyVaultUri(HostTypeOptions.ServiceInstance);
-                //var secretClient = new SecretClient(new Uri(keyVaultService), new DefaultAzureCredential());
-                //var blobConnStr = secretClient.GetSecret(blobSecretOptions.EmployeeServiceMsgSignatureSecret).Value.Value;
-                var blobConnStrKey = $"{serviceContext.ServiceInstanceName()}:{serviceContext.GetServiceBlobConnStrKey()}";
-                var configSection = config[blobConnStrKey];
-                azureClientBuilder.AddBlobServiceClient(config.GetSection(blobConnStrKey))
+                var blobConnStrKey = $"{serviceContext.GetServiceInstanceName()}:{serviceContext.GetServiceBlobConnStrKey()}";
+                clientBuilder.AddBlobServiceClient(config.GetSection(blobConnStrKey))
                                     .WithName(HostTypeOptions.ServiceInstance.ToString());
+                clientBuilder.AddBlobServiceClient(config.GetSection(serviceContext.GetServiceRuntimeBlobConnStrKey()))
+                                    .WithName(HostTypeOptions.Runtime.ToString());
 
-                azureClientBuilder.AddConfigurationClient(Environment.GetEnvironmentVariable(ConfigurationVariableConstant.APP_CONFIG_CONN_STR));
+                clientBuilder.AddConfigurationClient(Environment.GetEnvironmentVariable(ConfigVarConst.APP_CONFIG_CONN_STR));
                 
-                azureClientBuilder.UseCredential((services) =>
+                clientBuilder.UseCredential((services) =>
                 {
                     var clientCredentialFactory = services.GetRequiredService<IClientOAuthTokenProviderFactory>();
                     clientCredentialFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
                     return clientSecretCredential;
                 });
-
             });
             return services;
         }

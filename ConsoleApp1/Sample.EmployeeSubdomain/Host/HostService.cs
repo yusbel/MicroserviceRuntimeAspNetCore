@@ -1,16 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sample.EmployeeSubdomain.WebHook;
 using Microsoft.AspNetCore.Hosting;
-using Sample.Sdk;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Refit;
-using Polly;
-using Microsoft.Extensions.Logging;
 
 namespace Sample.EmployeeSubdomain.Host
 {
@@ -45,21 +36,7 @@ namespace Sample.EmployeeSubdomain.Host
                 {
                     services.AddEmployeeServiceDependencies(host.Configuration);
                     
-                    services.AddRefitClient<WebHookConfiguration>()
-                                    .ConfigureHttpClient(client =>
-                                    {
-
-                                    })
-                                    .AddTransientHttpErrorPolicy((builder) =>
-                                    {
-                                        builder.OrResult(resp => resp.StatusCode == System.Net.HttpStatusCode.GatewayTimeout);
-                                        return builder.WaitAndRetryAsync(new[]
-                                                                    {
-                                                                        TimeSpan.FromSeconds(1),
-                                                                        TimeSpan.FromSeconds(5),
-                                                                        TimeSpan.FromSeconds(10)
-                                                                    });
-                                    });
+                    
                     services.AddHttpClient("", client => { });
 
                     services.AddHttpClient("TestHttpClient", client =>

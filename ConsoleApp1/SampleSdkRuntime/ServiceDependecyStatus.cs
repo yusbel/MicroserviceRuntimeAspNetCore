@@ -12,8 +12,7 @@ namespace SampleSdkRuntime
         {
             None,
             ApplicationOrServicePrincipleNotFound,
-            ApplicationIdSecretNotFoundOnKeyVault,
-
+            ApplicationIdSecretNotFoundOnKeyVault
         }
     }
 }

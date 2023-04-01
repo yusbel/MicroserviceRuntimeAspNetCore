@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Msg.Data;
+﻿using Sample.Sdk.Data.Msg;
 
 namespace Sample.EmployeeSubdomain.Services.Interfaces
 {

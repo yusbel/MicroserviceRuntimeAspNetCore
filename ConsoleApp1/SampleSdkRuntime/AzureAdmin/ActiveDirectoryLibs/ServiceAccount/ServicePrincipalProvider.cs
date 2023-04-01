@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using Sample.Sdk.Core.Azure.Factory.Interfaces;
-using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Exceptions;
+using Sample.Sdk.Interface.Azure.Factory;
 using System;
 using System.Collections.Generic;
 using System.Linq;

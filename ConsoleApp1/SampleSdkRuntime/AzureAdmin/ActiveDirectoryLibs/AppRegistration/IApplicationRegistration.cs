@@ -17,5 +17,7 @@ namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
 
         Task<AppRegistrationSetup>
             DeleteAndCreate(string appIdentifier, CancellationToken token);
+
+        Task<Application?> GetApplication(string appId, CancellationToken token);
     }
 }

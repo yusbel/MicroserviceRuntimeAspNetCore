@@ -8,9 +8,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph.Models;
 using Sample.Sdk.Core.Azure;
 using Sample.Sdk.Core.Azure.Factory.Interfaces;
-using Sample.Sdk.Core.Security.Providers.Symetric.Interface;
+using Sample.Sdk.Data.Constants;
+using Sample.Sdk.Interface.Security.Symetric;
 using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration;
-using SampleSdkRuntime.AzureAdmin.BlobStorageLibs;
+using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount;
+using SampleSdkRuntime.AzureAdmin.BlobLibs;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.Data;
 using SampleSdkRuntime.Extensions;
@@ -19,7 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Sample.Sdk.Core.Enums.Enums;
+using static Sample.Sdk.Data.Enums.Enums;
 
 namespace SampleSdkRuntime.Providers.Registration
 {
@@ -27,42 +29,77 @@ namespace SampleSdkRuntime.Providers.Registration
     {
         private IServiceProvider _serviceProvider = null;
         private readonly IBlobProvider _blobProvider;
+        private readonly IAesKeyRandom _aesKeyRandom;
+        private readonly IConfiguration _config;
+        private readonly IApplicationRegistration _applicationRegistration;
+        private readonly IServicePrincipalProvider _servicePrincipalProvider;
+        private readonly SecretClient _secretClient;
         private ServiceRegistration _serviceRegistration = new ServiceRegistration();
-
-        public ServiceRegistrationProvider(IServiceProvider serviceProvider,
-            IBlobProvider blobProvider)
+        private string _appId = String.Empty;
+        private ServiceRegistrationProvider(string appId,
+            IServiceProvider serviceProvider,
+            IBlobProvider blobProvider,
+            IAesKeyRandom aesKeyRandom,
+            IConfiguration config,
+            IApplicationRegistration applicationRegistration,
+            IServicePrincipalProvider servicePrincipalProvider,
+            IAzureClientFactory<SecretClient> azureClientFactory)
         {
+            _appId = appId;
+            _secretClient = azureClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
             _serviceProvider = serviceProvider;
             _blobProvider = blobProvider;
+            _aesKeyRandom = aesKeyRandom;
+            _config = config;
+            _applicationRegistration = applicationRegistration;
+            _servicePrincipalProvider = servicePrincipalProvider;
         }
-        internal static ServiceRegistrationProvider Create(IServiceProvider serviceProvider)
+        internal static ServiceRegistrationProvider Create(IServiceProvider serviceProvider, string appId)
         {
-            return new ServiceRegistrationProvider(serviceProvider,
-                serviceProvider.GetRequiredService<IBlobProvider>());
+            return new ServiceRegistrationProvider(appId,
+                serviceProvider,
+                serviceProvider.GetRequiredService<IBlobProvider>(),
+                serviceProvider.GetRequiredService<IAesKeyRandom>(),
+                serviceProvider.GetRequiredService<IConfiguration>(),
+                serviceProvider.GetRequiredService<IApplicationRegistration>(),
+                serviceProvider.GetRequiredService<IServicePrincipalProvider>(),
+                serviceProvider.GetRequiredService<IAzureClientFactory<SecretClient>>());
         }
 
-        public async Task<ServiceRegistration> GetServiceRegistration(string appId, CancellationToken token)
+        public async Task<(bool isValid,ServiceRegistration reg)> GetServiceRegistration(string appId, CancellationToken token)
         {
-            var appReg = _serviceProvider.GetRequiredService<IApplicationRegistration>();
-            AppRegistrationSetup appRegSetup = null;
             try
             {
-                appRegSetup = await appReg.GetApplicationDetails(appId, token).ConfigureAwait(false);
+                //retrieving application
+                var app = await _applicationRegistration.GetApplication(appId, token)
+                                                                        .ConfigureAwait(false);
+                if (app == null || app.AppId == null)
+                    return (false, new ServiceRegistration());
+                //retrieving service principal
+                var servicePrincipal = await _servicePrincipalProvider.GetServicePrincipal(app.AppId, token)
+                                                                        .ConfigureAwait(false);
+                if (servicePrincipal == null)
+                    return (false, new ServiceRegistration());
+                //retrieve service pricipal password
+                var servicePass = await _secretClient.GetSecretAsync(GetAppDisplayName(appId), null, token)
+                                                                        .ConfigureAwait(false);
+                if (servicePass == null || servicePass.Value == null || servicePass.Value.Value == null)
+                    return (false, new ServiceRegistration());
+                //retrieve all the public keys used to verify message signature.
+
+                var appRegSetup = AppRegistrationSetup.Create(true, app, servicePrincipal, servicePass.Value.Value);
+                var serviceRegistration = ServiceRegistration.DefaultInstance(appId).Assign(appRegSetup);
+                return (true, serviceRegistration);
             }
             catch (Exception)
             {
-                return null;
+                //no need to log this is expected
+                return (false, default);
             }
-            var serviceReg = ServiceRegistration.DefaultInstance(appId).Assign(appRegSetup);
-            if (serviceReg.WasSuccessful) 
-            {
-                OnSuccess(serviceReg);
-            }
-            return serviceReg;
         }
 
         /// <summary>
-        /// 
+        /// Create service credentials
         /// </summary>
         /// <param name="appId"></param>
         /// <param name="token"></param>
@@ -71,26 +108,22 @@ namespace SampleSdkRuntime.Providers.Registration
         /// 
         private Func<Task> _privateConfigCredential = null;
         internal ServiceRegistrationProvider 
-            ConfigureServiceCredential(string appId,
-                CancellationToken token,
+            ConfigureServiceCredential(CancellationToken token,
                 Func<IServiceProvider, CancellationToken, Task<IEnumerable<ServiceCredential>>> createCredentials = null)
         {
             _privateConfigCredential = () => Task.Run(async () =>
             {
-                Func<string, CancellationToken, Task<IEnumerable<ServiceCredential>>> credProvider =
-                async (appIdentifier, cancellationToken) =>
-                {
-                    var credentialProvider = _serviceProvider.GetRequiredService<IServiceCredentialProvider>();
-                    return await credentialProvider.CreateOrGetCredentials(GetAppDisplayName(appId), token).ConfigureAwait(false);
-                };
-                _serviceRegistration.Credentials.AddRange(await credProvider.Invoke(GetAppDisplayName(appId), token).ConfigureAwait(false));
+                var credentialProvider = _serviceProvider.GetRequiredService<IServiceCredentialProvider>();
+                var credentials = await credentialProvider.CreateCredentials(GetAppDisplayName(_appId), token).ConfigureAwait(false);
+                
+                _serviceRegistration.Credentials.AddRange(credentials);
                 if (createCredentials != null)
                     _serviceRegistration.Credentials.AddRange(await createCredentials.Invoke(_serviceProvider, token).ConfigureAwait(false));
-                _serviceRegistration.ServiceInstanceId = appId;
+                _serviceRegistration.ServiceInstanceId = _appId;
                 _serviceRegistration.Credentials.ForEach(credential => 
                 { 
-                    credential.ServiceSecretKeyCertificateName = GetAppDisplayName(appId);
-                    credential.AppIdentifier = GetAppDisplayName(appId);
+                    credential.ServiceSecretKeyCertificateName = GetAppDisplayName(_appId);
+                    credential.AppIdentifier = GetAppDisplayName(_appId);
                 });
             });
             return this;
@@ -131,100 +164,20 @@ namespace SampleSdkRuntime.Providers.Registration
             return this;
         }
 
-        private string GetMessageKey() 
-        {
-            return $"AesMsgKey{_serviceRegistration.ServiceInstanceId.Replace("-", string.Empty)}";
-        }
 
-        private Func<Task> _privateConfigAesCyptoKeyInKeyVault = null;
-        internal ServiceRegistrationProvider ConfigureAesCryptoKeyInKeyVault(CancellationToken token) 
+        internal async Task<ServiceRegistration> Build(CancellationToken token)
         {
-            _privateConfigAesCyptoKeyInKeyVault = () => Task.Run(async() => 
+            (bool isValid, _serviceRegistration) = await GetServiceRegistration(_appId, token).ConfigureAwait(false);
+            if (!isValid) 
             {
-                var aesKeyProvider = _serviceProvider.GetRequiredService<IAesKeyRandom>();
-                var key = aesKeyProvider.GenerateRandomKey(256);
-                var keyVaultProvider = _serviceProvider.GetRequiredService<IKeyVaultProvider>();
-                var result = await keyVaultProvider.SaveOrDeleteSecretInKeyVaultWithRetry(GetMessageKey(),
-                                    Encoding.UTF8.GetString(key),
-                                    async (secretKey, secretText) =>
-                                    {
-                                        var secretClientFactory = _serviceProvider.GetRequiredService<IAzureClientFactory<SecretClient>>();
-                                        var secretClient = secretClientFactory.CreateClient(HostTypeOptions.ServiceInstance.ToString());
-                                        var result = await secretClient.SetSecretAsync(secretKey, secretText, token).ConfigureAwait(false);
-                                        return result.Value;
-                                    },
-                                    token)
-                                .ConfigureAwait(false);
+                await _privateConfigCredential.Invoke().ConfigureAwait(false);
+                await _privateConfigServiceCryptoSecret.Invoke().ConfigureAwait(false);
+            }
+            var appSettingName = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_RUNTIME_CERTIFICATE_NAME_APP_CONFIG_KEY);
+            await _blobProvider.UploadSignaturePublicKey(appSettingName!, token)
+                                                    .ConfigureAwait(false);
 
-                _serviceRegistration.Secrets.Add(new ServiceCryptoSecret()
-                {
-                    SecretId = result!.Secret!.Id.ToString(), 
-                    SecretKey = result.Secret.Name, 
-                    SecretText = result.Secret.Value
-                });
-            });
-            return this;
-        }
-
-        private Func<Task> _privateConfigCryptoKey = null;
-        internal ServiceRegistrationProvider 
-            ConfigureServiceCryptoKey(CancellationToken token)
-        {
-            _privateConfigCryptoKey = () => Task.Run((Func<Task?>)(async () =>
-            {
-                foreach(var credential in _serviceRegistration.Credentials)
-                {
-                    var keyClient = _serviceProvider.GetRequiredService<KeyClient>();
-                    var keyVaultProvider = _serviceProvider.GetRequiredService<IKeyVaultProvider>();
-                    var options = new CreateOctKeyOptions(credential.ServiceSecretKeyCertificateName.Replace("-", string.Empty))
-                    {
-                        Enabled = true,
-                        KeySize = 128
-                    };
-                    try
-                    {
-                        var factory = _serviceProvider.GetRequiredService<IClientOAuthTokenProviderFactory>();
-                        factory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
-                        var azureKeyVaultOptions = _serviceProvider.GetRequiredService<IOptions<AzureKeyVaultOptions>>();
-                        var managedHsmClient = new KeyClient(new Uri(azureKeyVaultOptions.Value.VaultUri), clientSecretCredential);
-
-                        var octKeyOptions = new CreateOctKeyOptions($"CloudOctKey-{Guid.NewGuid()}")
-                        {
-                            KeySize = 256,
-                        };
-
-                        KeyVaultKey cloudOctKey = managedHsmClient.CreateOctKey(octKeyOptions);
-
-                        var keyVaultResult = await keyVaultProvider.CreateOrDeleteOctKeyWithRetry(options,
-                                                                token,
-                                                                async (options, token) =>
-                                                                {
-                                                                    var result = await keyClient.CreateOctKeyAsync(options, token)
-                                                                                                .ConfigureAwait(false);
-                                                                    return result.Value;
-                                                                }).ConfigureAwait(false);
-                        _serviceRegistration.Keys.Add(new ServiceCryptoKey()
-                        {
-                            ServiceKeyId = keyVaultResult.keyVaultKey.Id.ToString(),
-                            ServiceKeyName = keyVaultResult.keyVaultKey.Name
-                        });
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                };
-            }));
-            return this;
-        }
-
-        internal ServiceRegistration Build()
-        {
-            _privateConfigCredential().Wait();
-            _privateConfigServiceCryptoSecret().Wait();
-            UploadCertificatePublicKey("ServiceRuntime:SignatureCertificateName", CancellationToken.None).Wait();
-
-            OnSuccess(_serviceRegistration);
+            AssignServiceRegistration(_serviceRegistration);
             return _serviceRegistration;
         }
 
@@ -254,38 +207,16 @@ namespace SampleSdkRuntime.Providers.Registration
                 });
                 return true;
             };
-        private string GetConfigValue(string key)
+        
+        private void AssignServiceRegistration(ServiceRegistration serviceReg) 
         {
-            return _serviceProvider.GetRequiredService<IConfiguration>().GetValue<string>(key);
+            AssignAesKeys(serviceReg);
         }
-
-        private void OnSuccess(ServiceRegistration serviceReg) 
+        private void AssignAesKeys(ServiceRegistration serviceReg) 
         {
-            var aesKeyProvider = _serviceProvider.GetRequiredService<IAesKeyRandom>();
             for (var i = 0; i < 30; i++) 
             {
-                serviceReg.AesKeys.Add(aesKeyProvider.GenerateRandomKey(256));
-            }
-        }
-
-        /// <summary>
-        /// "ServiceRuntime:SignatureCertificateName"
-        /// </summary>
-        /// <param name="appSettingName"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        private async Task<bool> UploadCertificatePublicKey(string appSettingName, 
-            CancellationToken token) 
-        {
-            try
-            {
-                return await _blobProvider.UploadPublicKey(appSettingName, token)
-                                                    .ConfigureAwait(false);
-
-            }
-            catch (Exception) 
-            {
-                throw;
+                serviceReg.AesKeys.Add(_aesKeyRandom.GenerateRandomKey(256));
             }
         }
     }

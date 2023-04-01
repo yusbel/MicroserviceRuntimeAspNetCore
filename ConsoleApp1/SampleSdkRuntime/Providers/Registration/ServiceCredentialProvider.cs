@@ -18,14 +18,10 @@ namespace SampleSdkRuntime.Providers.Registration
             _appReg = appReg;
         }
 
-        public async Task<IEnumerable<ServiceCredential>> CreateOrGetCredentials(string appId, CancellationToken token)
+        public async Task<IEnumerable<ServiceCredential>> CreateCredentials(string appId, CancellationToken token)
         {
             AppRegistrationSetup appRegResult = null;
-            try
-            {
-                appRegResult = await _appReg.GetApplicationDetails(appId, token).ConfigureAwait(false);
-            }
-            catch (Exception) { }
+            
             if (appRegResult == null || !appRegResult.WasSuccessful)
             {
                 appRegResult = await _appReg.DeleteAndCreate(appId, token).ConfigureAwait(false);

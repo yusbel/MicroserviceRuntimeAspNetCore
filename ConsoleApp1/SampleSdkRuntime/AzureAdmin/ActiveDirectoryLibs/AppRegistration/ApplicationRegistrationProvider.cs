@@ -8,9 +8,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Applications.Item.AddPassword;
 using Microsoft.Graph.Models;
-using Sample.Sdk.Core.Azure;
-using Sample.Sdk.Core.Azure.Factory.Interfaces;
-using Sample.Sdk.Core.Exceptions;
+using Sample.Sdk.Azure;
+using Sample.Sdk.Data.Options;
+using Sample.Sdk.Exceptions;
+using Sample.Sdk.Interface.Azure.Factory;
 using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount;
 using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
 using SampleSdkRuntime.Exceptions;
@@ -21,7 +22,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Sample.Sdk.Core.Enums.Enums;
+using static Sample.Sdk.Data.Enums.Enums;
 
 namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
 {
@@ -305,6 +306,34 @@ namespace SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration
         private static string GetAppDisplayName(string appIdentifier)
         {
             return appIdentifier.Replace("-", "");
+        }
+
+        /// <summary>
+        /// Get application by display name using the runtime service principal. Returns null if application is not found.
+        /// </summary>
+        /// <param name="appId">Application display name</param>
+        /// <param name="token">Cancel operation</param>
+        /// <returns></returns>
+        /// <exception cref="RequestFailedException"></exception>
+        public async Task<Application?> GetApplication(string appId, CancellationToken token) 
+        {
+            try
+            {
+                var graphClient = _graphServiceClientFactory.Create();
+                var apps = await graphClient!.Applications.GetAsync(requestConfig =>
+                            {
+                                requestConfig.QueryParameters.Filter = $"DisplayName eq '{GetAppDisplayName(appId)}'";
+                            }, token).ConfigureAwait(false);
+                if (apps!.Value != null && apps.Value.Count >= 0)
+                {
+                    return apps.Value.First();
+                }
+            }
+            catch (Exception) 
+            {
+                throw;
+            }
+            return null;
         }
 
         public async Task<AppRegistrationSetup>

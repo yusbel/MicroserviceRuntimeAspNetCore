@@ -1,7 +1,7 @@
 ﻿
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Sample.Sdk.Core.Security.Providers.Symetric;
+using Sample.Sdk.Core.Security.Symetric;
 using System;
 using System.Collections.Generic;
 using System.Linq;

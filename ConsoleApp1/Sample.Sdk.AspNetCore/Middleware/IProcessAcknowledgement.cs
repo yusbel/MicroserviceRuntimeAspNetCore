@@ -1,5 +1,5 @@
-﻿using Sample.Sdk.Core.Security.Providers.Protocol.State;
-using Sample.Sdk.Msg.Data;
+﻿using Sample.Sdk.Msg.Data;
+using Sample.Sdk.Security.Providers.Protocol.State;
 
 namespace Sample.Sdk.AspNetCore.Middleware
 {

@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Sample.Sdk.Core.EntityDatabaseContext;
+using Sample.Sdk.Data.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;

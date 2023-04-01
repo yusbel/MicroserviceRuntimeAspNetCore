@@ -3,13 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.EmployeeSubdomain.Interfaces;
-using Sample.Sdk.Core.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace Sample.EmployeeSubdomain.Services
 {

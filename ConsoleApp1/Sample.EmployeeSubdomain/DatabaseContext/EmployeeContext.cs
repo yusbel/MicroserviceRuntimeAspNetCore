@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sample.EmployeeSubdomain.Entities;
-using Sample.Sdk.Core.EntityDatabaseContext;
-using Sample.Sdk.EntityModel;
+using Sample.Sdk.Core.DatabaseContext;
+using Sample.Sdk.Data.Options;
 
 namespace Sample.EmployeeSubdomain.DatabaseContext
 {

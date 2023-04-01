@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Sample.Sdk.Msg.Interfaces;
 using Sample.Sdk.Msg;
-using Sample.Sdk.Persistance.Context;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,11 +14,13 @@ using Sample.PayRoll.Entities;
 using Sample.PayRoll.Interfaces;
 using Sample.PayRoll.DatabaseContext;
 using Sample.PayRoll.Services;
-using Sample.Sdk.Core.Security;
 using Sample.PayRoll.Services.Processors.Converter;
-using Sample.Sdk.Services.Interfaces;
 using Sample.PayRoll.Messages.InComming.Services;
 using Sample.Sdk;
+using Sample.Sdk.EntityDatabaseContext;
+using Sample.Sdk.Interface.Msg;
+using Sample.Sdk.Interface.Database;
+using Sample.Sdk.Data.Options;
 
 namespace Sample.PayRoll
 {
@@ -42,9 +43,9 @@ namespace Sample.PayRoll
                 options.EnableDetailedErrors(true);
             });
             //Adding sdk dependecies
-            services.AddSampleSdk(configuration);
-            services.AddSampleSdkInMemoryServices(configuration);
-            services.AddSampleSdkDataProtection(configuration, configuration.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions"));
+            //services.AddSampleSdk(configuration);
+            //services.AddSampleSdkInMemoryServices(configuration);
+            //services.AddSampleSdkDataProtection(configuration, configuration.GetValue<string>("ServiceSdk:Security:AzureKeyVaultOptions"));
             return services;
         }
     }

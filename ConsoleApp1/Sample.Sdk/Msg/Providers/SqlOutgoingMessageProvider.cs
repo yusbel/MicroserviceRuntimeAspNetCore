@@ -1,21 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Sample.Sdk.Core.EntityDatabaseContext;
-using Sample.Sdk.Core.Exceptions;
-using Sample.Sdk.EntityModel;
-using Sample.Sdk.Msg.Data;
-using Sample.Sdk.Msg.Providers.Interfaces;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+using Sample.Sdk.Core.DatabaseContext;
+using Sample.Sdk.Data.Entities;
+using Sample.Sdk.Data.Msg;
+using Sample.Sdk.Interface.Msg;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace Sample.Sdk.Msg.Providers
 {

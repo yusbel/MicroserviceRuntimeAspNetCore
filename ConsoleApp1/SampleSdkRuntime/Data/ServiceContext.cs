@@ -1,5 +1,6 @@
-﻿using Sample.Sdk.Core;
-using Sample.Sdk.Core.Constants;
+﻿using Sample.Sdk.Core.Constants;
+using Sample.Sdk.Data;
+using Sample.Sdk.Interface.Database;
 
 namespace SampleSdkRuntime.Data
 {
@@ -21,7 +22,7 @@ namespace SampleSdkRuntime.Data
             return _serviceRegistration?.AesKeys ?? Enumerable.Empty<byte[]>();
         }
 
-        public string ServiceInstanceName() 
+        public string GetServiceInstanceName() 
         {
             if (_serviceRegistration.ServiceInstanceId.IndexOf("-") > 0) 
             {
@@ -38,6 +39,16 @@ namespace SampleSdkRuntime.Data
         public string GetServiceBlobConnStrKey() 
         {
             return _serviceRegistration.ServiceBlobConnStrConfigKey;
+        }
+
+        public string GetServiceRuntimeBlobConnStrKey()
+        {
+            return _serviceRegistration.RuntimeConfigData.ServiceRuntimeBlobConnStrKey;
+        }
+
+        public ServiceRuntimeConfigData GetServiceRuntimeConfigData()
+        {
+            return _serviceRegistration.RuntimeConfigData;
         }
     }
 }
