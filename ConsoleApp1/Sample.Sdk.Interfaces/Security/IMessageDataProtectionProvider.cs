@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Data;
+﻿using Sample.Sdk.Data.Security;
 
 namespace Sample.Sdk.Interface.Security
 {

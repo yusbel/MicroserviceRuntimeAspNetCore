@@ -2,9 +2,12 @@
 using Azure.Security.KeyVault.Certificates;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using Sample.Sdk.Core.Caching;
 using Sample.Sdk.Data.Enums;
 using Sample.Sdk.Interface.Caching;
 using Sample.Sdk.Interface.Security.Certificate;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Sample.Sdk.Core.Security.Certificate
@@ -17,19 +20,29 @@ namespace Sample.Sdk.Core.Security.Certificate
     /// </remarks>
     public class AzureKeyVaultCertificateProvider : ICertificateProvider
     {
+        private static Lazy<IMemoryCacheState<string, X509Certificate2>> certificates = new Lazy<IMemoryCacheState<string, X509Certificate2>>(
+            ()=> 
+            {
+                return new MemoryCacheState<string, X509Certificate2>(new MemoryCache(Options.Create(new MemoryCacheOptions())));
+            }, true);
+
+        private static Lazy<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>> certificateWithPolicy = new Lazy<IMemoryCacheState<string, KeyVaultCertificateWithPolicy>>(
+            () => 
+            {
+                return new MemoryCacheState<string, KeyVaultCertificateWithPolicy>(new MemoryCache(Options.Create(new MemoryCacheOptions())));
+            }, true);
+
         private readonly IMemoryCacheState<string, X509Certificate2> _certificates;
         private readonly IAzureClientFactory<CertificateClient> _certificateFactoryClient;
         private readonly IMemoryCacheState<string, KeyVaultCertificateWithPolicy> _certificatesWithPolicy;
 
-        public AzureKeyVaultCertificateProvider(IMemoryCacheState<string, X509Certificate2> certificates,
-            List<KeyValuePair<Enums.HostTypeOptions, CertificateClient>> certificateClients,
-            IAzureClientFactory<CertificateClient> certificateFactoryClient,
-            IMemoryCacheState<string, KeyVaultCertificateWithPolicy> certificatesWithPolicy)
+        public AzureKeyVaultCertificateProvider(List<KeyValuePair<Enums.HostTypeOptions, CertificateClient>> certificateClients,
+            IAzureClientFactory<CertificateClient> certificateFactoryClient)
         {
             Guard.ThrowWhenNull(certificates, certificateClients);
-            _certificates = certificates;
+            _certificates = certificates.Value;
             _certificateFactoryClient = certificateFactoryClient;
-            _certificatesWithPolicy = certificatesWithPolicy;
+            _certificatesWithPolicy = certificateWithPolicy.Value;
         }
 
         /// <summary>

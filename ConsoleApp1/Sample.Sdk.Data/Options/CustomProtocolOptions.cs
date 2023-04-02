@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sample.Sdk.Data.Constants;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace Sample.Sdk.Data.Options
 {
     public class CustomProtocolOptions
     {
-        public const string Identifier = "ServiceSdk:Security:CustomProtocol";
+        public static string Identifier = Environment.GetEnvironmentVariable(ConfigVarConst.CUSTOM_PROTOCOL)!;
         public string WellknownSecurityEndpoint { get; set; } = string.Empty;
         public string DecryptEndpoint { get; set; } = string.Empty;
         public string AcknowledgementEndpoint { get; set; } = string.Empty;

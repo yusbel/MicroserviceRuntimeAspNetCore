@@ -19,24 +19,18 @@ namespace Sample.EmployeeSubdomain
         public static IServiceCollection AddEmployeeServiceDependencies(this IServiceCollection services, IConfiguration configuration) 
         {
             services.Configure<List<ExternalValidEndpointOptions>>(configuration.GetSection(ExternalValidEndpointOptions.SERVICE_SECURITY_VALD_ENDPOINTS_ID));
-
-            //Security
             services.AddTransient<IComputeExternalMessage, ComputeExternalMessage>();
-            
             services.AddTransient<IEmployee, Employee>();
             services.AddTransient<IEntityContext<EmployeeContext, EmployeeEntity>, EntityContext<EmployeeContext, EmployeeEntity>>();
             services.AddDbContext<EmployeeContext>(options =>
             {
                 options.UseSqlServer(sqlDbOptions => 
                 {
-                    
                 });
                 options.EnableDetailedErrors(true);
             });
-            
             services.AddHostedService<EmployeeGenerator>();
-            
-            services.AddSingleton<IMessageSenderService, Services.MessageSenderService>();
+            services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));
             
             return services;

@@ -1,24 +1,16 @@
-﻿using Azure.Identity;
-using Azure.Security.KeyVault.Certificates;
-using Azure.Security.KeyVault.Keys;
-using Azure.Security.KeyVault.Secrets;
-using Microsoft.Azure.Cosmos;
+﻿using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using Sample.Sdk;
-using Sample.Sdk.Core.Azure;
+using Sample.Sdk.Core.Azure.ActiveDirectoryLibs.AppRegistration;
+using Sample.Sdk.Core.Azure.ActiveDirectoryLibs.ServiceAccount;
+using Sample.Sdk.Core.Azure.BlobLibs;
 using Sample.Sdk.Core.Azure.Factory;
+using Sample.Sdk.Core.Azure.KeyVaultLibs;
 using Sample.Sdk.Data.Constants;
+using Sample.Sdk.Interface;
+using Sample.Sdk.Interface.Azure.ActiveDirectoryLibs;
+using Sample.Sdk.Interface.Azure.BlobLibs;
 using Sample.Sdk.Interface.Azure.Factory;
-using Sample.Sdk.Interface.Database;
-using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration;
-using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.ServiceAccount;
-using SampleSdkRuntime.AzureAdmin.BlobLibs;
-using SampleSdkRuntime.AzureAdmin.KeyVaultLibs;
-using SampleSdkRuntime.AzureAdmin.KeyVaultLibs.Interfaces;
+using Sample.Sdk.Interface.Azure.KeyVaultLibs;
 using SampleSdkRuntime.HostedServices;
 using SampleSdkRuntime.HostedServices.Interfaces;
 using SampleSdkRuntime.Providers;
@@ -26,14 +18,7 @@ using SampleSdkRuntime.Providers.Data;
 using SampleSdkRuntime.Providers.Interfaces;
 using SampleSdkRuntime.Providers.Registration;
 using SampleSdkRuntime.Providers.RuntimeObservers;
-using SampleSdkRuntime.Sdk;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Sample.Sdk.Data.Enums.Enums;
-using static System.Net.WebRequestMethods;
 
 namespace SampleSdkRuntime
 {

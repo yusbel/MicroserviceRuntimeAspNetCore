@@ -9,10 +9,10 @@ using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 using static Sample.Sdk.Data.Enums.Enums;
 using Sample.Sdk.Data.Msg;
 using Sample.Sdk.Core.Extensions;
-using Sample.Sdk.Data;
 using Sample.Sdk.Interface.Security;
 using Sample.Sdk.Interface.Security.Asymetric;
 using Sample.Sdk.Interface.Security.Signature;
+using Sample.Sdk.Data.Security;
 
 namespace Sample.Sdk.Core.Security
 {

@@ -1,4 +1,4 @@
-﻿using SampleSdkRuntime.Data;
+﻿using Sample.Sdk.Data.Registration;
 
 namespace SampleSdkRuntime.Providers.Registration
 {

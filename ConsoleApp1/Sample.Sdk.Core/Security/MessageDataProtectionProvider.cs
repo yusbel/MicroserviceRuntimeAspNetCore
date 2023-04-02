@@ -1,9 +1,9 @@
 ﻿using Azure.Security.KeyVault.Certificates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Sample.Sdk.Data;
 using Sample.Sdk.Data.Enums;
-using Sample.Sdk.Interface.Database;
+using Sample.Sdk.Data.Security;
+using Sample.Sdk.Interface;
 using Sample.Sdk.Interface.Security;
 using Sample.Sdk.Interface.Security.Asymetric;
 using Sample.Sdk.Interface.Security.Symetric;

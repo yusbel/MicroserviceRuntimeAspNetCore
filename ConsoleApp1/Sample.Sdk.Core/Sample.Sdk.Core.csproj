@@ -15,8 +15,4 @@
     <ProjectReference Include="..\Sample.Sdk.Interfaces\Sample.Sdk.Interface.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Security\Certificate\Interfaces\" />
-  </ItemGroup>
-
 </Project>

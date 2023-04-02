@@ -1,10 +1,5 @@
-﻿using SampleSdkRuntime.AzureAdmin.ActiveDirectoryLibs.AppRegistration;
-using SampleSdkRuntime.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Sample.Sdk.Data.Azure;
+using Sample.Sdk.Data.Registration;
 
 namespace SampleSdkRuntime.Extensions
 {

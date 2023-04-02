@@ -1,31 +1,22 @@
-﻿using Azure.Core;
-using Azure.Data.AppConfiguration;
-using Azure.Identity;
+﻿using Azure.Data.AppConfiguration;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Graph.Models;
-using Sample.Sdk.Azure;
 using Sample.Sdk.Core.Azure.Factory;
 using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Data.Enums;
 using Sample.Sdk.Data.Options;
-using Sample.Sdk.Exceptions;
-using Sample.Sdk.Interface.Database;
 using SampleSdkRuntime.Data;
-using SampleSdkRuntime.Exceptions;
 using SampleSdkRuntime.HostedServices;
-using SampleSdkRuntime.Sdk;
 using System.Diagnostics;
-using System.Net;
 using System.Text;
 using System.Text.Json;
-using static SampleSdkRuntime.Data.IRuntimeServiceInfo;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
+using Sample.Sdk.Interface;
+using Sample.Sdk.Data.Registration;
+using static Sample.Sdk.Data.Registration.RuntimeServiceInfo;
+using Sample.Sdk.Data.Exceptions;
+using Sample.Sdk.Core;
 
 namespace SampleSdkRuntime
 {
@@ -122,9 +113,6 @@ namespace SampleSdkRuntime
                         return serviceContext;
                     });
                     services.AddRuntimeServices(host.Configuration, new ServiceContext(serviceReg));
-                    services.AddSampleSdk(host.Configuration);
-                    services.AddSampleSdkInMemoryServices(host.Configuration);
-                    services.AddSampleSdkDataProtection(host.Configuration);
                 });
                 try
                 {
@@ -153,6 +141,9 @@ namespace SampleSdkRuntime
             Environment.SetEnvironmentVariable(ConfigVarConst.SERVICE_RUNTIME_CERTIFICATE_NAME_APP_CONFIG_KEY, "ServiceRuntime:SignatureCertificateName");
             Environment.SetEnvironmentVariable(ConfigVarConst.SERVICE_RUNTIME_BLOB_CONN_STR_KEY, "ServiceRuntime:BlobPublicKeyConnStr");
             Environment.SetEnvironmentVariable(ConfigVarConst.RUNTIME_BLOB_PUBLICKEY_CONTAINER_NAME, "ServiceRuntime:BlobPublicKeys:ContainerName");
+            Environment.SetEnvironmentVariable(ConfigVarConst.DB_CONN_STR, "DbConnectionString");
+            Environment.SetEnvironmentVariable(ConfigVarConst.CUSTOM_PROTOCOL, "ServiceSdk:Security:CustomProtocol");
+            Environment.SetEnvironmentVariable(ConfigVarConst.AZURE_MESSAGE_SETTINGS, "Service:AzureMessageSettings:Configuration");
         }
 
         private static ILogger<ServiceRuntime> GetLogger()
@@ -233,10 +224,8 @@ namespace SampleSdkRuntime
                 })
                 .ConfigureServices((host, services) =>
                 {
-                    ServiceConfiguration.Create(host.Configuration).AddRuntimeAzureKeyVaultOptions(services);
-                    services.AddSampleSdkTokenCredentials(host.Configuration);
-                    services.AddSampleSdkCryptographic();
-                    services.AddAzureKeyVaultClients(host.Configuration);
+                    //ServiceConfiguration.Create(host.Configuration).AddRuntimeAzureKeyVaultOptions(services);
+                    
                     services.AddRuntimeServices(host.Configuration, new ServiceContext(ServiceRegistration.DefaultInstance(serviceInstance)));
                     services.AddTransient<IServiceContext>(sp => 
                     {
@@ -306,7 +295,7 @@ namespace SampleSdkRuntime
             TimeSpan delay,
             CancellationToken token, 
             IConfiguration configuration,
-            ILogger logger) where T : IRuntimeServiceInfo, new()
+            ILogger logger) where T : RuntimeServiceInfo, new()
         {
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO))) 
             {

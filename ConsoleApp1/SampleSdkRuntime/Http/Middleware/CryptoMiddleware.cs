@@ -1,17 +1,7 @@
 ﻿using Azure.Core;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Microsoft.Graph;
-using Sample.Sdk.Core.Data;
-using Sample.Sdk.Data;
 using Sample.Sdk.Data.Enums;
 using Sample.Sdk.Data.HttpResponse;
 using Sample.Sdk.Interface.Security.Certificate;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SampleSdkRuntime.Http.Middleware
 {

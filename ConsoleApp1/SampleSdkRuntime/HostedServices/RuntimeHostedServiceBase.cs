@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Sample.Sdk.Data.Constants;
-using SampleSdkRuntime.Data;
+using Sample.Sdk.Data.Registration;
 using System.Text;
 using System.Text.Json;
 

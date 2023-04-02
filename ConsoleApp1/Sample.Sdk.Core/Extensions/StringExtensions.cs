@@ -1,4 +1,4 @@
-﻿using Sample.Sdk.Data;
+﻿using Sample.Sdk.Data.Security;
 using System;
 using System.Collections.Generic;
 using System.Linq;

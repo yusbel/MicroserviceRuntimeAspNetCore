@@ -1,12 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk.Exceptions;
-using SampleSdkRuntime.Providers.Data;
+﻿using SampleSdkRuntime.Providers.Data;
 using SampleSdkRuntime.Providers.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
 namespace SampleSdkRuntime.Providers
 {
@@ -32,7 +26,7 @@ namespace SampleSdkRuntime.Providers
                 }
                 catch (Exception e)
                 {
-                    e.LogCriticalException(_logger, "An error ocurred when invoking an observer");
+                    e.LogException(_logger.LogCritical, "An error ocurred when invoking an observer");
                 }
             }
             return results;

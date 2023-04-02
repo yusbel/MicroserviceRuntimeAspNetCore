@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sample.Sdk.Data.Constants;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
@@ -9,7 +10,7 @@ namespace Sample.Sdk.Data.Options
 {
     public class MessageSettingsConfigurationOptions
     {
-        public const string SECTION_ID = "Service:AzureMessageSettings:Configuration";
+        public static string SectionIdentifier = Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_MESSAGE_SETTINGS)!;
 
         public List<AzureMessageSettingsOptions> Sender { get; init; }
 

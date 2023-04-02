@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Sample.Sdk.Data;
+using Sample.Sdk.Data.Security;
 using Sample.Sdk.Interface.Security.Symetric;
 using System.Security.Cryptography;
 using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;

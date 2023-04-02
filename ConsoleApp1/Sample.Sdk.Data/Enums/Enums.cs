@@ -8,6 +8,12 @@ namespace Sample.Sdk.Data.Enums
 {
     public class Enums
     {
+        public enum Setup
+        {
+            None,
+            ApplicationOrServicePrincipleNotFound,
+            ApplicationIdSecretNotFoundOnKeyVault
+        }
         public enum SendFailedReason
         {
             InValidQueueName,

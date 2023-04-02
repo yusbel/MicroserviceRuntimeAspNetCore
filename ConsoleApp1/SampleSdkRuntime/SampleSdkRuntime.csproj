@@ -15,16 +15,10 @@
     <PackageReference Include="Azure.Data.AppConfiguration" Version="1.2.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.12.0" />
     <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.1.0" />
-    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.15.1" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.32.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Graph" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
   </ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="SampleSdkRuntimeTests" />
@@ -35,7 +29,7 @@
 		<InternalsVisibleTo Include="Sample.Sdk.Tests" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Http\Middleware\Data\" />
+	  <ProjectReference Include="..\Sample.Sdk.Core\Sample.Sdk.Core.csproj" />
 	</ItemGroup>
 
 </Project>
