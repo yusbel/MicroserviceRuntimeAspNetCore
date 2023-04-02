@@ -1,8 +1,9 @@
 ﻿using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Interface.Azure.BlobLibs;
+using Sample.Sdk.Interface.Registration;
 using SampleSdkRuntime.HostedServices.Interfaces;
+using SampleSdkRuntime.Providers;
 using SampleSdkRuntime.Providers.Data;
-using SampleSdkRuntime.Providers.Registration;
 
 namespace SampleSdkRuntime.HostedServices
 {

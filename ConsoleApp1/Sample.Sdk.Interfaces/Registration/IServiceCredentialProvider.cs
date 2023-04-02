@@ -1,8 +1,8 @@
 ﻿using Sample.Sdk.Data.Registration;
 
-namespace SampleSdkRuntime.Providers.Registration
+namespace Sample.Sdk.Interface.Registration
 {
-    internal interface IServiceCredentialProvider
+    public interface IServiceCredentialProvider
     {
         Task<IEnumerable<ServiceCredential>> CreateCredentials(string appId, CancellationToken token);
     }

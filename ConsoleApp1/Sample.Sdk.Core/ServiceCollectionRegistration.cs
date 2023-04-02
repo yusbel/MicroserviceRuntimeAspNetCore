@@ -20,6 +20,19 @@ using Sample.Sdk.Interface.Security.Signature;
 using Sample.Sdk.Interface.Security.Symetric;
 using static Sample.Sdk.Data.Enums.Enums;
 using Microsoft.Extensions.Caching.Memory;
+using Sample.Sdk.Core.Azure.ActiveDirectoryLibs.AppRegistration;
+using Sample.Sdk.Core.Azure.ActiveDirectoryLibs.ServiceAccount;
+using Sample.Sdk.Core.Azure.KeyVaultLibs;
+using Sample.Sdk.Interface.Azure.ActiveDirectoryLibs;
+using Sample.Sdk.Interface.Azure.KeyVaultLibs;
+using Sample.Sdk.Core.Registration;
+using Sample.Sdk.Interface.Registration;
+using Sample.Sdk.Core.Azure.BlobLibs;
+using Sample.Sdk.Interface.Azure.BlobLibs;
+using Sample.Sdk.Data.Constants;
+using Sample.Sdk.Interface;
+using Sample.Sdk.Data.Registration;
+using Sample.Sdk.Core.Security.Keys;
 
 namespace Sample.Sdk.Core
 {
@@ -37,21 +50,54 @@ namespace Sample.Sdk.Core
             services.AddTransient<IGraphServiceClientFactory, GraphServiceClientFactory>();
             services.AddDbContext<ServiceDbContext>();
             services.AddSingleton<HttpClient>();
-            services.AddSingleton<IPublicKeyProvider, IPublicKeyProvider>();
+            services.AddSingleton<IPublicKeyProvider, PublicKeyProvider>();
             services.AddTransient<ISendExternalMessage, MessageSenderService>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
             services.AddTransient<IClientOAuthTokenProviderFactory, ClientOAuthTokenProviderFactory>();
 
+            services.AddTransient<IServiceCredentialProvider, ServiceCredentialProvider>();
+            services.AddTransient<IApplicationRegistration, ApplicationRegistrationProvider>();
+            services.AddTransient<IKeyVaultPolicyProvider, KeyVaultPolicyProvider>();
+            services.AddTransient<IGraphServiceClientFactory, GraphServiceClientFactory>();
+            services.AddTransient<IArmClientFactory, ArmClientFactory>();
+            services.AddTransient<IServicePrincipalProvider, ServicePrincipalProvider>();
+            services.AddTransient<IBlobProvider, BlobProvider>();
+            services.AddTransient<IKeyVaultProvider, KeyVaultProvider>();
+
             services.AddAzureKeyVaultClients(config);
             services.AddCryptographic();
             services.AddServiceBus(config);
-            services.AddInMemoryServices(config);
+            services.AddAzureBlobAndConfigurationClient(config);
 
+            return services;
+        }
+
+        private static IServiceCollection AddAzureBlobAndConfigurationClient(this IServiceCollection services, IConfiguration config)
+        {
+            var serviceContext = new ServiceContext(ServiceRegistration.DefaultInstance());
+            services.AddAzureClients(clientBuilder =>
+            {
+                var blobConnStrKey = $"{serviceContext.GetServiceInstanceName()}:{serviceContext.GetServiceBlobConnStrKey()}";
+                clientBuilder.AddBlobServiceClient(config.GetSection(blobConnStrKey))
+                                    .WithName(HostTypeOptions.ServiceInstance.ToString());
+                clientBuilder.AddBlobServiceClient(config.GetSection(serviceContext.GetServiceRuntimeBlobConnStrKey()))
+                                    .WithName(HostTypeOptions.Runtime.ToString());
+
+                clientBuilder.AddConfigurationClient(Environment.GetEnvironmentVariable(ConfigVarConst.APP_CONFIG_CONN_STR));
+
+                clientBuilder.UseCredential((services) =>
+                {
+                    var clientCredentialFactory = services.GetRequiredService<IClientOAuthTokenProviderFactory>();
+                    clientCredentialFactory.TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out var clientSecretCredential);
+                    return clientSecretCredential;
+                });
+            });
             return services;
         }
 
         public static IServiceCollection AddInMemoryServices(this IServiceCollection services, IConfiguration config)
         {
+            
             services.AddHostedService<MessageSenderRealtimeHostedService>();
             services.AddHostedService<MessageReceiverRealtimeHostedService>();
             services.AddTransient<IMessageComputation, ComputeReceivedMessage>();

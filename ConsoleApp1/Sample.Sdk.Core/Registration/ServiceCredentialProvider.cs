@@ -1,8 +1,9 @@
 ﻿using Sample.Sdk.Data.Azure;
 using Sample.Sdk.Data.Registration;
 using Sample.Sdk.Interface.Azure.ActiveDirectoryLibs;
+using Sample.Sdk.Interface.Registration;
 
-namespace SampleSdkRuntime.Providers.Registration
+namespace Sample.Sdk.Core.Registration
 {
     internal class ServiceCredentialProvider : IServiceCredentialProvider
     {
@@ -16,7 +17,7 @@ namespace SampleSdkRuntime.Providers.Registration
         public async Task<IEnumerable<ServiceCredential>> CreateCredentials(string appId, CancellationToken token)
         {
             AppRegistrationSetup appRegResult = null;
-            
+
             if (appRegResult == null || !appRegResult.WasSuccessful)
             {
                 appRegResult = await _appReg.DeleteAndCreate(appId, token).ConfigureAwait(false);

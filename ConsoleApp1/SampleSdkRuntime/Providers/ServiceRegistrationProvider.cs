@@ -1,16 +1,17 @@
 ﻿using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Azure;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.Data.Azure;
 using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Data.Registration;
 using Sample.Sdk.Interface.Azure.ActiveDirectoryLibs;
 using Sample.Sdk.Interface.Azure.BlobLibs;
 using Sample.Sdk.Interface.Azure.KeyVaultLibs;
+using Sample.Sdk.Interface.Registration;
 using Sample.Sdk.Interface.Security.Symetric;
-using SampleSdkRuntime.Extensions;
 using static Sample.Sdk.Data.Enums.Enums;
 
-namespace SampleSdkRuntime.Providers.Registration
+namespace SampleSdkRuntime.Providers
 {
     internal class ServiceRegistrationProvider : IServiceRegistrationProvider
     {
@@ -22,7 +23,7 @@ namespace SampleSdkRuntime.Providers.Registration
         private readonly IServicePrincipalProvider _servicePrincipalProvider;
         private readonly SecretClient _secretClient;
         private ServiceRegistration _serviceRegistration = new ServiceRegistration();
-        private string _appId = String.Empty;
+        private string _appId = string.Empty;
         private ServiceRegistrationProvider(string appId,
             IServiceProvider serviceProvider,
             IBlobProvider blobProvider,
@@ -53,7 +54,7 @@ namespace SampleSdkRuntime.Providers.Registration
                 serviceProvider.GetRequiredService<IAzureClientFactory<SecretClient>>());
         }
 
-        public async Task<(bool isValid,ServiceRegistration reg)> GetServiceRegistration(string appId, CancellationToken token)
+        public async Task<(bool isValid, ServiceRegistration reg)> GetServiceRegistration(string appId, CancellationToken token)
         {
             try
             {
@@ -94,7 +95,7 @@ namespace SampleSdkRuntime.Providers.Registration
         /// <returns></returns>
         /// 
         private Func<Task> _privateConfigCredential = null;
-        internal ServiceRegistrationProvider 
+        internal ServiceRegistrationProvider
             ConfigureServiceCredential(CancellationToken token,
                 Func<IServiceProvider, CancellationToken, Task<IEnumerable<ServiceCredential>>> createCredentials = null)
         {
@@ -102,13 +103,13 @@ namespace SampleSdkRuntime.Providers.Registration
             {
                 var credentialProvider = _serviceProvider.GetRequiredService<IServiceCredentialProvider>();
                 var credentials = await credentialProvider.CreateCredentials(GetAppDisplayName(_appId), token).ConfigureAwait(false);
-                
+
                 _serviceRegistration.Credentials.AddRange(credentials);
                 if (createCredentials != null)
                     _serviceRegistration.Credentials.AddRange(await createCredentials.Invoke(_serviceProvider, token).ConfigureAwait(false));
                 _serviceRegistration.ServiceInstanceId = _appId;
-                _serviceRegistration.Credentials.ForEach(credential => 
-                { 
+                _serviceRegistration.Credentials.ForEach(credential =>
+                {
                     credential.ServiceSecretKeyCertificateName = GetAppDisplayName(_appId);
                     credential.AppIdentifier = GetAppDisplayName(_appId);
                 });
@@ -116,7 +117,7 @@ namespace SampleSdkRuntime.Providers.Registration
             return this;
         }
 
-        private string GetAppDisplayName(string appId) 
+        private string GetAppDisplayName(string appId)
         {
             return appId.Replace("-", "");
         }
@@ -151,11 +152,10 @@ namespace SampleSdkRuntime.Providers.Registration
             return this;
         }
 
-
         internal async Task<ServiceRegistration> Build(CancellationToken token)
         {
             (bool isValid, _serviceRegistration) = await GetServiceRegistration(_appId, token).ConfigureAwait(false);
-            if (!isValid) 
+            if (!isValid)
             {
                 await _privateConfigCredential.Invoke().ConfigureAwait(false);
                 await _privateConfigServiceCryptoSecret.Invoke().ConfigureAwait(false);
@@ -194,14 +194,14 @@ namespace SampleSdkRuntime.Providers.Registration
                 });
                 return true;
             };
-        
-        private void AssignServiceRegistration(ServiceRegistration serviceReg) 
+
+        private void AssignServiceRegistration(ServiceRegistration serviceReg)
         {
             AssignAesKeys(serviceReg);
         }
-        private void AssignAesKeys(ServiceRegistration serviceReg) 
+        private void AssignAesKeys(ServiceRegistration serviceReg)
         {
-            for (var i = 0; i < 30; i++) 
+            for (var i = 0; i < 30; i++)
             {
                 serviceReg.AesKeys.Add(_aesKeyRandom.GenerateRandomKey(256));
             }

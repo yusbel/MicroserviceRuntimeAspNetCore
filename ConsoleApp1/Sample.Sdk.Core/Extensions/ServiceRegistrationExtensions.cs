@@ -1,11 +1,11 @@
 ﻿using Sample.Sdk.Data.Azure;
 using Sample.Sdk.Data.Registration;
 
-namespace SampleSdkRuntime.Extensions
+namespace Sample.Sdk.Core.Extensions
 {
-    internal static class ServiceRegistrationExtensions
+    public static class ServiceRegistrationExtensions
     {
-        internal static ServiceRegistration Assign(this ServiceRegistration serviceReg, AppRegistrationSetup appReg) 
+        public static ServiceRegistration Assign(this ServiceRegistration serviceReg, AppRegistrationSetup appReg)
         {
             if (appReg == null)
                 return serviceReg;
@@ -25,8 +25,8 @@ namespace SampleSdkRuntime.Extensions
                 }
             });
             serviceReg.WasSuccessful = appReg.WasSuccessful;
-            
+
             return serviceReg;
-        } 
+        }
     }
 }

@@ -36,10 +36,9 @@ namespace Sample.Sdk.Core.Security.Certificate
         private readonly IAzureClientFactory<CertificateClient> _certificateFactoryClient;
         private readonly IMemoryCacheState<string, KeyVaultCertificateWithPolicy> _certificatesWithPolicy;
 
-        public AzureKeyVaultCertificateProvider(List<KeyValuePair<Enums.HostTypeOptions, CertificateClient>> certificateClients,
-            IAzureClientFactory<CertificateClient> certificateFactoryClient)
+        public AzureKeyVaultCertificateProvider(IAzureClientFactory<CertificateClient> certificateFactoryClient)
         {
-            Guard.ThrowWhenNull(certificates, certificateClients);
+            Guard.ThrowWhenNull(certificates);
             _certificates = certificates.Value;
             _certificateFactoryClient = certificateFactoryClient;
             _certificatesWithPolicy = certificateWithPolicy.Value;

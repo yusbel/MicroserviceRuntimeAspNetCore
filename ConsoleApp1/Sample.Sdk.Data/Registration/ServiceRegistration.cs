@@ -15,8 +15,10 @@ namespace Sample.Sdk.Data.Registration
         public string ServiceDataContainerName { get; init; } = string.Empty;
         public string ServiceBlobConnStrConfigKey { get; set; } = string.Empty;
         public ServiceRuntimeConfigData RuntimeConfigData { get; set; } = default!;
-        public static ServiceRegistration DefaultInstance(string serviceInstanceId)
+        public static ServiceRegistration DefaultInstance(string serviceInstanceId = "")
         {
+            serviceInstanceId = string.IsNullOrEmpty(serviceInstanceId) ? Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID)!
+                                                                        : serviceInstanceId;
             return new ServiceRegistration()
             {
                 ServiceInstanceId = serviceInstanceId,

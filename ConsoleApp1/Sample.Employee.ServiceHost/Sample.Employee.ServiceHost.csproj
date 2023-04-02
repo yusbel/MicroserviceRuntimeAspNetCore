@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sample.EmployeeSubdomain\Sample.EmployeeSubdomain.csproj" />
-    <ProjectReference Include="..\Sample.Sdk\Sample.Sdk.csproj" />
     <ProjectReference Include="..\SampleSdkRuntime\SampleSdkRuntime.csproj" />
   </ItemGroup>
 

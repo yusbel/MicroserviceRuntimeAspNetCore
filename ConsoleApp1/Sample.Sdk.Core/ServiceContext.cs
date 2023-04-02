@@ -2,7 +2,7 @@
 using Sample.Sdk.Data.Registration;
 using Sample.Sdk.Interface;
 
-namespace SampleSdkRuntime.Data
+namespace Sample.Sdk.Core
 {
     /// <summary>
     /// To add to service collection on the service host
@@ -22,21 +22,21 @@ namespace SampleSdkRuntime.Data
             return _serviceRegistration?.AesKeys ?? Enumerable.Empty<byte[]>();
         }
 
-        public string GetServiceInstanceName() 
+        public string GetServiceInstanceName()
         {
-            if (_serviceRegistration.ServiceInstanceId.IndexOf("-") > 0) 
+            if (_serviceRegistration.ServiceInstanceId.IndexOf("-") > 0)
             {
                 return _serviceRegistration.ServiceInstanceId.Substring(0, _serviceRegistration.ServiceInstanceId.IndexOf("-"));
             }
             return _serviceRegistration.ServiceInstanceId;
         }
 
-        public string GetServiceDataBlobContainerName() 
+        public string GetServiceDataBlobContainerName()
         {
             return _serviceRegistration.ServiceDataContainerName;
         }
 
-        public string GetServiceBlobConnStrKey() 
+        public string GetServiceBlobConnStrKey()
         {
             return _serviceRegistration.ServiceBlobConnStrConfigKey;
         }

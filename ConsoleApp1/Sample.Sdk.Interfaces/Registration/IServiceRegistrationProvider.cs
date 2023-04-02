@@ -1,8 +1,8 @@
 ﻿using Sample.Sdk.Data.Registration;
 
-namespace SampleSdkRuntime.Providers.Registration
+namespace Sample.Sdk.Interface.Registration
 {
-    internal interface IServiceRegistrationProvider
+    public interface IServiceRegistrationProvider
     {
         Task<(bool isValid, ServiceRegistration reg)> GetServiceRegistration(string appId, CancellationToken token);
     }
