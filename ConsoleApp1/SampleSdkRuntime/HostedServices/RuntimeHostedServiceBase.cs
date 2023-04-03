@@ -51,11 +51,11 @@ namespace SampleSdkRuntime.HostedServices
         protected void SetEnvironmentVariableForHostService()
         {
             var serviceReg = GetServiceReg();
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ServiceRuntime.AZURE_TENANT_ID)); ;
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_ID, GetServiceReg().Credentials.First().ClientId);
-            //Environment.SetEnvironmentVariable(ServiceRuntime.AZURE_CLIENT_SECRET, GetServiceReg().Credentials.First().ServiceSecretText);
-            Environment.SetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID, serviceReg.ServiceInstanceId);
-            Environment.SetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(serviceReg))));
+            Environment.SetEnvironmentVariable(ConfigVar.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ConfigVar.AZURE_TENANT_ID)); ;
+            Environment.SetEnvironmentVariable(ConfigVar.AZURE_CLIENT_ID, serviceReg.Credentials.First().ClientId);
+            Environment.SetEnvironmentVariable(ConfigVar.AZURE_CLIENT_SECRET, serviceReg.Credentials.First().ServiceSecretText);
+            Environment.SetEnvironmentVariable(ConfigVar.SERVICE_INSTANCE_NAME_ID, serviceReg.ServiceInstanceId);
+            Environment.SetEnvironmentVariable(ConfigVar.RUNTIME_SETUP_INFO, Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(serviceReg))));
         }
 
         public void Dispose()

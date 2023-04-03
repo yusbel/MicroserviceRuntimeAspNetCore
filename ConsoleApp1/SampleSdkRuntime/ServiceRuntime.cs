@@ -1,28 +1,19 @@
-﻿using Azure.Data.AppConfiguration;
-using Azure.Security.KeyVault.Secrets;
-using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Sample.Sdk.Core.Azure.Factory;
-using Sample.Sdk.Data.Constants;
-using Sample.Sdk.Data.Enums;
-using Sample.Sdk.Data.Options;
-using SampleSdkRuntime.Data;
-using SampleSdkRuntime.HostedServices;
+﻿using Sample.Sdk.Data.Constants;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
-using Sample.Sdk.Interface;
 using Sample.Sdk.Data.Registration;
 using static Sample.Sdk.Data.Registration.RuntimeServiceInfo;
 using Sample.Sdk.Data.Exceptions;
-using Sample.Sdk.Core;
 using SampleSdkRuntime.Host;
+using Serilog;
 
 namespace SampleSdkRuntime
 {
     public class ServiceRuntime
     {
+        
         /// <summary>
         /// ServiceRuntime-ServiceBusClient: 8d69558c-fc01-407c-becc-e561358afafb
         /// TenantId: c8656f45-daf5-42c1-9b29-ac27d3e63bf3
@@ -42,21 +33,28 @@ namespace SampleSdkRuntime
         /// <returns></returns>
         public static async Task RunAsync(string[] args, IHostBuilder serviceHostBuilder = null)
         {
+            var runtimeTokenSource = new CancellationTokenSource();
+            var runtimeToken = runtimeTokenSource.Token;
+
+            Console.CancelKeyPress += delegate
+            {
+                runtimeTokenSource.Cancel();                    
+            };
+
             if (args.Count() < 2)
                 throw new RuntimeStartException("Service runtime must receive a value setting as an argument with the service instance identifier");
             
             ConfigureEnvironmentVariables.AssignEnvironmentVariables(args);
             ILogger<ServiceRuntime> logger = GetLogger();
 
-            var runtimeTokenSource = new CancellationTokenSource();
-            var runtimeToken = runtimeTokenSource.Token;
+            
             Stopwatch sw = new Stopwatch();
             sw.Start();
             ServiceRegistration? serviceReg = null;
             try
             {
                 serviceReg = await RunSetupAsync(args, sw, runtimeToken).ConfigureAwait(false);
-                if (serviceReg != null)
+                if (serviceReg == null)
                 {
                     sw.Stop();
                     logger.LogCritical("Setup fail, service won't start");
@@ -153,12 +151,12 @@ namespace SampleSdkRuntime
             TimeSpan delay,
             CancellationToken token) where T : RuntimeServiceInfo, new()
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO))) 
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_SETUP_INFO))) 
             {
                 T? info;
                 try
                 {
-                    info = JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO)!)));
+                    info = JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_SETUP_INFO)!)));
                 }
                 catch (Exception)
                 {

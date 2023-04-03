@@ -58,15 +58,15 @@ namespace Sample.Sdk.Core.Msg
         }
 
         public async Task<bool> UpdateEventStatus(
-            IServiceScope serviceScope,
+            IServiceProvider serviceProvider,
             InComingEventEntity eventEntity,
             Expression<Func<InComingEventEntity, bool>> propertyToUpdate,
             CancellationToken cancellationToken)
         {
             try
             {
-                var dbContext = serviceScope.ServiceProvider.GetRequiredService<ServiceDbContext>();
-                dbContext.Attach(eventEntity);
+                using var scope = serviceProvider.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
                 dbContext.Entry(eventEntity).Property(propertyToUpdate).IsModified = true;
                 await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 return true;

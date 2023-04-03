@@ -1,5 +1,9 @@
-﻿Select * From Employees
+﻿select * from ExternalEvents
 
-Delete From ExternalEvents
+select count(*) from InComingEvents where WasProcessed = 1 and WasAcknowledge = 1
 
-Delete From InComingEvents
+delete from InComingEvents
+delete from ExternalEvents
+delete from Logs
+
+select * from Logs

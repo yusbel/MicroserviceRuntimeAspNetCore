@@ -10,7 +10,7 @@ namespace Sample.Sdk.Data.Options
 {
     public class MessageSettingsConfigurationOptions
     {
-        public static string SectionIdentifier = Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_MESSAGE_SETTINGS)!;
+        public static string SectionIdentifier = Environment.GetEnvironmentVariable(ConfigVar.AZURE_MESSAGE_SETTINGS)!;
 
         public List<AzureMessageSettingsOptions> Sender { get; init; }
 

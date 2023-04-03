@@ -29,48 +29,45 @@ namespace Sample.EmployeeSubdomain.Services
         {
             _tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _tokenSource.Token;
-            Task.Run(async () => 
+            Task.Run(async () =>
             {
                 try
                 {
                     var rnd = new Random();
                     var employees = new List<Tuple<string, string>>();
-                    for (var i = 0; i < 1; i++)
+                    for (var i = 0; i < 1000; i++)
                     {
                         employees.Add(new Tuple<string, string>($"yusbel{rnd.Next(0, 100)}", $"yusbel@gmail.com {rnd.Next(0, 100)}"));
                     }
-                    await Parallel.ForEachAsync(employees, token, async (employee, stopToken) =>
+                    //await Parallel.ForEachAsync(employees, token, async (employee, stopToken) =>
+                    foreach (var employee in employees)
                     {
                         try
                         {
-                            stopToken.ThrowIfCancellationRequested();
-                            using (var scope = _serviceProvider.CreateScope())
-                            {
-                                var employeeService = scope.ServiceProvider.GetRequiredService<IEmployee>();
-                                await employeeService.CreateAndSave(employee.Item1, employee.Item2, token).ConfigureAwait(false);
-                            }
+                            var scope = _serviceProvider.CreateScope();
+                            var employeeService = scope.ServiceProvider.GetRequiredService<IEmployee>();
+                            await employeeService.CreateAndSave(employee.Item1, employee.Item2, token)
+                                                    .ConfigureAwait(false);
+                            //await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
                             throw;
                         }
                         catch (Exception e)
-                        {
-                            e.LogException(_logger.LogCritical);
+                        {   
+                            throw;
                         }
-                    }).ConfigureAwait(false);
+                    }//);//.ConfigureAwait(false);
+
+                    _logger.LogInformation("Employee generator finished");
                 }
-                catch (OperationCanceledException oce) 
-                {
-                    oce.LogException(_logger.LogCritical);
-                }
-                catch (Exception e)
+                catch (Exception e) 
                 {
                     e.LogException(_logger.LogCritical);
                 }
-                _logger.LogInformation("Employee generator finished");
-            }, token);
 
+            }, token);
             return Task.CompletedTask;
         }
 

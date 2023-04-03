@@ -32,7 +32,7 @@ namespace Sample.Sdk.Core.Extensions
         {
             return new InComingEventEntity()
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = message.Id,
                 Body = message.Content,
                 MessageKey = message.EntityId,
                 CreationTime = DateTime.Now.ToLong(),
@@ -48,7 +48,7 @@ namespace Sample.Sdk.Core.Extensions
                 MsgQueueName = message.MsgQueueName,
                 WasProcessed = false,
                 AckQueueName = message.AckQueueName,
-                ServiceInstanceId = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID)!
+                ServiceInstanceId = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_INSTANCE_NAME_ID)!
             };
         }
 

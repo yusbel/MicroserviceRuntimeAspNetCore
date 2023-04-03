@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Sample.Sdk.Data.Msg
+﻿namespace Sample.Sdk.Data.Msg
 {
     /// <summary>
     /// Encrypted message

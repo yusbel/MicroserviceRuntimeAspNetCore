@@ -160,7 +160,7 @@ namespace SampleSdkRuntime.Providers
                 await _privateConfigCredential.Invoke().ConfigureAwait(false);
                 await _privateConfigServiceCryptoSecret.Invoke().ConfigureAwait(false);
             }
-            var appSettingName = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_RUNTIME_CERTIFICATE_NAME_APP_CONFIG_KEY);
+            var appSettingName = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_RUNTIME_CERTIFICATE_NAME_APP_CONFIG_KEY);
             await _blobProvider.UploadSignaturePublicKey(appSettingName!, token)
                                                     .ConfigureAwait(false);
 

@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 
 namespace Sample.Sdk.Core.Msg
 {
-    public class ServiceBusReceiverRoot : IAsyncDisposable
+    public class ServiceBusFactory : IAsyncDisposable
     {
         protected readonly string MsgContentType = "application/json;charset=utf8";
         private readonly ConcurrentDictionary<string, ServiceBusSender> serviceBusSender = new ConcurrentDictionary<string, ServiceBusSender>();
@@ -17,16 +17,15 @@ namespace Sample.Sdk.Core.Msg
         private readonly ConcurrentDictionary<string, ServiceBusProcessor> serviceBusProcessor = new ConcurrentDictionary<string, ServiceBusProcessor>();
         private readonly ServiceBusClient _service;
 
-        public ServiceBusReceiverRoot(
+        public ServiceBusFactory(
             IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient service)
         {
             Initialize(
-                serviceBusInfoOptions.Value.Where(s => s.ConfigType == Enums.AzureMessageSettingsOptionType.Receiver).ToList(),
+                serviceBusInfoOptions.Value.ToList(),
                 service);
             _service = service;
         }
-
         protected ServiceBusReceiver GetReceiver(string queueName)
         {
             if (!serviceBusReceiver.Any(s => s.Key.ToLower() == queueName.ToLower()))
@@ -35,14 +34,16 @@ namespace Sample.Sdk.Core.Msg
             }
             return serviceBusReceiver.First(s => s.Key.ToLower() == queueName.ToLower()).Value;
         }
-
-        protected ServiceBusSender GetSender(string queueName)
+        protected ServiceBusSender? GetSender(string queueName, string queueEndpoint)
         {
-            if (!serviceBusSender.Any(s => s.Key.ToLower() == queueName.ToLower()))
+            if (!serviceBusSender.Any(sender => sender.Key.ToLower() == queueName.ToLower()))
             {
                 return default;
             }
-            return serviceBusSender.First(s => s.Key.ToLower() == queueName.ToLower()).Value;
+            var sender = serviceBusSender.FirstOrDefault(s => s.Key.ToLower() == queueName.ToLower()).Value;
+            return sender != null && sender.FullyQualifiedNamespace.Contains(queueEndpoint)
+                                    ? sender
+                                    : default;
         }
         protected ServiceBusProcessor GetServiceBusProcessor(string queueName, Func<ServiceBusProcessorOptions> options = null)
         {
@@ -72,24 +73,32 @@ namespace Sample.Sdk.Core.Msg
             {
                 throw new ApplicationException("Service bus client must be registered as a services");
             }
-            serviceBusInfoOptions.ForEach(option =>
+            serviceBusInfoOptions.Where(option=> option.ConfigType == Enums.AzureMessageSettingsOptionType.Receiver)
+                .ToList().ForEach(option =>
             {
                 if (string.IsNullOrEmpty(option.Identifier))
-                {
                     throw new ApplicationException("Add identifier to azure service bus info");
-                }
 
                 option.MessageInTransitOptions.ForEach(queue =>
-                {
+                {   
                     if (!string.IsNullOrEmpty(queue.AckQueueName))
                         serviceBusSender?.TryAdd(queue.AckQueueName, service.CreateSender(queue.AckQueueName));
                     if (!string.IsNullOrEmpty(queue.MsgQueueName))
                         serviceBusReceiver?.TryAdd(queue.MsgQueueName, service.CreateReceiver(queue.MsgQueueName));
-
+                });
+            });
+            serviceBusInfoOptions.Where(option => option.ConfigType == Enums.AzureMessageSettingsOptionType.Sender)
+                .ToList().ForEach(option => 
+            {
+                option.MessageInTransitOptions.ForEach(queue =>
+                {
+                    if (!string.IsNullOrEmpty(queue.MsgQueueName))
+                        serviceBusSender?.TryAdd(queue.MsgQueueName, service.CreateSender(queue.MsgQueueName));
+                    //if (!string.IsNullOrEmpty(queue.AckQueueName))
+                    //    serviceBusReceiver?.TryAdd(queue.AckQueueName, service.CreateReceiver(queue.AckQueueName));
                 });
             });
         }
-
 
         public async ValueTask DisposeAsync()
         {
@@ -115,7 +124,5 @@ namespace Sample.Sdk.Core.Msg
                 }
             }
         }
-
-
     }
 }

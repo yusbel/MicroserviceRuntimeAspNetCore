@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+﻿using Microsoft.Extensions.Configuration.AzureAppConfiguration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sample.Sdk.Core;
+using Sample.Sdk.Core.Msg;
 using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Data.Registration;
 using Sample.Sdk.Interface;
@@ -12,11 +14,11 @@ namespace SampleSdkRuntime.Host
         {
             var serviceHostVariables = new Dictionary<string, string>
                 {
-                    { ConfigVarConst.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_TENANT_ID)! },
-                    { ConfigVarConst.AZURE_CLIENT_ID, serviceReg.Credentials.First().ClientId },
-                    { ConfigVarConst.AZURE_CLIENT_SECRET, serviceReg.Credentials.First().ServiceSecretText },
-                    { ConfigVarConst.SERVICE_INSTANCE_NAME_ID, serviceReg.ServiceInstanceId },
-                    { ConfigVarConst.IS_RUNTIME, "false" }
+                    { ConfigVar.AZURE_TENANT_ID, Environment.GetEnvironmentVariable(ConfigVar.AZURE_TENANT_ID)! },
+                    { ConfigVar.AZURE_CLIENT_ID, serviceReg.Credentials.First().ClientId },
+                    { ConfigVar.AZURE_CLIENT_SECRET, serviceReg.Credentials.First().ServiceSecretText },
+                    { ConfigVar.SERVICE_INSTANCE_NAME_ID, serviceReg.ServiceInstanceId },
+                    { ConfigVar.IS_RUNTIME, "false" }
                 };
 
             var host = hostBuilder
@@ -25,6 +27,9 @@ namespace SampleSdkRuntime.Host
                     appConfig.AddInMemoryCollection(serviceHostVariables);
                     appConfig.AddAzureAppConfiguration(appConfig =>
                     {
+                        appConfig.Connect(Environment.GetEnvironmentVariable(ConfigVar.APP_CONFIG_CONN_STR));
+                        appConfig.Select(KeyFilter.Any, LabelFilter.Null);
+                        appConfig.Select(KeyFilter.Any, Environment.GetEnvironmentVariable(ConfigVar.ENVIRONMENT_VAR));
                         appConfig.ConfigureKeyVault(appConfigKeyVault =>
                         {
                             ConfigureAzureKeyVaultWithAppConfiguration.Configure(appConfigKeyVault, host, args[0]);

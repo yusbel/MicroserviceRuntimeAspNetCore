@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Data.Options;
 using static Sample.Sdk.Data.Enums.Enums;
@@ -17,7 +18,7 @@ namespace Sample.Sdk.Core
         /// </summary>
         public static ServiceConfiguration Create(IConfiguration configuration)
         {
-            var id = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID);
+            var id = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_INSTANCE_NAME_ID);
             return new ServiceConfiguration()
             {
                 config = configuration,
@@ -79,7 +80,8 @@ namespace Sample.Sdk.Core
 
         internal void AddDatabaseSettingsOptions(IServiceCollection services)
         {
-            services.Configure<DatabaseSettingOptions>(config.GetSection($"{serviceInstanceName}:{DatabaseSettingOptions.DatabaseSetting}"));
+            var key = $"{serviceInstanceName}:{DatabaseSettingOptions.DatabaseSetting}";
+            services.Configure<DatabaseSettingOptions>(option => option.ConnectionString = config.GetValue<string>(key));
         }
 
         internal void AddExternalValidEndpointsOptions(IServiceCollection services)
@@ -103,7 +105,8 @@ namespace Sample.Sdk.Core
                 new AzureKeyVaultOptions{ Type = HostTypeOptions.Runtime },
                 new AzureKeyVaultOptions{ Type = HostTypeOptions.ServiceInstance }
             };
-            config.GetSection($"{serviceInstanceName}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}")
+            var sectionId = $"{serviceInstanceName}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}";
+            config.GetSection(sectionId)
                     .Bind(options.First(option => option.Type == HostTypeOptions.ServiceInstance));
             config.GetSection(AzureKeyVaultOptions.RUNTIME_KEYVAULT_SECTION_APP_CONFIG)
                     .Bind(options.First(option => option.Type == HostTypeOptions.Runtime));
@@ -113,7 +116,8 @@ namespace Sample.Sdk.Core
         private List<AzureMessageSettingsOptions> GetServiceBusReceiverOptions()
         {
             var receiverOptions = new List<AzureMessageSettingsOptions>();
-            config.GetSection($"{serviceInstanceName}:{AzureMessageSettingsOptions.RECEIVER_SECTION_ID}")
+            var key = $"{serviceInstanceName}:{AzureMessageSettingsOptions.RECEIVER_SECTION_ID}";
+            config.GetSection(key)
                         .Bind(receiverOptions);
             return receiverOptions;
         }

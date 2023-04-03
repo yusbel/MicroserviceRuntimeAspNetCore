@@ -6,7 +6,7 @@ namespace Sample.Sdk.Interface.Msg
     public interface IMessageSender
     {
         Task<(bool WasSent, SendFailedReason Reason)>
-            Send(CancellationToken token,
+            SendMessage(CancellationToken token,
                     ExternalMessage msg,
                     Action<ExternalMessage> onSent,
                     Action<ExternalMessage, SendFailedReason?, Exception?> onError);

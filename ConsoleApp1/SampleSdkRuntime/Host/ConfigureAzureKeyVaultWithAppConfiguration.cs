@@ -13,11 +13,11 @@ namespace SampleSdkRuntime.Host
     {
         public static void Configure(AzureAppConfigurationKeyVaultOptions appConfigKeyVaultOptions, HostBuilderContext hostCtx, string serviceInstanceName) 
         {
-            var appConfigClient = new ConfigurationClient(Environment.GetEnvironmentVariable(ConfigVarConst.APP_CONFIG_CONN_STR));
+            var appConfigClient = new ConfigurationClient(Environment.GetEnvironmentVariable(ConfigVar.APP_CONFIG_CONN_STR));
             var keyVaultConfigAppKey = $"{serviceInstanceName}:{AzureKeyVaultOptions.SERVICE_SECURITY_KEYVAULT_SECTION_APP_CONFIG}";
             var serviceVaultUri = appConfigClient.GetConfigurationSetting(
                 keyVaultConfigAppKey,
-                Environment.GetEnvironmentVariable(ConfigVarConst.ENVIRONMENT_VAR));
+                Environment.GetEnvironmentVariable(ConfigVar.ENVIRONMENT_VAR));
 
             var keyVaultOptions = JsonSerializer.Deserialize<AzureKeyVaultOptions>(serviceVaultUri.Value.Value);
 

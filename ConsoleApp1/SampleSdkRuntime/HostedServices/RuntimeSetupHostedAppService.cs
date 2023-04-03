@@ -38,8 +38,8 @@ namespace SampleSdkRuntime.HostedServices
 
         private async Task CreateSetup(CancellationToken token)
         {
-            Environment.SetEnvironmentVariable(ConfigVarConst.RUNTIME_SETUP_INFO, string.Empty);
-            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ConfigVarConst.SERVICE_INSTANCE_NAME_ID);
+            Environment.SetEnvironmentVariable(ConfigVar.RUNTIME_SETUP_INFO, string.Empty);
+            var ServiceInstanceIdentifier = _configuration.GetValue<string>(ConfigVar.SERVICE_INSTANCE_NAME_ID);
             var serviceReg = await ServiceRegistrationProvider.Create(_serviceProvider, ServiceInstanceIdentifier)
                                 .ConfigureServiceCredential(token)
                                 .ConfigureServiceCryptoSecret(token)

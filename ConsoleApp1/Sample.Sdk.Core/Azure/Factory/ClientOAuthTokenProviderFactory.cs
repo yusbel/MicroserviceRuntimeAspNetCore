@@ -34,14 +34,14 @@ namespace Sample.Sdk.Core.Azure.Factory
                 AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
             };
             return new ClientSecretCredential(
-                Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_TENANT_ID),
-                Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_CLIENT_ID),
-                Environment.GetEnvironmentVariable(ConfigVarConst.AZURE_CLIENT_SECRET),
+                Environment.GetEnvironmentVariable(ConfigVar.AZURE_TENANT_ID),
+                Environment.GetEnvironmentVariable(ConfigVar.AZURE_CLIENT_ID),
+                Environment.GetEnvironmentVariable(ConfigVar.AZURE_CLIENT_SECRET),
                 clientSecretCredentialOptions);
         }
         public bool TryGetOrCreateClientSecretCredentialWithDefaultIdentity(out ClientSecretCredential secretCredential)
         {
-            (string TenantId, string ClientId, string ClientSecret) = _configuration.GetValue<bool>(ConfigVarConst.IS_RUNTIME)
+            (string TenantId, string ClientId, string ClientSecret) = _configuration.GetValue<bool>(ConfigVar.IS_RUNTIME)
                                                                         ? GetAzureRuntimeServiceCredential()
                                                                         : GetAzureServiceInstanceCredential();
             if (string.IsNullOrEmpty(TenantId) || string.IsNullOrEmpty(ClientId) || string.IsNullOrEmpty(ClientSecret))
@@ -59,15 +59,15 @@ namespace Sample.Sdk.Core.Azure.Factory
 
         public string GetDefaultTenantId()
         {
-            return _configuration.GetValue<bool>(ConfigVarConst.IS_RUNTIME)
-                                                ? _configuration.GetValue<string>(ConfigVarConst.RUNTIME_AZURE_TENANT_ID)
-                                                : _configuration.GetValue<string>(ConfigVarConst.AZURE_TENANT_ID);
+            return _configuration.GetValue<bool>(ConfigVar.IS_RUNTIME)
+                                                ? _configuration.GetValue<string>(ConfigVar.RUNTIME_AZURE_TENANT_ID)
+                                                : _configuration.GetValue<string>(ConfigVar.AZURE_TENANT_ID);
         }
 
         public (string TenantId, string ClientId, string ClientSecret)
             GetAzureTokenCredentials()
         {
-            return _configuration.GetValue<bool>(ConfigVarConst.IS_RUNTIME)
+            return _configuration.GetValue<bool>(ConfigVar.IS_RUNTIME)
                                                                         ? GetAzureRuntimeServiceCredential()
                                                                         : GetAzureServiceInstanceCredential();
         }
@@ -75,24 +75,24 @@ namespace Sample.Sdk.Core.Azure.Factory
         public (string TenantId, string ClientId, string ClientSecret)
         GetAzureServiceInstanceCredential()
         {
-            return (_configuration.GetValue<string>(ConfigVarConst.AZURE_TENANT_ID),
-                    _configuration.GetValue<string>(ConfigVarConst.AZURE_CLIENT_ID),
-                    _configuration.GetValue<string>(ConfigVarConst.AZURE_CLIENT_SECRET));
+            return (_configuration.GetValue<string>(ConfigVar.AZURE_TENANT_ID),
+                    _configuration.GetValue<string>(ConfigVar.AZURE_CLIENT_ID),
+                    _configuration.GetValue<string>(ConfigVar.AZURE_CLIENT_SECRET));
 
         }
 
         public (string TenantId, string ClientId, string ClientSecret)
             GetAzureRuntimeServiceCredential()
         {
-            if (!string.IsNullOrEmpty(_configuration.GetValue<string>(ConfigVarConst.RUNTIME_AZURE_CLIENT_ID)))
+            if (!string.IsNullOrEmpty(_configuration.GetValue<string>(ConfigVar.RUNTIME_AZURE_CLIENT_ID)))
             {
-                return (_configuration.GetValue<string>(ConfigVarConst.RUNTIME_AZURE_TENANT_ID),
-                            _configuration.GetValue<string>(ConfigVarConst.RUNTIME_AZURE_CLIENT_ID),
-                            _configuration.GetValue<string>(ConfigVarConst.RUNTIME_AZURE_CLIENT_SECRET));
+                return (_configuration.GetValue<string>(ConfigVar.RUNTIME_AZURE_TENANT_ID),
+                            _configuration.GetValue<string>(ConfigVar.RUNTIME_AZURE_CLIENT_ID),
+                            _configuration.GetValue<string>(ConfigVar.RUNTIME_AZURE_CLIENT_SECRET));
             }
-            return (Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_AZURE_TENANT_ID)!,
-                            Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_AZURE_CLIENT_ID)!,
-                            Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_AZURE_CLIENT_SECRET)!);
+            return (Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_AZURE_TENANT_ID)!,
+                            Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_AZURE_CLIENT_ID)!,
+                            Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_AZURE_CLIENT_SECRET)!);
         }
     }
 }

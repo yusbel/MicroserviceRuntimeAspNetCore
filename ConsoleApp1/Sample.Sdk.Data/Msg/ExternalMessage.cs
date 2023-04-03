@@ -28,14 +28,6 @@
         /// </summary>
         public string CorrelationId { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Message unique identifier used to track duplicate
-        /// </summary>
-        public string Id
-        {
-            get; set;
-        } = string.Empty;
-
         public string AckQueueName { get; set; } = string.Empty;
     }
 }

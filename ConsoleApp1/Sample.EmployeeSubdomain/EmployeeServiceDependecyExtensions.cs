@@ -29,6 +29,7 @@ namespace Sample.EmployeeSubdomain
                 });
                 options.EnableDetailedErrors(true);
             });
+
             services.AddHostedService<EmployeeGenerator>();
             services.AddSingleton<IMessageSenderService, MessageSenderService>();
             services.Configure<StorageLocationOptions>(configuration.GetSection(StorageLocationOptions.StorageLocation));

@@ -53,7 +53,7 @@ namespace Sample.EmployeeSubdomain.Services
                 {
                     await Parallel.ForEachAsync(externalMsgs, async (msg, token) =>
                             {
-                                await _sender.Send(token, msg,
+                                await _sender.SendMessage(token, msg,
                                     msgSent =>
                                     {
                                         sentMsgs.Add(msg);

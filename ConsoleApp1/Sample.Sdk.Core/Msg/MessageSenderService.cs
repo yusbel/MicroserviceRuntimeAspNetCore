@@ -99,7 +99,7 @@ namespace Sample.Sdk.Core.Msg
                     eventListToSend.RemoveAll(e => e == null);
                     await Parallel.ForEachAsync(eventListToSend, async (eventEntity, token) =>
                     {
-                        await _messageSender.Send(token, eventEntity!,
+                        await _messageSender.SendMessage(token, eventEntity!,
                                         msg =>
                                         {
                                             //success send

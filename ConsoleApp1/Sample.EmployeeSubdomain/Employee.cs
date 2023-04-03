@@ -25,6 +25,7 @@ namespace Sample.EmployeeSubdomain
             try
             {
                 var msg = EmployeeAdded.Create(_employee.Name, _employee.Email);
+                msg.AckQueueName = "ackemployeeadded";
                 await Save(msg, token, sendNotification: true).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }

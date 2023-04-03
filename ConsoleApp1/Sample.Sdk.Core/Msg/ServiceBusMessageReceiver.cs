@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Sample.Sdk.Core.Extensions;
 using Sample.Sdk.Data.Entities;
 using Sample.Sdk.Data.Msg;
 using Sample.Sdk.Data.Options;
@@ -11,7 +12,7 @@ using static Sample.Sdk.Core.Extensions.ExternalMessageExtensions;
 
 namespace Sample.Sdk.Core.Msg
 {
-    public class ServiceBusMessageReceiver : ServiceBusReceiverRoot, IMessageReceiver
+    public class ServiceBusMessageReceiver : ServiceBusFactory, IMessageReceiver
     {
         private readonly ILogger<ServiceBusMessageReceiver> _logger;
         public ServiceBusMessageReceiver(
@@ -27,32 +28,37 @@ namespace Sample.Sdk.Core.Msg
         /// <summary>
         /// Retrieve message from the acknowledgement queue
         /// </summary>
-        /// <param name="ackQueue">Acknowsledgement queue name</param>
+        /// <param name="queueName">Acknowsledgement queue name</param>
         /// <param name="messageProcessor">Process acknowledgement message</param>
         /// <param name="token">Cancel operation</param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public async Task ReceiveAck(string ackQueue,
+        public async Task ReceiveMessages(string queueName,
             Func<ExternalMessage, Task<bool>> messageProcessor,
             CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            var serviceProcessor = GetServiceBusProcessor(ackQueue, () =>
-                                                                    {
-                                                                        return new ServiceBusProcessorOptions()
-                                                                        {
-                                                                            AutoCompleteMessages = true,
-                                                                            ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
-                                                                            MaxConcurrentCalls = Environment.ProcessorCount
-                                                                        };
-                                                                    });
+            var serviceProcessor = GetServiceBusProcessor(queueName, () =>
+            {
+                return new ServiceBusProcessorOptions()
+                {
+                    AutoCompleteMessages = true,
+                    ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
+                    MaxConcurrentCalls = Environment.ProcessorCount
+                };
+            });
             serviceProcessor.ProcessMessageAsync += async (args) =>
             {
                 var externalMsg = JsonSerializer.Deserialize<ExternalMessage>(Encoding.UTF8.GetString(args.Message.Body.ToArray()));
                 if (externalMsg != null)
                     await messageProcessor.Invoke(externalMsg);
             };
+            serviceProcessor.ProcessErrorAsync +=  (args) => 
+            {
+                args.Exception.LogException(_logger.LogCritical);
+                return Task.CompletedTask;
+            }; 
             await serviceProcessor.StartProcessingAsync(token).ConfigureAwait(false);
         }
 

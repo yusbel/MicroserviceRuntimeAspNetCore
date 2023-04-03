@@ -17,17 +17,17 @@ namespace Sample.Sdk.Data.Registration
         public ServiceRuntimeConfigData RuntimeConfigData { get; set; } = default!;
         public static ServiceRegistration DefaultInstance(string serviceInstanceId = "")
         {
-            serviceInstanceId = string.IsNullOrEmpty(serviceInstanceId) ? Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_INSTANCE_NAME_ID)!
+            serviceInstanceId = string.IsNullOrEmpty(serviceInstanceId) ? Environment.GetEnvironmentVariable(ConfigVar.SERVICE_INSTANCE_NAME_ID)!
                                                                         : serviceInstanceId;
             return new ServiceRegistration()
             {
                 ServiceInstanceId = serviceInstanceId,
-                ServiceDataContainerName = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_DATA_BLOB_CONTAINER_NAME)!,
-                ServiceBlobConnStrConfigKey = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_BLOB_CONN_STR_APP_CONFIG_KEY)!,
+                ServiceDataContainerName = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_DATA_BLOB_CONTAINER_NAME)!,
+                ServiceBlobConnStrConfigKey = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_BLOB_CONN_STR_APP_CONFIG_KEY)!,
                 RuntimeConfigData = new ServiceRuntimeConfigData()
                 {
-                    ServiceRuntimeBlobConnStrKey = Environment.GetEnvironmentVariable(ConfigVarConst.SERVICE_RUNTIME_BLOB_CONN_STR_KEY)!,
-                    ServiceRuntimeBlobPublicKeyContainerName = Environment.GetEnvironmentVariable(ConfigVarConst.RUNTIME_BLOB_PUBLICKEY_CONTAINER_NAME)!
+                    ServiceRuntimeBlobConnStrKey = Environment.GetEnvironmentVariable(ConfigVar.SERVICE_RUNTIME_BLOB_CONN_STR_KEY)!,
+                    ServiceRuntimeBlobPublicKeyContainerName = Environment.GetEnvironmentVariable(ConfigVar.RUNTIME_BLOB_PUBLICKEY_CONTAINER_NAME)!
                 }
             };
         }

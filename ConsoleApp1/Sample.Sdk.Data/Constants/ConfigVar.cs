@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Sample.Sdk.Data.Constants
+﻿namespace Sample.Sdk.Data.Constants
 {
-    public class ConfigVarConst
+    public class ConfigVar
     {
         public const string IS_RUNTIME = "IsRuntime";
         public const string AZURE_TENANT_ID = "AZURE_TENANT_ID";

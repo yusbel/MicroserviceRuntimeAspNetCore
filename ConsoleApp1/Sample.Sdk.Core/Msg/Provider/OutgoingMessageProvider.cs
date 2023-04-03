@@ -4,7 +4,7 @@ using Sample.Sdk.Data.Msg;
 using static Sample.Sdk.Core.Extensions.OutgoingEventEntityExtensions;
 using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
-namespace Sample.Sdk.Msg.Providers
+namespace Sample.Sdk.Core.Msg.Provider
 {
     /// <summary>
     /// Base class to convert outgoing event entity into external message, it would be used to encapsulate the abstract operations
@@ -31,7 +31,7 @@ namespace Sample.Sdk.Msg.Providers
                 try
                 {
                     var externalMsg = outgoingEvent.ConvertToExternalMessage();
-                    if(externalMsg != null)
+                    if (externalMsg != null)
                         externalMessages.Add(externalMsg);
                 }
                 catch (Exception e)

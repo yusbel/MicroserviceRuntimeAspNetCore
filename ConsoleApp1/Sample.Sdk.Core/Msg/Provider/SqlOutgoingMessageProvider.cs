@@ -8,7 +8,7 @@ using Sample.Sdk.Interface.Msg;
 using System.Linq.Expressions;
 using static Sample.Sdk.Core.Extensions.AggregateExceptionExtensions;
 
-namespace Sample.Sdk.Msg.Providers
+namespace Sample.Sdk.Core.Msg.Provider
 {
     public class SqlOutgoingMessageProvider : OutgoingMessageProvider, IOutgoingMessageProvider
     {
@@ -53,16 +53,16 @@ namespace Sample.Sdk.Msg.Providers
         /// <param name="sentMsgs">Messages sent</param>
         /// <param name="cancellationToken">Cancellation token to stop this operation</param>
         /// <returns></returns>
-        public async Task<int> UpdateSentMessages(IEnumerable<ExternalMessage> sentMsgs, 
-            CancellationToken cancellationToken, 
-            Action<ExternalMessage, Exception> failSend) 
+        public async Task<int> UpdateSentMessages(IEnumerable<ExternalMessage> sentMsgs,
+            CancellationToken cancellationToken,
+            Action<ExternalMessage, Exception> failSend)
         {
-            if(sentMsgs == null || !sentMsgs.Any()) { return 0; }
-            var tasks= new List<Task>();
-            foreach (var sentMsg in sentMsgs) 
+            if (sentMsgs == null || !sentMsgs.Any()) { return 0; }
+            var tasks = new List<Task>();
+            foreach (var sentMsg in sentMsgs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var task = Task.Run(async() => 
+                var task = Task.Run(async () =>
                 {
                     try
                     {
@@ -88,7 +88,7 @@ namespace Sample.Sdk.Msg.Providers
             {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 e.LogException(_logger.LogCritical);
             }
@@ -107,29 +107,29 @@ namespace Sample.Sdk.Msg.Providers
             Func<OutgoingEventEntity, OutgoingEventEntity> updateEntity,
             Action<string, Exception> failSent)
         {
-            if(sentMsgs == null || !sentMsgs.Any()) { return 0; }
+            if (sentMsgs == null || !sentMsgs.Any()) { return 0; }
             var tasks = new List<Task>();
             var exceptions = new List<Exception>();
             cancellationToken.ThrowIfCancellationRequested();
-            foreach (var sentMsg in sentMsgs) 
+            foreach (var sentMsg in sentMsgs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var task = Task.Run(async () => 
+                var task = Task.Run(async () =>
                 {
                     using var scope = _serviceProvider.CreateScope();
                     using var dbContext = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
-                    try 
+                    try
                     {
                         var entityToUpdate = await dbContext.OutgoingEvents
                                                     .FirstOrDefaultAsync(e => !e.IsDeleted && e.Id == sentMsg, cancellationToken)
                                                     .ConfigureAwait(false);
-                        if(entityToUpdate != null) 
+                        if (entityToUpdate != null)
                         {
                             updateEntity?.Invoke(entityToUpdate);
                             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                         }
                     }
-                    catch(Exception e) 
+                    catch (Exception e)
                     {
                         failSent?.Invoke(sentMsg, e);
                         exceptions.Add(e);
@@ -138,14 +138,14 @@ namespace Sample.Sdk.Msg.Providers
                 _ = task.ConfigureAwait(false);
                 tasks.Add(task);
             }
-            try 
+            try
             {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
             }
-            catch(Exception e) { exceptions.Add(e); }
+            catch (Exception e) { exceptions.Add(e); }
             exceptions.ForEach(e => e.LogException(_logger.LogCritical));
             return tasks.Count(t => t.IsCompletedSuccessfully);
         }
-        
+
     }
 }

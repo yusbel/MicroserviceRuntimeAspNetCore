@@ -1,6 +1,4 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Sample.EmployeeSubdomain.Host;
 using SampleSdkRuntime;
 

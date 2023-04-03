@@ -39,11 +39,11 @@ namespace Sample.Sdk.Core.Msg
                 {
                     throw new ApplicationException("Add identifier to azure service bus info");
                 }
-                option.MessageInTransitOptions.ForEach(queue =>
-                {
-                    if (!string.IsNullOrEmpty(queue.MsgQueueName))
-                        serviceBusSender?.TryAdd(queue.MsgQueueName, service.CreateSender(queue.MsgQueueName));
-                });
+                    option.MessageInTransitOptions.ForEach(queue =>
+                    {
+                        if (!string.IsNullOrEmpty(queue.MsgQueueName))
+                            serviceBusSender?.TryAdd(queue.MsgQueueName, service.CreateSender(queue.MsgQueueName));
+                    });
             });
         }
 

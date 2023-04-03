@@ -19,7 +19,7 @@ namespace Sample.Sdk.Interface.Msg
                                             CancellationToken cancellationToken);
 
         Task<bool> UpdateEventStatus(
-            IServiceScope serviceScope,
+            IServiceProvider serviceProvider,
             InComingEventEntity eventEntity,
             Expression<Func<InComingEventEntity, bool>> propertyToUpdate,
             CancellationToken cancellationToken);

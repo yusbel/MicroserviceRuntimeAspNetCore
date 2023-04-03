@@ -1,10 +1,5 @@
 ﻿using Sample.Sdk.Data.Entities;
 using Sample.Sdk.Data.Msg;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.Sdk.Interface.Msg
 {
@@ -15,7 +10,7 @@ namespace Sample.Sdk.Interface.Msg
             , Func<InComingEventEntity, CancellationToken, Task<bool>> saveEntity
             , string queueName = "");
 
-        Task ReceiveAck(string ackQueue,
+        Task ReceiveMessages(string queueName,
             Func<ExternalMessage, Task<bool>> messageProcessor,
             CancellationToken token);
     }

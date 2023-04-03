@@ -15,5 +15,6 @@ namespace Sample.Sdk.Data.Msg
         public string MsgQueueEndpoint { get; set; } = string.Empty;
         public string CryptoEndpoint { get; set; } = string.Empty;
         public string SignDataKeyId { get; set; } = string.Empty;
+        public string SignatureCertificateKey { get; set; } = string.Empty;
     }
 }

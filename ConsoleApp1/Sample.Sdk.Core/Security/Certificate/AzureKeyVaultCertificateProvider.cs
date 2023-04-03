@@ -7,7 +7,6 @@ using Sample.Sdk.Core.Caching;
 using Sample.Sdk.Data.Enums;
 using Sample.Sdk.Interface.Caching;
 using Sample.Sdk.Interface.Security.Certificate;
-using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Sample.Sdk.Core.Security.Certificate

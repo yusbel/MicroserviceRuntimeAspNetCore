@@ -33,6 +33,7 @@ using Sample.Sdk.Data.Constants;
 using Sample.Sdk.Interface;
 using Sample.Sdk.Data.Registration;
 using Sample.Sdk.Core.Security.Keys;
+using Sample.Sdk.Core.Msg.Provider;
 
 namespace Sample.Sdk.Core
 {
@@ -43,6 +44,7 @@ namespace Sample.Sdk.Core
             var configOptions = ServiceConfiguration.Create(config);
             configOptions.AddDatabaseSettingsOptions(services);
             configOptions.AddCustomProtocolOptions(services);
+            configOptions.AddAzureKeyVaultOptions(services);
             services.Configure<MessageSettingsConfigurationOptions>(config.GetSection(MessageSettingsConfigurationOptions.SectionIdentifier));
 
             services.AddTransient<IArmClientFactory, ArmClientFactory>();
@@ -50,7 +52,11 @@ namespace Sample.Sdk.Core
             services.AddTransient<IGraphServiceClientFactory, GraphServiceClientFactory>();
             services.AddDbContext<ServiceDbContext>();
             services.AddSingleton<HttpClient>();
-            services.AddSingleton<IPublicKeyProvider, PublicKeyProvider>();
+            services.AddSingleton<IPublicKeyProvider>(sp=> 
+            {
+                var httpClient = sp.GetRequiredService<HttpClient>();
+                return new PublicKeyProvider(httpClient);
+            });
             services.AddTransient<ISendExternalMessage, MessageSenderService>();
             services.AddTransient<IMessageInTransitService, MessageInTransitService>();
             services.AddTransient<IClientOAuthTokenProviderFactory, ClientOAuthTokenProviderFactory>();
@@ -83,7 +89,7 @@ namespace Sample.Sdk.Core
                 clientBuilder.AddBlobServiceClient(config.GetSection(serviceContext.GetServiceRuntimeBlobConnStrKey()))
                                     .WithName(HostTypeOptions.Runtime.ToString());
 
-                clientBuilder.AddConfigurationClient(Environment.GetEnvironmentVariable(ConfigVarConst.APP_CONFIG_CONN_STR));
+                clientBuilder.AddConfigurationClient(Environment.GetEnvironmentVariable(ConfigVar.APP_CONFIG_CONN_STR));
 
                 clientBuilder.UseCredential((services) =>
                 {
@@ -97,7 +103,6 @@ namespace Sample.Sdk.Core
 
         public static IServiceCollection AddInMemoryServices(this IServiceCollection services, IConfiguration config)
         {
-            
             services.AddHostedService<MessageSenderRealtimeHostedService>();
             services.AddHostedService<MessageReceiverRealtimeHostedService>();
             services.AddTransient<IMessageComputation, ComputeReceivedMessage>();
@@ -107,6 +112,8 @@ namespace Sample.Sdk.Core
             services.AddTransient<IMessageReceiver, ServiceBusMessageReceiver>();
             services.Configure<MemoryCacheOptions>(config);
             services.AddTransient<IMemoryCache, MemoryCache>();
+            services.AddTransient<IOutgoingMessageProvider, SqlOutgoingMessageProvider>();
+
             return services;
         }
 
@@ -125,6 +132,7 @@ namespace Sample.Sdk.Core
 
         public static IServiceCollection AddCryptographic(this IServiceCollection services)
         {
+            services.AddTransient<IMessageDataProtectionProvider, MessageDataProtectionProvider>();
             services.AddTransient<ISignatureCryptoProvider, SignatureCryptoProvider>();
             services.AddTransient<IMessageCryptoService, MessageCryptoService>();
             services.AddTransient<ISecurityEndpointValidator, SecurityEndpointValidator>();

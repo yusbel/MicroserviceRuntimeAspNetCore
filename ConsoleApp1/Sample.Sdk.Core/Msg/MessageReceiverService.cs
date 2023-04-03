@@ -106,25 +106,16 @@ namespace Sample.Sdk.Core.Msg
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
-            var tasks = new List<Task>();
-            var retrievalTask = ReceiveMessages(token);
-            _ = retrievalTask.ConfigureAwait(false);
-            tasks.Add(retrievalTask);
-            var taskFromDb = RetrieveInComingEventEntityFromDatabase(token);
-            _ = taskFromDb.ConfigureAwait(false);
-            tasks.Add(taskFromDb);
-            var taskCompute = ComputeReceivedMessage(token);
-            _ = taskCompute.ConfigureAwait(false);
-            tasks.Add(taskCompute);
-            var taskUpdate = UpdateEventStatus(token);
-            _ = taskUpdate.ConfigureAwait(false);
-            tasks.Add(taskUpdate);
-            var taskRetrieveAck = RetrieveAcknowledgementMessage(token);
-            _ = taskRetrieveAck.ConfigureAwait(false);
-            tasks.Add(taskRetrieveAck);
-            var taskSentAck = SendAckMessages(token);
-            _ = taskSentAck.ConfigureAwait(false);
-            //tasks.Add(taskSentAck);
+            var tasks = new List<Task>() 
+            {
+                ReceiveMessages(token),
+                RetrieveInComingEventEntityFromDatabase(token),
+                ComputeReceivedMessage(token),
+                UpdateEventStatus(token),
+                RetrieveAcknowledgementMessage(token),
+                SendAckMessages(token)
+            };
+            tasks.ForEach(t => t.ConfigureAwait(false));
             try
             {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -154,9 +145,9 @@ namespace Sample.Sdk.Core.Msg
                 {
                     while (_ackMessages.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
-                        var msgToSend = messages.ToList().ConvertAll(msg => { return msg.ConvertToExternalMessage(); });
+                        var msgToSend = messages.ToList().ConvertAll(msg => msg.ConvertToExternalMessage());
 
-                        await _messageSender.SendMessages((msg) => msg.AckQueueName, msgToSend, msgs =>
+                        await _messageSender.SendMessages((msg) => msg.AckQueueName, msgToSend, onSent: msgs =>
                         {
                             msgs.ToList().ForEach(msg =>
                             {
@@ -169,9 +160,11 @@ namespace Sample.Sdk.Core.Msg
                                 _persistMessages.TryAdd(computedMessage);
                             });
 
-                        }, (msgs, exception) =>
-                        {
-                        }, token).ConfigureAwait(false);
+                        }, 
+                        onError : (msgs, exception) =>
+                            {
+
+                            }, token).ConfigureAwait(false);
 
                         await Task.Delay(1000, token).ConfigureAwait(false);
                     }
@@ -238,8 +231,7 @@ namespace Sample.Sdk.Core.Msg
                         {
                             try
                             {
-                                using var scope = _serviceProvider.CreateScope();
-                                await _computations.UpdateEventStatus(scope,
+                                await _computations.UpdateEventStatus(_serviceProvider,
                                                             computedMessage.EventEntity,
                                                             computedMessage.PropertyToUpdate,
                                                             token)
@@ -256,9 +248,9 @@ namespace Sample.Sdk.Core.Msg
                                 await Task.Delay(1000, token).ConfigureAwait(false);
                             }
                         }
-                        await Task.Delay(TimeSpan.FromMinutes(1), token).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(30), token).ConfigureAwait(false);
                     }
-                    await Task.Delay(TimeSpan.FromMinutes(1), token).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(30), token).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -283,8 +275,8 @@ namespace Sample.Sdk.Core.Msg
                     while (_inComingEvents.TryTakeAllWithoutDuplicate(out var messages, token))
                     {
                         token.ThrowIfCancellationRequested();
-                        //await Parallel.ForEachAsync(messages, token, async (message, token) =>
-                        foreach (var message in messages)
+                        await Parallel.ForEachAsync(messages, token, async (message, token) =>
+                        //foreach (var message in messages)
                         {
                             EncryptedMessage? encryptedMessage = null;
                             try
@@ -311,15 +303,6 @@ namespace Sample.Sdk.Core.Msg
                                 decryptorResult = await _cryptoService.GetDecryptedExternalMessage(encryptedMessage!,
                                                                                                     cancellationToken)
                                                                         .ConfigureAwait(false);
-                            }
-                            catch (OperationCanceledException) { throw; }
-                            catch (Exception e)
-                            {
-                                e.LogException(_logger.LogCritical);
-                                return;
-                            }
-                            try
-                            {
                                 if (decryptorResult.wasEncrypted)
                                 {
                                     using var scope = _serviceProvider.CreateScope();
@@ -335,7 +318,7 @@ namespace Sample.Sdk.Core.Msg
                             {
                                 e.LogException(_logger.LogCritical);
                             }
-                        };//);
+                        });
                         await Task.Delay(1000, token).ConfigureAwait(false);
                     }
                     await Task.Delay(1000, token).ConfigureAwait(false);
@@ -403,46 +386,34 @@ namespace Sample.Sdk.Core.Msg
             CancellationTokenSource tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = tokenSource.Token;
             return Task.Run(async () =>
-            {
+            {       
                 try
                 {
-                    while (!token.IsCancellationRequested)
-                    {
-                        try
+                    var settings = _messagingOptions.Value.Where(item => item.ConfigType ==
+                                                            AzureMessageSettingsOptionType.Receiver)
+                                                    .ToList();
+                    var tasks = new List<Task>();
+                    foreach (var msgSettings in settings)
+                    {   
+                        foreach (var msgInTransitOptions in msgSettings.MessageInTransitOptions)
                         {
-                            var settings = _messagingOptions.Value.Where(item => item.ConfigType ==
-                                                                    AzureMessageSettingsOptionType.Receiver)
-                                                            .ToList();
-                            foreach (var msgSettings in settings)
+                            var task = Task.Run(async () =>
                             {
-                                var tasks = new List<Task>();
-                                foreach (var msgInTransitOptions in msgSettings.MessageInTransitOptions)
-                                {
-                                    var task = Task.Run(async () =>
+                                await _messageBusReceiver.ReceiveMessages(msgInTransitOptions.MsgQueueName,
+                                    async (extMsg) =>
                                     {
                                         using var scope = _serviceProvider.CreateScope();
-                                        await _messageBusReceiver.Receive(
-                                                            token,
-                                                            async (inComingEvent, token) =>
-                                                            {
-                                                                await _computations.SaveInComingEventEntity(scope, inComingEvent, token).ConfigureAwait(false);
-                                                                _inComingEvents.TryAdd(inComingEvent);//realtime message
-                                                                return true;
-                                                            }, msgInTransitOptions.MsgQueueName.ToLower())
-                                                    .ConfigureAwait(false);
-                                    }, token);
-                                    task.ConfigureAwait(false);
-                                    tasks.Add(task);
-                                }
-                                await Task.WhenAll(tasks);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            e.LogException(_logger.LogCritical);
-                            //TODO:Inspect exception from database to slow the loop count and raise cancel operation.
+                                        var msg = extMsg.ConvertToInComingEventEntity();
+                                        await _computations.SaveInComingEventEntity(scope, msg, token).ConfigureAwait(false);
+                                        _inComingEvents.TryAdd(msg);
+                                        return true;
+                                    }, token).ConfigureAwait(false);
+                            }, token);
+                            task.ConfigureAwait(false);
+                            tasks.Add(task);
                         }
                     }
+                    await Task.WhenAll(tasks);
                 }
                 catch (Exception e)
                 {

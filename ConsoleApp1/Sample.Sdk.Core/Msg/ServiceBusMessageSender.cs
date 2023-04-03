@@ -13,7 +13,7 @@ namespace Sample.Sdk.Core.Msg
     /// <summary>
     /// Message sender implementation using azure service bus
     /// </summary>
-    public partial class ServiceBusMessageSender : ServiceBusSenderRoot, IMessageSender
+    public partial class ServiceBusMessageSender : ServiceBusFactory, IMessageSender
     {
         private class Message
         {
@@ -25,8 +25,7 @@ namespace Sample.Sdk.Core.Msg
             , IOptions<List<AzureMessageSettingsOptions>> serviceBusInfoOptions
             , ServiceBusClient serviceBusClient) :
             base(serviceBusInfoOptions
-                , serviceBusClient
-                , loggerFactory.CreateLogger<ServiceBusSenderRoot>())
+                , serviceBusClient)
         {
             _logger = loggerFactory.CreateLogger<ServiceBusMessageSender>();
         }
@@ -40,7 +39,7 @@ namespace Sample.Sdk.Core.Msg
         /// <param name="onSent">Invoked per message successful sent</param>
         /// <returns cref="int">Amount of successful sent messages</returns>
         public async Task<(bool WasSent, SendFailedReason Reason)>
-            Send(CancellationToken token,
+            SendMessage(CancellationToken token,
                     ExternalMessage msg,
                     Action<ExternalMessage> onSent,
                     Action<ExternalMessage, SendFailedReason?, Exception?> onError)
@@ -108,22 +107,23 @@ namespace Sample.Sdk.Core.Msg
                             return false;
                         counter++;
                         return true;
-                    });
+                    }).ToList();
                     var sender = GetSender(getQueue(toSend.First()), toSend.First().MsgQueueEndpoint);
                     if (sender == null)
                         throw new InvalidOperationException($"Sender not found for queue {getQueue(toSend.First())}");
-                    var msgBatch = await sender!.CreateMessageBatchAsync(token).ConfigureAwait(false);
-                    toSend.ToList().ForEach(msg =>
-                    {
-                        msgBatch.TryAddMessage(new ServiceBusMessage()
-                        {
-                            CorrelationId = msg.CorrelationId,
-                            MessageId = msg.Id,
-                            Body = new BinaryData(JsonSerializer.Serialize(msg))
-                        });
-                    });
                     try
                     {
+                        var msgBatch = await sender!.CreateMessageBatchAsync(token).ConfigureAwait(false);
+                        toSend.ToList().ForEach(msg =>
+                        {
+                            var serviceBusMsg = new ServiceBusMessage()
+                            {
+                                CorrelationId = msg.CorrelationId,
+                                MessageId = msg.Id,
+                                Body = new BinaryData(JsonSerializer.Serialize(msg))
+                            };
+                            msgBatch.TryAddMessage(serviceBusMsg);
+                        });
                         await sender.SendMessagesAsync(msgBatch, token).ConfigureAwait(false);
                     }
                     catch (Exception exception)

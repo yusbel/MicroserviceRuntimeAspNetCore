@@ -1,6 +1,4 @@
-﻿using Azure.Security.KeyVault.Certificates;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
 using Sample.Sdk.Data.Enums;
 using Sample.Sdk.Data.Security;
 using Sample.Sdk.Interface;
@@ -69,7 +67,8 @@ namespace Sample.Sdk.Core.Security
             out List<KeyValuePair<SymetricResult, SymetricResult>> result)
         {
             result = new List<KeyValuePair<SymetricResult, SymetricResult>>();
-            foreach (var symetricKeyValue in data)
+            var decryptResult = new ConcurrentBag<KeyValuePair<SymetricResult, SymetricResult>>();
+            Parallel.ForEach(data, symetricKeyValue => 
             {
                 if (_symetricCryptoProvider.TryDecrypt(symetricKeyValue.Key.EncryptedData,
                                                         symetricKeyValue.Key.Key[keyIndex],
@@ -85,10 +84,11 @@ namespace Sample.Sdk.Core.Security
                     {
                         symetricKeyValue.Key.PlainData = symetricDecryptResult!.PlainData;
                         symetricKeyValue.Value.PlainData = symetricValueDecrypt!.PlainData;
-                        result.Add(KeyValuePair.Create(symetricKeyValue.Key, symetricKeyValue.Value));
+                        decryptResult.Add(KeyValuePair.Create(symetricKeyValue.Key, symetricKeyValue.Value));
                     }
                 }
-            }
+            });
+            result = decryptResult.ToList();
             return data.Count == result.Count;
         }
 
@@ -346,8 +346,8 @@ namespace Sample.Sdk.Core.Security
         {
             var encryptedkeys = new ConcurrentBag<KeyValuePair<SymetricResult, SymetricResult>>();
             token.ThrowIfCancellationRequested();
-            //await Parallel.ForEachAsync(keys, async (symetricResult, token) => 
-            foreach (var symetricResult in keys)
+            await Parallel.ForEachAsync(keys, async (symetricResult, token) => 
+            //foreach (var symetricResult in keys)
             {
                 for (var i = 0; i < symetricResult.Key.Key.Count; i++)
                 {
@@ -365,7 +365,7 @@ namespace Sample.Sdk.Core.Security
                     symetricResult.Value.Key[i] = valuePropKeyEncrypted.data!;
                 }
                 encryptedkeys.Add(KeyValuePair.Create(symetricResult.Key, symetricResult.Value));
-            }//).ConfigureAwait(false);
+            }).ConfigureAwait(false);
             return encryptedkeys.ToList();
         }
 

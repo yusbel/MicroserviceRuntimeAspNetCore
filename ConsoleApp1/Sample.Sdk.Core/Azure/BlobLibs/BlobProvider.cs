@@ -83,7 +83,6 @@ namespace Sample.Sdk.Core.Azure.BlobLibs
             }
             return new byte[0];
         }
-
         private string GetBlobContainerName()
         {
             var containerName = _config.GetValue<string>(_serviceContext.GetServiceRuntimeConfigData().ServiceRuntimeBlobPublicKeyContainerName);
@@ -95,7 +94,7 @@ namespace Sample.Sdk.Core.Azure.BlobLibs
         }
         private string GetBlobName(string certificateName)
         {
-            var blobPath = _config[Environment.GetEnvironmentVariable(ConfigVarConst.BLOB_CERTIFICATE_PATH_APP_CONFIG_KEY)];
+            var blobPath = _config[Environment.GetEnvironmentVariable(ConfigVar.BLOB_CERTIFICATE_PATH_APP_CONFIG_KEY)];
             return $@"{blobPath}{_serviceContext.GetServiceInstanceName()}/{certificateName}";
         }
     }

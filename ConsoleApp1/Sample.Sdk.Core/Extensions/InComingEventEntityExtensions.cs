@@ -1,10 +1,5 @@
 ﻿using Sample.Sdk.Data.Entities;
 using Sample.Sdk.Data.Msg;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.Sdk.Core.Extensions
 {
@@ -14,6 +9,7 @@ namespace Sample.Sdk.Core.Extensions
         {
             return new ExternalMessage()
             {
+                Id = inComingEventEntity.Id,
                 CertificateKey = inComingEventEntity.CertificateKey,
                 AckQueueName = inComingEventEntity.AckQueueName,
                 CertificateVaultUri = inComingEventEntity.CertificateLocation,

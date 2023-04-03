@@ -1,4 +1,5 @@
 ﻿using SampleSdkRuntime.Http.Middleware;
+using Serilog.Ui.Web;
 
 namespace SampleSdkRuntime.Host
 {
@@ -11,6 +12,7 @@ namespace SampleSdkRuntime.Host
         public void Configure(IApplicationBuilder appBuilder, IWebHostEnvironment environment) 
         {
             appBuilder.UseMiddleware<CryptoMiddleware>();
+            appBuilder.UseSerilogUi();
 
             appBuilder.Run(async (ctx) => 
             {
