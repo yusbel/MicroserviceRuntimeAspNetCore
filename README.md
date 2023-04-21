@@ -14,7 +14,7 @@ There are alternatives to this pattern:
 
 What I’m working on?
 
-The goal of this concept is to have a practical implementation in .Net core that focus on the approach of, that include an out of the box implementation for raising and consuming events with security controls to protect confidential data in transit. It would be expensive to build the code that handle the requirements of saving, sending, and receiving events on each microservice. Implementing a runtime service that implement these capabilities is what this concept is intended to provide you.
+The goal of this concept is to have a practical implementation in .Net core that include an out of the box implementation for raising and consuming events with security controls to protect confidential data in transit. It would be expensive to build the code that handle the requirements of saving, sending, and receiving events on each microservice. Implementing a runtime service that implement these capabilities is what this concept is intended to provide you.
 
 High level requirements:
 * Each microservice owns the write operation of a graph data (it could be a flat document or a document with nested documents). 
