@@ -45,10 +45,10 @@ The goal of this concept is to have a practical implementation in .Net core that
 * The runtime supports multiple microservices assemblies on development environment. It makes easy to run multiple microservices locally.
 
 ### Concept 
-* Microservices are bound to a subdomain transaction
-* Each microservice use a persistence object to save entities and events
-* A runtime generic host read events and dispatch them into Azure Service Bus Queue
-* Write service to service communication is done via Azure Service Bus Queue
+* Microservices are bound to a subdomain transaction.
+* Each microservice use a persistence object to save entities and events.
+* A runtime generic host read events and dispatch them into Azure Service Bus Queue.
+* Write service to service communication is done via Azure Service Bus Queue.
 
 
 ![alt_text][concept]
@@ -99,7 +99,7 @@ The goal of this concept is to have a practical implementation in .Net core that
         ]
 ```
 #### Azure service bus receiver
-* Each microservice load the receiver configuration and add a service bus processor into a concurrent collection
+* Each microservice load the receiver configuration and add a service bus processor into a concurrent collection.
 
 ```
 "Receiver": [
@@ -132,7 +132,7 @@ The goal of this concept is to have a practical implementation in .Net core that
 ```
 
 #### Save entity and event
-* Save entity and event in a transaction 
+* Save entity and event in a transaction. 
 ```
 public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
         {
@@ -166,7 +166,7 @@ public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, Cancellat
 
 # Runtime
 A microservice assembly is loaded and invoked by a service host runtime. The service host runtime do:
-* Set environment variables 
+* Set environment variables. 
 * Setup service dependencies in Azure, like: registering the service in active directory, manage secret, key and policies in azure key vault, load configuration values from Azure App Configuration.
 * Verify service dependecies status.
 
@@ -216,9 +216,9 @@ private static bool LaunchCoreHostApp(string[] args,
 
 
 ## Create employee activity diagram
-* Once an employee is create a new event EmployeeAdded is raised
-* PayRoll microservice is subscribed to EmployeeAdded queue 
-* PayRoll create a payroll entry for the new created employee and send an acknowledge message to employee service
+* Once an employee is create a new event EmployeeAdded is raised.
+* PayRoll microservice is subscribed to EmployeeAdded queue. 
+* PayRoll create a payroll entry for the new created employee and send an acknowledge message to employee service.
 
 ### Activity diagram
 
