@@ -1,5 +1,10 @@
 # Microservice runtime draft
 
+## Overview
+Most microservices implementations relay on REST endpoints for interprocess communications. I'm working through a concept in which REST endpoint are not used for interprocess communication, this is a most to do when propagating write operations across microservices. A write operation that span multiple microservices is a distributed transaction that it should not be implented using REST endpoint. Lets said you have an orchestration layer or microservice that orchestrate operations across microservices. Let's say, that to create an employee the architecture use a orchestration microservice that invoke the OnBoarding microservice, upon valid respond it invoke the PayRoll microservice. In this scenerio, we have a distributed transaction, there are solutions to deal with failure, like using compensation patterns to revert changes done. The architecture gets complicated, it reseemble the n-tier architecture rather than microservice architecture that focus on domain functionalities. Microservices usually are not restricted like the n-tier architecture in which a tier layer can only talk to a certain tier(s)(strict or relax), etc, microservice are cohesive and solve a domain problem, they emit events and they can be invoked by any other microservices. Microservies can be protected by creating network controls to limit the access to their interfaces.
+
+Read operations, when a microservice need data from another service it's typical to use a REST endpoint to retireve the data to compute the incoming request. The alternative to this approach is to collocate data on each microservice given the cost of collocating data is acceptable. Why?, collocating data on each microservice increase their autonomy, availability and performace. This can be done in those service where the availability and performance is core or a must in your microservices implementations rather than a hammer for every read operation. There is another alternative, create a group of service that are read-only services, these services are subscriber to the domain emitted events to create documents that match the read operation required by the client applications. These group of services will reduce the amount of data duplication, one cons is that they have an old snaphot of the data. The data they provide is behind according to the latency between emitted events and their computation. 
+
 
 ## Concept 
 * Microservices are bound to a subdomain transaction
@@ -19,7 +24,7 @@
 * Service bus instance are created and stored in a concurrent collection during startup
 
 ### Queue configuration
-* Each sender queue have an acknowledge queue if acknowledge for message received and processed is expected by the sender microservice
+* Each sender queue have an acknowledge queue if acknowledge for message received and processed is expected by the sender microservice. The ackqueue is part of configuration to validate that the reply to in a message when used match the configuration. This control enable to secure that message are routed through queues as intended during the architecture cycle. 
 * Each message have a DecryptScope that is required to decrypt message using the service runtime local crypto endpoint (it would be explained later)
 * Each queue is setup in a service endpoint. Receiver microserivce must validate the message intransit data (defined later) like the endpoint match the endpoint from where the message was received. This would provide gurantee that message are send to the queue and received from the queue that was intended too.   
 
