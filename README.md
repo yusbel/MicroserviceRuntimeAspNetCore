@@ -58,7 +58,7 @@ Reference-style:
 "Receiver": [
           {
             "ConfigType": "Receiver",
-            "ConnStr": "Endpoint=sb://leraningyusbel.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=m0Vgczo6e3O0iRQm3XfDhBXiWIelyfFEA+ASbNDzY4U=",
+            "ConnStr": "Endpoint=sb://leraningyusbel.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SharedAccessKeyGoesHere",
             "Identifier": "ServiceBusClientPayRollMessages",
             "MessageInTransitOptions": [
               {
