@@ -85,7 +85,7 @@
         ]
 ```
 
-## SAve entity and event
+## Save entity and event
 * Save entity and event in a transaction 
 ```
 public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
