@@ -33,7 +33,7 @@ High level requirements:
 * An Azure Key Vault is assigned to each microservice.
 * A service principal account is created per microservice.
 * A service principal account is created for the runtime.
-* Service principal account are saved in Azure Key Vault as secret.
+* Service principal password are saved in Azure Key Vault as secret.
 * Azure Key Vault secrets are read through Azure App Configuration. 
 * The runtime creates a generic host with a hosted service to setup Azure services and verify their setup.
 * The runtime loads the microservice IHost application to registered additional services dependencies like ServiceContext.
