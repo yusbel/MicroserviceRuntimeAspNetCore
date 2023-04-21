@@ -5,7 +5,7 @@
 * Microservices are bound to a subdomain transaction
 * Each microservice use a persistence object to save entities and events
 * A runtime generic host read events and dispatch them into Azure Service Bus Queue
-* Service to service communication is done via azure service bus queue
+* Service to service communication is done via Azure Service Bus Queue
 
 
 ![alt_text][concept]
@@ -85,5 +85,36 @@
         ]
 ```
 
+## SAve entity and event
+* Save entity and event in a transaction 
+```
+public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
+        {
+            _dbContext.Add(eventEntity);
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
 
+            if (token.IsCancellationRequested)
+                return false;
+
+            await strategy.ExecuteInTransactionAsync(
+                operation: async () =>
+                    {
+                        await _dbContext.SaveChangesAsync(acceptAllChangesOnSuccess: false).ConfigureAwait(false);
+                    },
+                verifySucceeded: async () =>
+                    {
+                        return await _dbContext.Set<OutgoingEventEntity>().AsNoTracking().AnyAsync(ee => ee.Id == eventEntity.Id).ConfigureAwait(false);
+                    }).ConfigureAwait(false);
+
+            _dbContext.ChangeTracker.AcceptAllChanges();
+            if (OnSave != null)
+            {
+                OnSave(this, new ExternalMessageEventArgs()
+                {
+                    ExternalMessage = eventEntity!.ConvertToExternalMessage()
+                });
+            }
+            return true;
+        }
+```
 
