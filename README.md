@@ -7,7 +7,7 @@
 * A runtime generic host read events and dispatch them into Azure Service Bus Queue
 * Service to service communication is done via azure service bus queue
 
-Reference-style:
+
 ![alt_text][concept]
 
 [concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb120by120.png "Microservice concept"
