@@ -64,7 +64,7 @@ The goal of this concept is to have a practical implementation in .Net core that
 * Each microservice load at startup the configuration of queue to send messages.
 * Service bus instance are created and stored in a concurrent collection during startup.
 
-### Queue
+#### Queue
 * Each sender queue have an acknowledge queue, if acknowledgement is required from receiver. The ackqueue is part of the configuration to validate that the reply a message is send to a queue agrees during setup. This control enable to secure that message are routed through queues as intended during the architecture cycle. 
 * Each message have a DecryptScope that is required to decrypt message using the service runtime local crypto endpoint (it would be explained later)
 * Each queue is setup in a service endpoint. Receiver microserivce must validate the message intransit data (defined later) like the endpoint match the endpoint from where the message was received. This would provide gurantee that message are send to the queue and received from the queue that was intended too.   
@@ -98,7 +98,7 @@ The goal of this concept is to have a practical implementation in .Net core that
           }
         ]
 ```
-### Azure service bus receiver
+#### Azure service bus receiver
 * Each microservice load the receiver configuration and add a service bus processor into a concurrent collection
 
 ```
@@ -131,7 +131,7 @@ The goal of this concept is to have a practical implementation in .Net core that
         ]
 ```
 
-### Save entity and event
+#### Save entity and event
 * Save entity and event in a transaction 
 ```
 public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
