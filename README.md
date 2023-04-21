@@ -10,7 +10,7 @@
 Reference-style:
 ![alt_text][concept]
 
-[concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb.png "Microservice concept"
+[concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb120by120.png "Microservice concept"
 
 
 ## Azure Service Bus configuration
