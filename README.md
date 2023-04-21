@@ -118,6 +118,16 @@ public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, Cancellat
         }
 ```
 
+# Runtime
+A microservice assembly is loaded and invoked by a service host runtime. The service host runtime do:
+* Set environment variables 
+* Setup service dependecies in Azure like: registering the service in active directory, manage secret, key and policies in azure key vault, load configuration values from Azure App Configuration.
+* Verify service dependecies status.
+
+![alt_text][runtime]
+
+[runtime]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/RuntimeSample.png "Runtime activity diagram"
+
 ## Create employee activity diagram
 * Once an employee is create a new event EmployeeAdded is raised
 * PayRoll microservice is subscribed to EmployeeAdded queue 
