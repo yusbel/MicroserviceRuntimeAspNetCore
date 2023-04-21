@@ -60,7 +60,7 @@ The goal of this concept is to have a practical implementation in .Net core that
 ### Configuration
 * Azure App Configuration will be used for all development life cycle environments.
 
-### Azure Service Bus
+#### Azure Service Bus
 * Each microservice load at startup the configuration of queue to send messages.
 * Service bus instance are created and stored in a concurrent collection during startup.
 
