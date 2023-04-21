@@ -118,3 +118,12 @@ public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, Cancellat
         }
 ```
 
+## Create employee activity diagram
+* Once an employee is create a new event EmployeeAdded is raised
+* PayRoll microservice is subscribed to EmployeeAdded queue 
+* PayRoll create a payroll entry for the new created employee and send an acknowledge message to employee service
+
+### Activity diagram
+
+![alt_text][createemployee]
+[createemployee]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/CreateEmployeeActivityDiagram.png "Employee Added"
