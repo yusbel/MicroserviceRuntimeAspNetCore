@@ -14,11 +14,11 @@
 
 
 
-## Azure Service Bus configuration
+### Azure Service Bus configuration
 * Each microservice load at startup the configuration of queue to send messages
 * Service bus instance are created and stored in a concurrent collection during startup
 
-## Queue configuration
+### Queue configuration
 * Each sender queue have an acknowledge queue if acknowledge for message received and processed is expected by the sender microservice
 * Each message have a DecryptScope that is required to decrypt message using the service runtime local crypto endpoint (it would be explained later)
 * Each queue is setup in a service endpoint. Receiver microserivce must validate the message intransit data (defined later) like the endpoint match the endpoint from where the message was received. This would provide gurantee that message are send to the queue and received from the queue that was intended too.   
@@ -52,7 +52,7 @@
           }
         ]
 ```
-## Azure service bus receiver configuration
+### Azure service bus receiver configuration
 * Each microservice load the receiver configuration and add a service bus processor into a concurrent collection
 
 ```
@@ -85,7 +85,7 @@
         ]
 ```
 
-## Save entity and event
+### Save entity and event
 * Save entity and event in a transaction 
 ```
 public async Task<bool> SaveWithEvent(OutgoingEventEntity eventEntity, CancellationToken token)
