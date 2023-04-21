@@ -13,6 +13,7 @@ Reference-style:
 [concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb120by120.png "Microservice concept"
 
 
+
 ## Azure Service Bus configuration
 * Each microservice load at startup the configuration of queue to send messages
 * Service bus instance are created and stored in a concurrent collection during startup
