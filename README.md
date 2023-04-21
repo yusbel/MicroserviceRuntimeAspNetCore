@@ -128,6 +128,47 @@ A microservice assembly is loaded and invoked by a service host runtime. The ser
 
 [runtime]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/RuntimeSample.png "Runtime activity diagram"
 
+### Load microservice assembly
+* Microservie assembly location are stored on an environment variable or can be passed as a command argument
+* Runtime is nothing more that a generic host application
+* Runtime excecute a hosted service to setup azure service and verify their configuration status on an schedule
+
+### Sample code that load the microservice assembly and execute the run async
+```
+private static bool LaunchCoreHostApp(string[] args, 
+            ServiceHostBuilderOption service, 
+            ServiceRegistration serviceReg,
+            CancellationToken runtimeToken) 
+        {
+            var logger = GetLogger();
+            if (!File.Exists(service.Service))
+                return false;
+            var hostService = AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(service.Service, service.HostBuilder);
+
+            if (hostService is ICoreHostBuilder serviceHost)
+            {
+                var serviceHostBuilder = serviceHost.GetHostBuilder(args);
+                try
+                {
+                    if (serviceReg == null)
+                        throw new InvalidOperationException();
+                    _ = Task.Run(async () => 
+                    {
+                        await HostService.Run(serviceHostBuilder, serviceReg, args, runtimeToken)
+                                        .ConfigureAwait(false);
+                    }, runtimeToken);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    e.LogException(logger.LogCritical);
+                }
+            }
+            return false;
+        }
+```
+
+
 ## Create employee activity diagram
 * Once an employee is create a new event EmployeeAdded is raised
 * PayRoll microservice is subscribed to EmployeeAdded queue 
