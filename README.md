@@ -11,6 +11,7 @@ Read operations: When a microservice need data from another service to compute a
 There are alternatives to this pattern:
 * Collocate data on each microservice given the cost of collocating data is acceptable. Why? collocating data on each microservice increase their autonomy, availability, and performance. This can be done in those services where the availability and performance are a must in your microservices implementations rather than a hammer for every read operation. 
 * Create a group of service that are read-only services, these services subscribe to the domain emitted events to create documents that match the read operation required by the client applications. These group of services will reduce the amount of data duplication; one cons, is that they have an old snapshot of the data. The data they provide is behind according to the latency between emitted events and their computation.
+
 What I’m working on?
 
 The goal of this concept is to have a practical implementation in .Net core that focus on the approach of, that include an out of the box implementation for raising and consuming events with security controls to protect confidential data in transit. It would be expensive to build the code that handle the requirements of saving, sending, and receiving events on each microservice. Implementing a runtime service that implement these capabilities is what this concept is intended to provide you.
