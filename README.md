@@ -12,3 +12,34 @@ Reference-style:
 
 [concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb.png "Microservice concept"
 
+```
+"Sender": [
+          {
+            "ConfigType": "Sender",
+            "ConnStr": "Endpoint=sb://leraningyusbel.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=m0Vgczo6e3O0iRQm3XfDhBXiWIelyfFEA+ASbNDzY4U=",
+            "Identifier": "ServiceBusClientEmployeeMessages",
+            "MessageInTransitOptions": [
+              {
+                "MsgQueueName": "EmployeeAdded",
+                "AckQueueName" :  "AckEmployeeAdded",
+                "MsgDecryptScope": "EmployeeAdded.Decrypt",
+                "MsgQueueEndpoint": "leraningyusbel.servicebus.windows.net"
+              },
+              {
+                "MsgQueueName": "EmployeeUpdated",
+                "AckQueueName" : "",
+                "MsgDecryptScope": "EmployeeUpdated.Decrypt",
+                "MsgQueueEndpoint": "leraningyusbel.servicebus.windows.net"
+              },
+              {
+                "MsgQueueName": "EmployeeDeleted",
+                "AckQueueName" :  "",
+                "MsgDecryptScope": "EmployeeDeleted.Decrypt",
+                "MsgQueueEndpoint": "leraningyusbel.servicebus.windows.net"
+              }
+            ]
+          }
+        ]
+```
+
+
