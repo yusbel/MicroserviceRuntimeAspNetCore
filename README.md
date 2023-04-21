@@ -7,7 +7,7 @@ Let’s said, you have an orchestration layer or a microservice that orchestrate
 
 The architecture gets complicated with handling network partition errors to remains consistent; it resembles the n-tier architecture rather than microservice architecture that focus on domain functionalities. Microservices usually are not restricted like the n-tier architecture in which a tier layer can only talk to a certain tier(s) (strict or relaxed), etc., microservice are cohesive and solve a domain problem, they emit events, and they can be invoked by any other microservices. Microservice are protected by creating network controls to limit the access to their interfaces.
 
-Read operations: When a microservice need data from another service to compute a request it's typical to use a REST endpoint to retrieve the data to compute the incoming request. 
+Read operations: When a microservice need data from another service to compute a request it's typical to use a REST endpoint to retrieve the data to compute a response. 
 
 There are alternatives to this pattern:
 * Collocate data on each microservice given the cost of collocating data is acceptable. Why? collocating data on each microservice increase their autonomy, availability, and performance. This can be done in those services where the availability and performance are a must in your microservices implementations rather than a hammer for every read operation. 
