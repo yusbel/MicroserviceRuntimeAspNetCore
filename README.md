@@ -39,7 +39,7 @@ High level requirements:
 * The runtime loads the microservice IHost application to registered additional services dependencies like ServiceContext.
 * The runtime registers the hosted service responsible for sending and receiving events into the microservice generic host.
 * The runtime creates the environment variables with the App Configuration key.
-
+* The runtime supports multiple microservices assemblies on development environment. It makes easy to run multiple microservices locally.
 
 ### Concept 
 * Microservices are bound to a subdomain transaction
