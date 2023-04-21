@@ -9,5 +9,5 @@
 Reference-style:
 ![alt_text][concept]
 
-[concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConcept.png "Microservice concept"
+[concept]: https://learningruntimestor.blob.core.windows.net/runtimedocumentation/MicroserviceConceptAndDb.png "Microservice concept"
 
