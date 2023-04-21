@@ -6,6 +6,7 @@ Most microservices implementations rely on REST endpoints for inter-process comm
 Let’s said, you have an orchestration layer or a microservice that orchestrate operations across microservices. Let's say, that to create an employee the architecture uses an orchestration microservice that invoke the On-Boarding microservice, upon valid respond it invoke the PayRoll microservice. In this scenario, we have a distributed transaction, there are solutions to deal with failure, like using compensation patterns to revert changes done. 
 
 The architecture gets complicated with handling network partition errors to remains consistent; it resembles the n-tier architecture rather than microservice architecture that focus on domain functionalities. Microservices usually are not restricted like the n-tier architecture in which a tier layer can only talk to a certain tier(s) (strict or relaxed), etc., microservice are cohesive and solve a domain problem, they emit events, and they can be invoked by any other microservices. Microservice are protected by creating network controls to limit the access to their interfaces.
+
 Read operations: When a microservice need data from another service to compute a request it's typical to use a REST endpoint to retrieve the data to compute the incoming request. 
 
 There are alternatives to this pattern:
